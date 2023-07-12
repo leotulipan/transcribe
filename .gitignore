@@ -5,13 +5,12 @@ invoice*.pdf
 *.eml
 *.code-workspace
 
+# intermarket_bmd
+*combined.xlsx
+
 # Google Drive secrets
 credentials.json
 token.*
-
-
-# I like to put keys in a .env file
-.env
 
 # JS dev
 node_modules/
