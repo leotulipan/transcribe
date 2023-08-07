@@ -4,6 +4,7 @@
 invoice*.pdf
 *.eml
 *.code-workspace
+*.ogg
 
 # intermarket_bmd
 *combined.xlsx
@@ -176,3 +177,4 @@ plentymarkets_api/documentation and tooling/swagger-codegen-cli-2.4.30.jar
 .gitignore
 plentymarkets_api/documentation and tooling/swagger-codegen-cli.jar
 jera_bmd/FehlendeBelege.xlsx
+export0.ogg
