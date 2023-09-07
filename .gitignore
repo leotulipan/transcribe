@@ -174,7 +174,8 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 plentymarkets_api/documentation and tooling/swagger-codegen-cli-2.4.30.jar
-.gitignore
 plentymarkets_api/documentation and tooling/swagger-codegen-cli.jar
-jera_bmd/FehlendeBelege.xlsx
-export0.ogg
+jera_bmd/*.xlsx
+*.ogg
+plenty_token.json
+*.tmp
