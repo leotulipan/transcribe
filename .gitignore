@@ -179,3 +179,4 @@ jera_bmd/*.xlsx
 *.ogg
 plenty_token.json
 *.tmp
+plentymarkets_api/interface_documentation/*.html
