@@ -180,3 +180,6 @@ jera_bmd/*.xlsx
 plenty_token.json
 *.tmp
 plentymarkets_api/interface_documentation/*.html
+# Teachable
+??_??_??_*.html
+course_data.csv
