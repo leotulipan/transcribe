@@ -183,3 +183,5 @@ plentymarkets_api/interface_documentation/*.html
 # Teachable
 ??_??_??_*.html
 course_data.csv
+# Hard Links so do not track this doublicate:
+intermarket_bmd/class_PlentymarketsAPI.py
