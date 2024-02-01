@@ -6,6 +6,9 @@ invoice*.pdf
 *.code-workspace
 *.ogg
 
+# Nested Git Repos
+flask_gcp_deploy_demo/*
+
 # intermarket_bmd
 *combined.xlsx
 
