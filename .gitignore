@@ -188,3 +188,6 @@ plentymarkets_api/interface_documentation/*.html
 course_data.csv
 # Hard Links so do not track this doublicate:
 intermarket_bmd/class_PlentymarketsAPI.py
+
+# Ignore all files langchain turorials
+*/langchain-tutorials/*
