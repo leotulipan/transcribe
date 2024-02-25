@@ -5,6 +5,10 @@ invoice*.pdf
 *.eml
 *.code-workspace
 *.ogg
+# Google Drive secrets
+# https://developers.google.com/sheets/api/quickstart/python?hl=en#enable_the_api
+*credentials.json
+*token.json
 
 # Nested Git Repos
 flask_gcp_deploy_demo/*
