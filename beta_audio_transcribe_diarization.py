@@ -17,7 +17,14 @@ from pydub import AudioSegment
 # Docs https://github.com/jiaaro/pydub/blob/master/API.markdown
 
 import replicate
+# https://github.com/replicate/replicate-python#readme
 import base64
+
+# Diarization https://replicate.com/thomasmol/whisper-diarization?input=python uses
+# https://huggingface.co/pyannote/speaker-diarization-3.1
+# and faster-whisper for transcription
+# see https://github.com/pyannote/pyannote-audio?tab=readme-ov-file#benchmark
+
 
 # global variables
 args = ""
