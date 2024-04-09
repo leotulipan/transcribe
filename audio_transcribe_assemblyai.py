@@ -50,10 +50,13 @@ def main():
     # debug 
     parser.add_argument("-d", "--debug", help="Debug mode", action="store_true")
 
-    parser.add_argument("-f", "--file", required=False, help="filename, foldername or pattern to transcribe")
-
-    # k / keep parameter to keep the ogg files
-    parser.add_argument("-k", "--keep", help="Keep the ogg files", action="store_true")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-f", "--file", help="filename, foldername or pattern to transcribe")
+    group.add_argument("-i", "--id", help="ID of an already done transcription")
+    
+    # speaker_labels
+    parser.add_argument("-n", "--no_speaker_labels", help="Disable speaker labels", action="store_true", default=False) 
+    
     args = parser.parse_args()
 
     pp = pprint.PrettyPrinter(indent=4)
@@ -71,29 +74,34 @@ def main():
     # Initialize an empty dictionary to store the files
     files_dict = {}
 
-    # Check if args.file is a directory
-    if os.path.isdir(args.file):
-        # If it's a directory, get all audio and video files in the directory
-        for root, dirs, files in os.walk(args.file):
-            for file in files:
-                if file.endswith(('.mp3', '.wav', '.ogg', '.mp4', '.avi', '.mp4', '.mov', '.mkv', '.webm', '.m4a', '.flac', '.aac', '.wma', '.aiff', '.flv', '.wmv', '.3gp', '.3g2', '.m4v', '.ts', '.m2ts', '.mts', '.vob', '.ogv', '.ogg', '.oga', '.opus', '.spx', '.amr', '.mka', '.mk3d')):
-                    files_dict[file] = os.path.join(root, file)
-    # Check if args.file is a file
-    elif os.path.isfile(args.file):
-        # If it's a file, just add it to the dictionary
-        files_dict[args.file] = args.file
-    # Check if args.file is a wildcard pattern
-    elif '*' in args.file or '?' in args.file:
-        # If it's a wildcard pattern, find all matching files
-        for file in glob.glob(args.file):
-            files_dict[file] = file
+    # Check if args.id is given
+    if args.id:
+        # If id is given, skip this part and make a dummy filename entry with CWD/{id}.wav
+        files_dict[args.id] = os.path.join(os.getcwd(), f"{args.id}.wav")
     else:
-        print("Invalid input. Please provide a valid file, directory, or wildcard pattern.")
-        return
+        # Check if args.file is a directory
+        if os.path.isdir(args.file):
+            # If it's a directory, get all audio and video files in the directory
+            for root, dirs, files in os.walk(args.file):
+                for file in files:
+                    if file.endswith(('.mp3', '.wav', '.ogg', '.mp4', '.avi', '.mp4', '.mov', '.mkv', '.webm', '.m4a', '.flac', '.aac', '.wma', '.aiff', '.flv', '.wmv', '.3gp', '.3g2', '.m4v', '.ts', '.m2ts', '.mts', '.vob', '.ogv', '.ogg', '.oga', '.opus', '.spx', '.amr', '.mka', '.mk3d')):
+                        files_dict[file] = os.path.join(root, file)
+        # Check if args.file is a file
+        elif os.path.isfile(args.file):
+            # If it's a file, just add it to the dictionary
+            files_dict[args.file] = args.file
+        # Check if args.file is a wildcard pattern
+        elif '*' in args.file or '?' in args.file:
+            # If it's a wildcard pattern, find all matching files
+            for file in glob.glob(args.file):
+                files_dict[file] = file
+        else:
+            print("Invalid input. Please provide a valid file, directory, or wildcard pattern.")
+            return
     
     for file_name, file_path in files_dict.items():
         # check if file exists
-        if not os.path.exists(file_path):
+        if not os.path.exists(file_path) and not args.id:
             print(f"Audio File {file_name} does not exist!")
             continue
 
@@ -102,26 +110,29 @@ def main():
 
         # cd to file_path
         os.chdir(os.path.dirname(file_path))
+        # save dir_name
+        file_dir = os.path.dirname(file_path)
 
         # Check if transcript exists
         if check_transcript_exists(os.path.dirname(file_path), file_name):
             print(f"Transcript for {file_name} exists!")
             continue
 
-        # https://platform.openai.com/docs/guides/speech-to-text/longer-inputs
-        # G:\Geteilte Ablagen\_3_References\Transscribe Queue\v12044gd0000cg3j4tbc77ubn6e7us3g.mp4
-        audio = AudioSegment.from_file(file_path)
+        if not args.id:
+            # https://platform.openai.com/docs/guides/speech-to-text/longer-inputs
+            # G:\Geteilte Ablagen\_3_References\Transscribe Queue\v12044gd0000cg3j4tbc77ubn6e7us3g.mp4
+            audio = AudioSegment.from_file(file_path)
 
-        # raw_date byte length
-        if in_debug_mode():
-            mb = len(audio.raw_data) / (1024.0 * 1024.0)
-            print(f"Audio size: {mb} MB")
+            # raw_date byte length
+            if in_debug_mode():
+                mb = len(audio.raw_data) / (1024.0 * 1024.0)
+                print(f"Audio size: {mb} MB")
             
         # https://platform.openai.com/docs/guides/speech-to-text/longer-inputs
         # PyDub handles time in milliseconds
         twenty_four_minutes = 24 * 60 * 1000
 
-        config = aai.TranscriptionConfig(speaker_labels=True, format_text=True, language_code="de")
+        config = aai.TranscriptionConfig(speaker_labels=not args.no_speaker_labels, format_text=True, language_code="de")
         # https://www.assemblyai.com/docs/api-reference/transcript#body-parameters
         # speakers_expected
         # language_code="de"
@@ -132,22 +143,58 @@ def main():
 
         if in_debug_mode():
             print("Starting AssemblyAI Transcription...")
+            
+        # id - '030df9ec-d65c-4b30-bab5-7e00fe56a9de'
 
-        transcriber = aai.Transcriber()
-        transcript = transcriber.transcribe(
-          file_path,
-          config=config
-        )
+        if not args.id:
+            transcriber = aai.Transcriber()
+            transcript = transcriber.transcribe(
+            file_path,
+            config=config
+            )
+            
+            print(f"Transcription Length: {transcript.audio_duration}")
+            
+            # transcript.json_response['text']
+            # transcript.text
 
-        text_transcript = ""        
-        for utterance in transcript.utterances:
-            text_transcript += f"Speaker {utterance.speaker}: {utterance.text}\n"
-                    
-        # Save the transcript
-        file_dir = os.path.dirname(file_path)
+            # Save the transcript object as a json file
+            with open(os.path.join(file_dir, f"{file_name}.json"), "w") as f:
+                f.write(transcript.json_response)
+        else:    
+            #aai.Transcript(args.id)
+            class Transcript:
+                def __init__(self, id):
+                    self.id = id
+            transcript = Transcript(args.id)
+
+            
+        # Then get the sentences
+        sentences_url = f"https://api.assemblyai.com/v2/transcript/{transcript.id}/sentences"
+        headers = {"authorization": os.getenv("ASSEMBLY_AI_KEY")}
+        sentences_response = requests.get(sentences_url, headers=headers)
+        
         with open(os.path.join(file_dir, f"{file_name}.txt"), "w") as f:
-            f.write(text_transcript)
-        print(f"Transcript: {text_transcript[:160]} saved to {file_name}.txt")
+            f.write(f"Transcript ID: {transcript.id}\n")
+            # Iterate over the "sentences" list
+            for sentence in json.loads(sentences_response.text)['sentences']:
+                # Extract the "text" field and the speaker
+                text = sentence['text']
+                if not args.no_speaker_labels:
+                    speaker = sentence['speaker']
+                    f.write(f"Speaker {speaker}: {text}\n")
+                else:
+                    f.write(f"{text}\n")
+
+        # text_transcript = ""        
+        # for utterance in transcript.utterances:
+        #     text_transcript += f"Speaker {utterance.speaker}: {utterance.text}\n"
+                    
+        # # Save the transcript
+        
+        # with open(os.path.join(file_dir, f"{file_name}.txt"), "w") as f:
+        #     f.write(text_transcript)
+        print(f"Transcript saved to {file_name}.txt")
         
 if __name__ == '__main__':
     main()        
