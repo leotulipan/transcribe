@@ -1,19 +1,15 @@
 import glob
-import re
 from dotenv import load_dotenv
-import sys
 import os
 import pprint
-import calendar
-from datetime import datetime
 import json
 import requests
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import json
 import argparse
 
-from openai import OpenAI
-import pydub
+#from openai import OpenAI
+#import pydub
 from pydub import AudioSegment
 # Docs https://github.com/jiaaro/pydub/blob/master/API.markdown
 
@@ -68,7 +64,6 @@ def main():
         print("We are in debug mode.") 
 
     load_dotenv() # load environment variables from .env file
-    openai_api_key = os.getenv("OPENAI_API_KEY")
     aai.settings.api_key = os.getenv("ASSEMBLY_AI_KEY")
 
     # Initialize an empty dictionary to store the files
@@ -122,6 +117,10 @@ def main():
             # https://platform.openai.com/docs/guides/speech-to-text/longer-inputs
             # G:\Geteilte Ablagen\_3_References\Transscribe Queue\v12044gd0000cg3j4tbc77ubn6e7us3g.mp4
             audio = AudioSegment.from_file(file_path)
+
+            # What are the API limits on file size or file duration?
+            # Currently, the maximum file size that can be submitted to the /v2/transcript endpoint for transcription is 5GB, and the maximum duration is 10 hours.
+            # The maximum file size for a local file uploaded to the API via the /v2/upload endpoint is 2.2GB.
 
             # raw_date byte length
             if in_debug_mode():
