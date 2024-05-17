@@ -46,7 +46,7 @@ def main():
     # debug 
     parser.add_argument("-d", "--debug", help="Debug mode", action="store_true")
 
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument("-f", "--file", help="filename, foldername or pattern to transcribe")
     group.add_argument("-i", "--id", help="ID of an already done transcription")
     
@@ -57,7 +57,7 @@ def main():
 
     pp = pprint.PrettyPrinter(indent=4)
 
-    client = OpenAI()
+    #client = OpenAI()
 
     if in_debug_mode():
         clear_screen()
@@ -65,7 +65,51 @@ def main():
 
     load_dotenv() # load environment variables from .env file
     aai.settings.api_key = os.getenv("ASSEMBLY_AI_KEY")
+    # For direct requests calls
+    headers = {
+                "Authorization": os.getenv("ASSEMBLY_AI_KEY")
+            }
 
+    # if no file or id is given, call the list transcript api
+    if not args.file and not args.id:
+            print("Listing transcripts:")
+            # curl https://api.assemblyai.com/v2/transcript -H "Authorization: <apiKey>"
+
+            url = "https://api.assemblyai.com/v2/transcript"
+
+            response = requests.get(url, headers=headers)
+
+            data = response.json()
+
+            # Create a list to store the transcript data
+            transcript_data = []
+
+            print("Number | ID                                   | Created             | Error")
+            print("-" * 80)
+
+            for i, transcript in enumerate(data["transcripts"]):
+                if i >= 5:
+                    break
+                created = datetime.strptime(transcript["created"], "%Y-%m-%dT%H:%M:%S.%f")
+                error = transcript.get("error", "")
+                transcript_data.append((transcript['id'], i+1))
+                print(f"{i+1:6} | {transcript['id']} | {created.strftime('%Y-%m-%d %H:%M:%S')} | {error}")
+
+            # Ask the user for input
+            selected_number = input("Enter the number of the transcript you want to select (or press Enter to exit): ")
+
+            # Save the response
+            response = None
+            if selected_number:
+                selected_number = int(selected_number)
+                if selected_number > 0 and selected_number <= len(transcript_data):
+                    args.id = transcript_data[selected_number-1][0]
+
+            if not args.id:
+                print("No transcript selected. Exiting...")    
+                exit()
+
+        
     # Initialize an empty dictionary to store the files
     files_dict = {}
 
@@ -104,7 +148,8 @@ def main():
         file_name, file_extension = os.path.splitext(full_file_name)    
 
         # cd to file_path
-        os.chdir(os.path.dirname(file_path))
+        if(os.path.dirname(file_path) != ""):
+            os.chdir(os.path.dirname(file_path))
         # save dir_name
         file_dir = os.path.dirname(file_path)
 
@@ -148,18 +193,25 @@ def main():
         if not args.id:
             transcriber = aai.Transcriber()
             transcript = transcriber.transcribe(
-            file_path,
-            config=config
-            )
+                file_path,
+                config=config
+                )
             
-            print(f"Transcription Length: {transcript.audio_duration}")
+            print(f"Transcript ID: {transcript.id}")
+            
+            # this is a dict
+            transcript_json = transcript.json_response
+            # json dict to json
+            json_str = json.dumps(transcript_json)
+            
+            print(f"Transcription Length: {transcript_json['audio_duration']}")
             
             # transcript.json_response['text']
             # transcript.text
 
             # Save the transcript object as a json file
             with open(os.path.join(file_dir, f"{file_name}.json"), "w") as f:
-                f.write(transcript.json_response)
+                f.write(json.dumps(transcript_json))
         else:    
             #aai.Transcript(args.id)
             class Transcript:
@@ -167,21 +219,29 @@ def main():
                     self.id = id
             transcript = Transcript(args.id)
 
+        if in_debug_mode():
+            print("Getting Sentences...")    
             
         # Then get the sentences
         sentences_url = f"https://api.assemblyai.com/v2/transcript/{transcript.id}/sentences"
-        headers = {"authorization": os.getenv("ASSEMBLY_AI_KEY")}
         sentences_response = requests.get(sentences_url, headers=headers)
-        
+            
         with open(os.path.join(file_dir, f"{file_name}.txt"), "w") as f:
             f.write(f"Transcript ID: {transcript.id}\n")
+            current_speaker = ""
             # Iterate over the "sentences" list
             for sentence in json.loads(sentences_response.text)['sentences']:
                 # Extract the "text" field and the speaker
                 text = sentence['text']
                 if not args.no_speaker_labels:
                     speaker = sentence['speaker']
-                    f.write(f"Speaker {speaker}: {text}\n")
+                    if speaker != current_speaker:
+                        # Speaker change
+                        current_speaker = speaker
+                        f.write(f"Speaker {speaker}: {text}\n")
+                    else:
+                        # same speaker
+                        f.write(f"{text}\n")
                 else:
                     f.write(f"{text}\n")
 
