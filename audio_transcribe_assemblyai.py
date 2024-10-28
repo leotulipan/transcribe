@@ -1,3 +1,13 @@
+# /// script
+# dependencies = [
+#   "load_dotenv",
+#   "argparse",
+#   "requests",
+#   "datetime",
+#   "assemblyai",
+#   "pydub",
+# ]
+# ///
 import glob
 from dotenv import load_dotenv
 import os
@@ -17,7 +27,7 @@ import assemblyai as aai
 
 # global variables
 args = ""
-
+headers = ""
 
 # Function to check if we are in debug mode
 def in_debug_mode():
@@ -38,20 +48,47 @@ def clear_screen():
 
 def check_transcript_exists(file_path, file_name):
     transcript_path = os.path.join(file_path, f"{file_name}.txt")
-    return os.path.exists(transcript_path)
+    srt_path = os.path.join(file_path, f"{file_name}.srt")
+    return os.path.exists(transcript_path) or os.path.exists(srt_path)
 
+def export_subtitles(transcript_id, subtitle_format, file_name):
+    """
+    Export subtitles using AssemblyAI API.
+
+    Args:
+        api_token (str): Your API token for AssemblyAI.
+        transcript_id (str): The ID of the transcript you want to export as subtitles.
+        subtitle_format (str): The subtitle format to export (either 'srt' or 'vtt').
+
+    Returns:
+        str: The filename of the saved subtitle file.
+    """
+    # Set the API endpoint for exporting subtitles
+    url = f"https://api.assemblyai.com/v2/transcript/{transcript_id}/{subtitle_format}"
+
+    # Send a GET request to the API to get the subtitle data
+    response = requests.get(url, headers=headers)
+
+    # Check if the response status code is successful (200)
+    if response.status_code == 200:
+        # Save the subtitle data to a local file
+        filename = f"{file_name}.{subtitle_format}"
+        with open(filename, "wb") as subtitle_file:
+            subtitle_file.write(response.content)
+        return filename
+    else:
+        raise RuntimeError(f"Subtitle export failed: {response.text}")
+    
 def main():
-    global args
+    global args, headers
     parser = argparse.ArgumentParser()
     # debug 
     parser.add_argument("-d", "--debug", help="Debug mode", action="store_true")
-
     group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument("-f", "--file", help="filename, foldername or pattern to transcribe")
+    group.add_argument("-f", "--file", "--folder", help="filename, foldername, or pattern to transcribe")
     group.add_argument("-i", "--id", help="ID of an already done transcription")
-    
     # speaker_labels
-    parser.add_argument("-n", "--no_speaker_labels", help="Disable speaker labels", action="store_true", default=False) 
+    parser.add_argument("-s", "--speaker_labels", help="Use this flag to remove speaker labels", action="store_false", default=True) 
     
     args = parser.parse_args()
 
@@ -69,6 +106,7 @@ def main():
     headers = {
                 "Authorization": os.getenv("ASSEMBLY_AI_KEY")
             }
+
 
     # if no file or id is given, call the list transcript api
     if not args.file and not args.id:
@@ -120,6 +158,8 @@ def main():
     else:
         # Check if args.file is a directory
         if os.path.isdir(args.file):
+            if in_debug_mode():
+                print("Directory found.")
             # If it's a directory, get all audio and video files in the directory
             for root, dirs, files in os.walk(args.file):
                 for file in files:
@@ -127,10 +167,15 @@ def main():
                         files_dict[file] = os.path.join(root, file)
         # Check if args.file is a file
         elif os.path.isfile(args.file):
-            # If it's a file, just add it to the dictionary
-            files_dict[args.file] = args.file
+            # If it's a file, remove any leading './' or '.\' and add it to the dictionary
+            normalized_file = os.path.normpath(args.file)
+            files_dict[normalized_file] = normalized_file
+            if in_debug_mode():
+                print("File found.")
         # Check if args.file is a wildcard pattern
         elif '*' in args.file or '?' in args.file:
+            if in_debug_mode():
+                print("Wildcard pattern found.")
             # If it's a wildcard pattern, find all matching files
             for file in glob.glob(args.file):
                 files_dict[file] = file
@@ -139,6 +184,8 @@ def main():
             return
     
     for file_name, file_path in files_dict.items():
+        if in_debug_mode():
+            print(f"File: {file_name}")
         # check if file exists
         if not os.path.exists(file_path) and not args.id:
             print(f"Audio File {file_name} does not exist!")
@@ -176,7 +223,7 @@ def main():
         # PyDub handles time in milliseconds
         twenty_four_minutes = 24 * 60 * 1000
 
-        config = aai.TranscriptionConfig(speaker_labels=not args.no_speaker_labels, format_text=True, language_code="de")
+        config = aai.TranscriptionConfig(speaker_labels=args.speaker_labels, format_text=True, language_code="de")
         # https://www.assemblyai.com/docs/api-reference/transcript#body-parameters
         # speakers_expected
         # language_code="de"
@@ -227,13 +274,12 @@ def main():
         sentences_response = requests.get(sentences_url, headers=headers)
             
         with open(os.path.join(file_dir, f"{file_name}.txt"), "w") as f:
-            f.write(f"Transcript ID: {transcript.id}\n")
             current_speaker = ""
             # Iterate over the "sentences" list
             for sentence in json.loads(sentences_response.text)['sentences']:
                 # Extract the "text" field and the speaker
                 text = sentence['text']
-                if not args.no_speaker_labels:
+                if args.speaker_labels:
                     speaker = sentence['speaker']
                     if speaker != current_speaker:
                         # Speaker change
@@ -244,7 +290,11 @@ def main():
                         f.write(f"{text}\n")
                 else:
                     f.write(f"{text}\n")
-
+                    
+        # with open(os.path.join(file_dir, f"{file_name}.srt"), "w") as f:         
+        #     f.write(transcript.export_subtitles_srt(chars_per_caption=65))
+        export_subtitles(transcript.id, "srt", file_name)
+        
         # text_transcript = ""        
         # for utterance in transcript.utterances:
         #     text_transcript += f"Speaker {utterance.speaker}: {utterance.text}\n"
