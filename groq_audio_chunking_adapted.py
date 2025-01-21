@@ -6,14 +6,17 @@
 #   "pathlib",
 #   "datetime",
 #   "argparse",
-#   "python-dotenv"
+#   "python-dotenv",
+#   "librosa",
 # ]
 # ///
 
 # based on https://github.com/groq/groq-api-cookbook/blob/main/tutorials/audio-chunking/audio_chunking_code.py
 # example call
-# uv run .\audio_chunking_code.py --language de '.\2025-01-21 - podcast prozess 4.wav'
 # set GROQ_API_KEY in .env
+#
+#  uv run --link-mode=copy .\groq_audio_chunking_adapted.py -l de .\audio-test.mkv
+#
 
 from groq import Groq, RateLimitError
 from pydub import AudioSegment
@@ -27,6 +30,8 @@ import tempfile
 import re
 import argparse
 from dotenv import load_dotenv
+from pydub import AudioSegment
+import librosa
 
 def get_args():
     parser = argparse.ArgumentParser(description="Audio chunking and transcription using Groq API.")
@@ -40,7 +45,7 @@ def get_args():
 args = get_args()
 
 
-def preprocess_audio(input_path: Path) -> Path:
+def preprocess_audio_with_ffmpeg(input_path: Path) -> Path:
     """
     Preprocess audio file to 16kHz mono FLAC using ffmpeg.
     FLAC provides lossless compression for faster upload times.
@@ -69,6 +74,30 @@ def preprocess_audio(input_path: Path) -> Path:
     except subprocess.CalledProcessError as e:
         output_path.unlink(missing_ok=True)
         raise RuntimeError(f"FFmpeg conversion failed: {e.stderr}")
+
+def preprocess_audio(input_path: Path) -> Path:
+    """
+    Preprocess audio file to 16kHz mono FLAC using pydub.
+    FLAC provides lossless compression for faster upload times.
+    """
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+    
+    with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
+        output_path = Path(temp_file.name)
+        
+    print("Converting audio to 16kHz mono FLAC...")
+    try:
+        # Load audio file
+        audio = AudioSegment.from_file(input_path)
+        # Set frame rate to 16kHz and channels to mono
+        audio = audio.set_frame_rate(16000).set_channels(1)
+        # Export as FLAC
+        audio.export(output_path, format="flac")
+        return output_path
+    except Exception as e:
+        output_path.unlink(missing_ok=True)
+        raise RuntimeError(f"Audio conversion failed: {e}")        
     
 def transcribe_single_chunk(client: Groq, chunk: AudioSegment, chunk_num: int, total_chunks: int) -> tuple[dict, float]:
     """
