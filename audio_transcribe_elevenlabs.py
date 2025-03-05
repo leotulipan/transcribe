@@ -4,7 +4,6 @@
 #   "argparse",
 #   "requests",
 #   "datetime",
-#   "elevenlabs",
 #   "pydub",
 #   "loguru",
 # ]
@@ -19,12 +18,11 @@ import requests
 from datetime import date, timedelta, datetime
 import argparse
 from pydub import AudioSegment
-from elevenlabs import ElevenLabs
 from loguru import logger
 
 # global variables
 args = ""
-client = None
+headers = None
 
 def setup_logger():
     """Configure loguru logger"""
@@ -149,7 +147,7 @@ def handle_error_response(response):
         logger.error(f"Raw error response: {response.text}")
 
 def main():
-    global args, client
+    global args, headers
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", help="Debug mode", action="store_true")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -170,7 +168,10 @@ def main():
         logger.info("Debug mode enabled")
 
     load_dotenv()
-    client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+    headers = {
+        "xi-api-key": os.getenv("ELEVENLABS_API_KEY"),
+        "Accept": "application/json"
+    }
 
     # Initialize an empty dictionary to store the files
     files_dict = {}
@@ -227,44 +228,60 @@ def main():
         if file_dir:
             os.chdir(file_dir)
 
-        # Transcribe using ElevenLabs
+        # Transcribe using ElevenLabs API
         logger.info("Starting ElevenLabs transcription...")
 
         try:
-            response = client.speech_to_text.convert(
-                model_id="scribe_v1",
-                file=file_path,
-                language_code=args.language,
-                tag_audio_events=True,
-                num_speakers=2 if args.speaker_labels else None,
-                timestamps_granularity="word",
-                diarize=args.speaker_labels
-            )
+            with open(file_path, 'rb') as audio_file:
+                files = {
+                    'file': ('audio.flac', audio_file, 'audio/flac')
+                }
+                data = {
+                    'model_id': 'scribe_v1',
+                    'language_code': args.language,
+                    'tag_audio_events': 'true',
+                    'num_speakers': '2' if args.speaker_labels else None,
+                    'timestamps_granularity': 'word',
+                    'diarize': 'true' if args.speaker_labels else 'false'
+                }
+                
+                # Remove None values from data
+                data = {k: v for k, v in data.items() if v is not None}
+                
+                response = requests.post(
+                    "https://api.elevenlabs.io/v1/speech-to-text",
+                    headers=headers,
+                    files=files,
+                    data=data
+                )
+                
+                response.raise_for_status()
+                response_data = response.json()
 
-            # Save JSON response
-            json_file = os.path.join(file_dir, f"{file_name}.json")
-            with open(json_file, 'w', encoding='utf-8') as f:
-                json.dump(response, f, ensure_ascii=False, indent=2)
-            logger.info(f"JSON response saved to {json_file}")
+                # Save JSON response
+                json_file = os.path.join(file_dir, f"{file_name}.json")
+                with open(json_file, 'w', encoding='utf-8') as f:
+                    json.dump(response_data, f, ensure_ascii=False, indent=2)
+                logger.info(f"JSON response saved to {json_file}")
 
-            # Create text file
-            text_file = os.path.join(file_dir, f"{file_name}.txt")
-            create_text_file(response['words'], text_file)
+                # Create text file
+                text_file = os.path.join(file_dir, f"{file_name}.txt")
+                create_text_file(response_data['words'], text_file)
 
-            # Create SRT file
-            srt_file = os.path.join(file_dir, f"{file_name}.srt")
-            create_srt(response['words'], srt_file, args.chars_per_line)
+                # Create SRT file
+                srt_file = os.path.join(file_dir, f"{file_name}.srt")
+                create_srt(response_data['words'], srt_file, args.chars_per_line)
 
-            logger.info(f"Transcription completed for {file_name}")
-            logger.info(f"Files saved in {file_dir}")
+                logger.info(f"Transcription completed for {file_name}")
+                logger.info(f"Files saved in {file_dir}")
 
-            # Delete FLAC file if requested
-            if args.delete_flac and file_path.endswith('.flac'):
-                try:
-                    os.remove(file_path)
-                    logger.info(f"Deleted temporary FLAC file: {file_path}")
-                except Exception as e:
-                    logger.error(f"Error deleting FLAC file: {e}")
+                # Delete FLAC file if requested
+                if args.delete_flac and file_path.endswith('.flac'):
+                    try:
+                        os.remove(file_path)
+                        logger.info(f"Deleted temporary FLAC file: {file_path}")
+                    except Exception as e:
+                        logger.error(f"Error deleting FLAC file: {e}")
 
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400:
