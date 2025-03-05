@@ -23,10 +23,16 @@ from loguru import logger
 # global variables
 args = ""
 headers = None
+MAX_AUDIO_LENGTH = 7200  # seconds
 
 def setup_logger():
     """Configure loguru logger"""
     logger.remove()  # Remove default handler
+    
+    # Always log errors to console
+    logger.add(lambda msg: print(msg), level="ERROR")
+    
+    # Add file logging
     logger.add(
         "transcribe_{time}.log",
         rotation="1 day",
@@ -34,7 +40,10 @@ def setup_logger():
         level="INFO",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
     )
-    logger.add(lambda msg: print(msg), level="INFO")  # Also print to console
+    
+    # Add console logging for all levels if verbose
+    if args.verbose:
+        logger.add(lambda msg: print(msg), level="INFO")
 
 def in_debug_mode():
     if args.debug:
@@ -47,10 +56,19 @@ def clear_screen():
 def check_transcript_exists(file_path, file_name):
     transcript_path = os.path.join(file_path, f"{file_name}.txt")
     srt_path = os.path.join(file_path, f"{file_name}.srt")
-    return os.path.exists(transcript_path) or os.path.exists(srt_path)
+    json_path = os.path.join(file_path, f"{file_name}.json")
+    return all(os.path.exists(p) for p in [transcript_path, srt_path, json_path])
+
+def check_audio_length(file_path):
+    """Check if audio file is shorter than MAX_AUDIO_LENGTH"""
+    audio = AudioSegment.from_file(file_path)
+    duration_seconds = len(audio) / 1000.0  # Convert milliseconds to seconds
+    if duration_seconds > MAX_AUDIO_LENGTH:
+        raise RuntimeError(f"Audio duration ({duration_seconds:.1f}s) exceeds maximum allowed length ({MAX_AUDIO_LENGTH}s)")
+    return True
 
 def convert_to_flac(input_file):
-    """Convert audio file to FLAC format (mono, 16-bit)"""
+    """Convert audio/video file to FLAC format (mono, 16-bit)"""
     logger.info(f"Converting {input_file} to FLAC format...")
     audio = AudioSegment.from_file(input_file)
     # Convert to mono
@@ -141,8 +159,10 @@ def handle_error_response(response):
     """Pretty print error response from API"""
     try:
         error_data = response.json()
-        logger.error("API Error Response:")
-        logger.error(json.dumps(error_data, indent=2))
+        detail = error_data.get('detail', {})
+        status = detail.get('status', 'unknown')
+        message = detail.get('message', 'No message provided')
+        logger.error(f"API Error: {status} - {message}")
     except:
         logger.error(f"Raw error response: {response.text}")
 
@@ -154,9 +174,10 @@ def main():
     group.add_argument("-f", "--file", "--folder", help="filename, foldername, or pattern to transcribe")
     parser.add_argument("-c", "--chars_per_line", type=int, default=80, help="Maximum characters per line in SRT file")
     parser.add_argument("-s", "--speaker_labels", help="Use this flag to remove speaker labels", action="store_false", default=True)
-    parser.add_argument("--delete-flac", help="Delete the generated FLAC file after processing", action="store_true")
+    parser.add_argument("--keep-flac", help="Keep the generated FLAC file after processing", action="store_true")
     parser.add_argument("--no-convert", help="Send the audio file as-is without conversion", action="store_true")
     parser.add_argument("-l", "--language", help="Language code (ISO-639-1 or ISO-639-3). Examples: en (English), fr (French), de (German)", default=None)
+    parser.add_argument("-v", "--verbose", help="Show all log messages in console", action="store_true")
     
     args = parser.parse_args()
     pp = pprint.PrettyPrinter(indent=4)
@@ -217,9 +238,10 @@ def main():
         if not args.no_convert and file_extension.lower() != '.flac':
             file_path = convert_to_flac(file_path)
 
-        # Check file size
+        # Check file size and duration
         try:
             check_file_size(file_path)
+            check_audio_length(file_path)
         except RuntimeError as e:
             logger.error(f"Error: {e}")
             continue
@@ -227,6 +249,7 @@ def main():
         # Change to file directory
         if file_dir:
             os.chdir(file_dir)
+            logger.info(f"Working directory changed to: {file_dir}")
 
         # Transcribe using ElevenLabs API
         logger.info("Starting ElevenLabs transcription...")
@@ -273,10 +296,11 @@ def main():
                 create_srt(response_data['words'], srt_file, args.chars_per_line)
 
                 logger.info(f"Transcription completed for {file_name}")
-                logger.info(f"Files saved in {file_dir}")
+                if file_dir:
+                    logger.info(f"Files saved in: {file_dir}")
 
-                # Delete FLAC file if requested
-                if args.delete_flac and file_path.endswith('.flac'):
+                # Delete FLAC file by default unless --keep-flac is specified
+                if not args.keep_flac and file_path.endswith('.flac'):
                     try:
                         os.remove(file_path)
                         logger.info(f"Deleted temporary FLAC file: {file_path}")
