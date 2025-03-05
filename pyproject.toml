@@ -1,13 +1,16 @@
 [project]
 name = "scripts-transcribe"
 version = "0.1.0"
-description = "Add your description here"
+description = "Transcript with AssemlyAI to txt and srt of file or a whole folder"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "argparse>=1.4.0",
     "assemblyai>=0.34.0",
+    "datetime>=5.5",
+    "elevenlabs>=1.52.0",
     "glob2>=0.7",
+    "load-dotenv>=0.1.0",
     "os-sys>=0.9.1",
     "pprintpp>=0.4.0",
     "pydub>=0.25.1",
