@@ -32,14 +32,18 @@ import argparse
 from dotenv import load_dotenv
 from pydub import AudioSegment
 import librosa
+import textwrap
+from datetime import timedelta
+import sys
 
 def get_args():
     parser = argparse.ArgumentParser(description="Audio chunking and transcription using Groq API.")
-    parser.add_argument("audio_path", type=str, help="Path to the input audio file.")
-    parser.add_argument("--language", "-l", type=str, default="en", help="Language of the audio (default: en).")
+    parser.add_argument("audio_path", type=str, help="Path to the input audio file or segments JSON file.")
+    parser.add_argument("--language", "-l", type=str, default="de", help="Language of the audio (default: en).")
     parser.add_argument("--model", "-m",type=str, default="whisper-large-v3", help="Model to use for transcription (default: whisper-large-v3).")
     parser.add_argument("--chunk_length", "-c", type=int, default=600, help="Length of each chunk in seconds (default: 600).")
     parser.add_argument("--overlap", "-o", type=int, default=10, help="Overlap between chunks in seconds (default: 10).")
+    parser.add_argument("--srt-only", "-s", action="store_true", help="Convert existing segments JSON to SRT format only.")
     return parser.parse_args()
 
 args = get_args()
@@ -127,7 +131,9 @@ def transcribe_single_chunk(client: Groq, chunk: AudioSegment, chunk_num: int, t
                     file=("chunk.flac", temp_file, "audio/flac"),
                     model=args.model,
                     language=args.language, # We highly recommend specifying the language of your audio if you know it
-                    response_format="verbose_json"
+                    response_format="verbose_json",
+                    temperature=0,  # For best transcription quality
+                    timestamp_granularities=["segment"]  # Get segment-level timestamps
                 )
                 api_time = time.time() - start_time
                 total_api_time += api_time
@@ -227,14 +233,16 @@ def find_longest_common_sequence(sequences: list[str], match_by_words: bool = Tr
         return ''.join(total_sequence)
     return ''.join(total_sequence)
 
-def merge_transcripts(results: list[tuple[dict, int]]) -> dict:
+def merge_transcripts(results: list[tuple[dict, int]], overlap: int = 10) -> dict:
     """
     Merge transcription chunks and handle overlaps by:
-    1. Merge all segments within each chunk's overlap/stride
-    2. Merge chunk boundaries using find_longest_common_sequence
+    1. Adjust all segment timestamps based on the chunk's position in the audio
+    2. Merge all segments within each chunk's overlap/stride
+    3. Merge chunk boundaries using find_longest_common_sequence
     
     Args:
         results: List of (result, start_time) tuples
+        overlap: Overlap between chunks in seconds
         
     Returns:
         dict: Merged transcription
@@ -242,22 +250,41 @@ def merge_transcripts(results: list[tuple[dict, int]]) -> dict:
     print("\nMerging results...")
     final_segments = []
     
-    # Process each chunk's segments
+    # Process each chunk's segments and adjust timestamps
     processed_chunks = []
-    for i, (chunk, _) in enumerate(results):
+    overlap_sec = overlap  # Convert overlap to seconds
+    
+    for i, (chunk, chunk_start_ms) in enumerate(results):
         # Extract full segment data including metadata
         data = chunk.model_dump() if hasattr(chunk, 'model_dump') else chunk
         segments = data['segments']
         
+        # Convert chunk_start_ms from milliseconds to seconds for timestamp adjustment
+        chunk_start_sec = chunk_start_ms / 1000.0
+        
+        # Adjust all timestamps in this chunk based on its position in the original audio
+        adjusted_segments = []
+        for segment in segments:
+            adjusted_segment = segment.copy()
+            # Adjust start and end times based on the chunk's position
+            # For chunks after the first one, subtract the overlap time
+            if i > 0:
+                adjusted_segment['start'] += chunk_start_sec - (i * overlap_sec)
+                adjusted_segment['end'] += chunk_start_sec - (i * overlap_sec)
+            else:
+                adjusted_segment['start'] += chunk_start_sec
+                adjusted_segment['end'] += chunk_start_sec
+            adjusted_segments.append(adjusted_segment)
+        
         # If not last chunk, find next chunk start time
         if i < len(results) - 1:
-            next_start = results[i + 1][1]
+            next_start = results[i + 1][1]  # in milliseconds
             
             # Split segments into current and overlap based on next chunk's start time
             current_segments = []
             overlap_segments = []
             
-            for segment in segments:
+            for segment in adjusted_segments:
                 if segment['end'] * 1000 > next_start:
                     overlap_segments.append(segment)
                 else:
@@ -275,7 +302,7 @@ def merge_transcripts(results: list[tuple[dict, int]]) -> dict:
             processed_chunks.append(current_segments)
         else:
             # For last chunk, keep all segments
-            processed_chunks.append(segments)
+            processed_chunks.append(adjusted_segments)
     
     # Merge boundaries between chunks
     for i in range(len(processed_chunks) - 1):
@@ -305,6 +332,97 @@ def merge_transcripts(results: list[tuple[dict, int]]) -> dict:
         "text": final_text,
         "segments": final_segments
     }
+
+def convert_to_srt(result: dict, output_path: Path) -> None:
+    """
+    Convert Groq's verbose JSON output to SRT format with metadata-based filtering.
+    
+    Args:
+        result: Transcription result dictionary from Groq API
+        output_path: Path to save the SRT file
+    """
+    def format_time(seconds: float) -> str:
+        """Convert seconds to SRT timestamp format: HH:MM:SS,mmm"""
+        td = timedelta(seconds=seconds)
+        hours, remainder = divmod(td.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        milliseconds = int(td.microseconds / 1000)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
+
+    def split_text_into_chunks(text: str, max_chars: int = 80) -> list[str]:
+        """Split text into chunks of maximum length while respecting word boundaries"""
+        return textwrap.wrap(text, width=max_chars, break_long_words=False)
+
+    # Filter segments based on metadata quality indicators
+    filtered_segments = []
+    for segment in result['segments']:
+        # Skip segments with:
+        # 1. High no_speech_prob (likely non-speech)
+        # 2. Very negative avg_logprob (low confidence)
+        # 3. Unusual compression_ratio (potential issues)
+        # 4. Zero start time (unless it's the only segment)
+        if (segment['no_speech_prob'] < 0.5 and  # Less than 50% chance of being non-speech
+            segment['avg_logprob'] > -0.5 and    # Better than -0.5 log probability
+            0.8 < segment['compression_ratio'] < 2.0 and  # Normal speech patterns
+            (segment['start'] != 0 or all(s['start'] == 0 for s in result['segments']))):
+            filtered_segments.append(segment)
+
+    # Sort segments by start time to ensure proper ordering
+    filtered_segments.sort(key=lambda x: x['start'])
+
+    # Merge overlapping segments
+    merged_segments = []
+    if filtered_segments:
+        current_segment = filtered_segments[0].copy()
+        
+        for next_segment in filtered_segments[1:]:
+            # If segments overlap or are very close (within 0.1s), merge them
+            if next_segment['start'] <= current_segment['end'] + 0.1:
+                current_segment['end'] = max(current_segment['end'], next_segment['end'])
+                current_segment['text'] = current_segment['text'] + ' ' + next_segment['text']
+            else:
+                merged_segments.append(current_segment)
+                current_segment = next_segment.copy()
+        
+        merged_segments.append(current_segment)
+
+    srt_lines = []
+    subtitle_index = 1
+
+    for segment in merged_segments:
+        start_time = segment['start']
+        end_time = segment['end']
+        text = segment['text'].strip()
+
+        if not text:  # Skip empty segments
+            continue
+
+        chunks = split_text_into_chunks(text)
+        
+        if len(chunks) == 1:
+            srt_lines.append(f"{subtitle_index}")
+            srt_lines.append(f"{format_time(start_time)} --> {format_time(end_time)}")
+            srt_lines.append(chunks[0])
+            srt_lines.append("")  # Empty line
+            subtitle_index += 1
+        else:
+            # Distribute chunks evenly across segment duration
+            chunk_duration = (end_time - start_time) / len(chunks)
+            for i, chunk in enumerate(chunks):
+                chunk_start = start_time + i * chunk_duration
+                chunk_end = chunk_start + chunk_duration
+                srt_lines.append(f"{subtitle_index}")
+                srt_lines.append(f"{format_time(chunk_start)} --> {format_time(chunk_end)}")
+                srt_lines.append(chunk)
+                srt_lines.append("")  # Empty line
+                subtitle_index += 1
+
+    # Write SRT file
+    srt_path = output_path.with_suffix('.srt')
+    with open(srt_path, 'w', encoding='utf-8') as f:
+        f.write("\n".join(srt_lines))
+    
+    print(f"SRT file saved to: {srt_path}")
 
 def save_results(result: dict, audio_path: Path) -> Path:
     """
@@ -337,10 +455,14 @@ def save_results(result: dict, audio_path: Path) -> Path:
         with open(f"{base_path}_segments.{args.language}.json", 'w', encoding='utf-8') as f:
             json.dump(result["segments"], f, indent=2, ensure_ascii=False)
         
+        # Convert to SRT format
+        convert_to_srt(result, base_path)
+        
         print(f"\nResults saved to transcriptions folder:")
         print(f"- {base_path}.{args.language}.txt")
         print(f"- {base_path}_full.{args.language}.json")
         print(f"- {base_path}_segments.{args.language}.json")
+        print(f"- {base_path}.{args.language}.srt")
         
         return base_path
     
@@ -408,7 +530,7 @@ def transcribe_audio_in_chunks(audio_path: Path, chunk_length: int = 600, overla
             total_transcription_time += chunk_time
             results.append((result, start))
             
-        final_result = merge_transcripts(results)
+        final_result = merge_transcripts(results, overlap)
         save_results(final_result, audio_path)
             
         print(f"\nTotal Groq API transcription time: {total_transcription_time:.2f}s")
@@ -420,5 +542,70 @@ def transcribe_audio_in_chunks(audio_path: Path, chunk_length: int = 600, overla
         if processed_path:
             Path(processed_path).unlink(missing_ok=True)
 
+def convert_segments_to_srt(segments_path: Path, language: str = "en") -> None:
+    """
+    Convert an existing segments JSON file to SRT format.
+    
+    Args:
+        segments_path: Path to the segments JSON file or original media file
+        language: Language code for the output filename
+    """
+    try:
+        # If the input path is not a segments file, try to find it
+        if not str(segments_path).endswith(f"_segments.{language}.json"):
+            # Try to find the segments file in the transcriptions directory
+            possible_paths = [
+                # Try with _segments suffix in same directory
+                segments_path.parent / f"{segments_path.stem}_segments.{language}.json",
+                # Try in transcriptions directory
+                Path("transcriptions") / f"{segments_path.stem}_segments.{language}.json",
+                # Try with timestamp pattern in transcriptions directory
+                Path("transcriptions") / f"{segments_path.stem}_*_segments.{language}.json"
+            ]
+            
+            segments_path = None
+            for path in possible_paths:
+                if path.is_file():
+                    segments_path = path
+                    break
+                elif "*" in str(path):
+                    # Handle glob pattern
+                    matches = list(Path(path.parent).glob(path.name))
+                    if matches:
+                        segments_path = matches[0]  # Use the first match
+                        break
+            
+            if not segments_path:
+                print("Error: Could not find segments file. Tried:")
+                for path in possible_paths:
+                    print(f"- {path}")
+                sys.exit(1)
+        
+        print(f"Reading segments file: {segments_path}")
+        with open(segments_path, 'r', encoding='utf-8') as f:
+            segments_data = json.load(f)
+        
+        # Create a result dictionary in the format expected by convert_to_srt
+        result = {
+            "text": " ".join(segment["text"] for segment in segments_data),
+            "segments": segments_data
+        }
+        
+        # Use the same directory as the segments file
+        output_path = segments_path.parent / segments_path.stem.replace("_segments", "")
+        convert_to_srt(result, output_path)
+        
+    except Exception as e:
+        print(f"Error converting segments to SRT: {str(e)}")
+        raise
+
 if __name__ == "__main__":
-    transcribe_audio_in_chunks(Path(args.audio_path), args.chunk_length, args.overlap)
+    args = get_args()
+    
+    if args.srt_only:
+        # Handle SRT-only conversion
+        input_path = Path(args.audio_path)
+        convert_segments_to_srt(input_path, args.language)
+    else:
+        # Handle full transcription process
+        transcribe_audio_in_chunks(Path(args.audio_path), args.chunk_length, args.overlap)
