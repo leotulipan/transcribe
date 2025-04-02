@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Recorder & Transcriber</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Simple pulse animation for recording */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .recording-pulse {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        /* Custom scrollbar for history */
+        .history-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        .history-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .history-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .history-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Ensure body takes full height */
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: sans-serif; /* Basic font */
+        }
+        /* Flex container for layout */
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh; /* Ensure it takes at least full viewport height */
+        }
+        .content-grow {
+            flex-grow: 1;
+        }
+         /* Style for disabled buttons */
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        /* Ensure SVGs added by Lucide scale correctly */
+        [data-lucide] {
+             width: 1em; /* Or adjust as needed */
+             height: 1em;
+             display: inline-block; /* Prevents layout shifts */
+             vertical-align: middle; /* Aligns icons with text */
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="main-container container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">Voice Recorder & Transcriber</h1>
+            <p class="text-gray-600">Record audio, save it locally, and transcribe using Gemini.</p>
+        </header>
+
+        <section id="apiKeySection" class="mb-6 p-4 bg-white rounded-lg shadow">
+            <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key:</label>
+            <div class="flex items-center space-x-2">
+                <input type="password" id="apiKey" name="apiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your API key">
+                <button id="saveApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save</button>
+            </div>
+             <p class="text-xs text-gray-500 mt-2">Your API key is stored only in your browser's local storage and is required for transcription.</p>
+        </section>
+
+        <section class="mb-6 p-6 bg-white rounded-lg shadow text-center">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Record Audio</h2>
+            <button id="recordButton" class="p-4 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out disabled:bg-gray-400">
+                <i id="micIconPlaceholder" data-lucide="mic" style="width: 32px; height: 32px;"></i>
+            </button>
+            <p id="statusMessage" class="mt-3 text-gray-600 h-5">&nbsp;</p> </section>
+
+        <section id="transcriptionSection" class="mb-6 p-4 bg-white rounded-lg shadow hidden">
+             <h2 class="text-xl font-semibold mb-2 text-gray-700">Transcription</h2>
+             <div class="relative">
+                <textarea id="transcriptionOutput" rows="4" class="w-full p-2 border border-gray-300 rounded-md bg-gray-50 resize-none" readonly placeholder="Transcription will appear here..."></textarea>
+                <button id="copyButton" title="Copy to Clipboard" class="absolute top-2 right-2 p-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 opacity-50 cursor-not-allowed" disabled>
+                    <i data-lucide="copy" style="width: 18px; height: 18px;"></i>
+                </button>
+             </div>
+        </section>
+
+        <section class="content-grow p-4 bg-white rounded-lg shadow flex flex-col">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700 flex-shrink-0">Recording History</h2>
+            <div id="historyList" class="history-list flex-grow overflow-y-auto space-y-3 pr-2">
+                <p id="noHistoryMessage" class="text-gray-500">No recordings yet.</p>
+            </div>
+        </section>
+
+        <footer class="mt-8 text-center text-sm text-gray-500">
+            <p>App by Gemini. Uses browser storage and requires Gemini API Key for transcription.</p>
+        </footer>
+
+    </div> <script>
+        // --- DOM Elements ---
+        const apiKeyInput = document.getElementById('apiKey');
+        const saveApiKeyButton = document.getElementById('saveApiKey');
+        const recordButton = document.getElementById('recordButton');
+        // const micIcon = document.getElementById('micIcon'); // No longer needed with data-lucide
+        const statusMessage = document.getElementById('statusMessage');
+        const transcriptionSection = document.getElementById('transcriptionSection');
+        const transcriptionOutput = document.getElementById('transcriptionOutput');
+        const copyButton = document.getElementById('copyButton');
+        const historyList = document.getElementById('historyList');
+        const noHistoryMessage = document.getElementById('noHistoryMessage');
+
+        // --- State Variables ---
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let currentApiKey = localStorage.getItem('geminiApiKey') || '';
+        let db; // For IndexedDB
+
+        // --- Constants ---
+        const DB_NAME = 'VoiceRecorderDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'recordings';
+        const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=';
+
+        // --- IndexedDB Initialization ---
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onerror = (event) => {
+                    console.error("IndexedDB error:", event.target.error);
+                    setStatus('Error initializing local database.', true);
+                    reject(event.target.error);
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    console.log("Database initialized successfully.");
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                        objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+                        console.log("Object store created.");
+                    }
+                };
+            });
+        }
+
+        // --- IndexedDB Operations (Promisified) ---
+        // (Add, Get All, Get By ID, Update, Delete - unchanged from previous version)
+        function addRecordingToDB(blob, mimeType) {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject("Database not initialized.");
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const recording = {
+                    audioBlob: blob,
+                    mimeType: mimeType, // Store mimeType
+                    timestamp: new Date(),
+                    transcription: null // Initially no transcription
+                };
+                const request = store.add(recording);
+
+                request.onsuccess = (event) => {
+                    console.log("Recording added to DB with ID:", event.target.result);
+                    resolve(event.target.result); // Returns the new ID
+                };
+                request.onerror = (event) => {
+                    console.error("Error adding recording:", event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        function getRecordingsFromDB() {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject("Database not initialized.");
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll(); // Get all recordings
+
+                request.onsuccess = (event) => {
+                    resolve(event.target.result.sort((a, b) => b.timestamp - a.timestamp)); // Sort newest first
+                };
+                request.onerror = (event) => {
+                    console.error("Error getting recordings:", event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+         function getRecordingByIdFromDB(id) {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject("Database not initialized.");
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(id);
+
+                request.onsuccess = (event) => {
+                    resolve(event.target.result);
+                };
+                request.onerror = (event) => {
+                    console.error("Error getting recording by ID:", event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        function updateTranscriptionInDB(id, transcription) {
+             return new Promise(async (resolve, reject) => {
+                if (!db) return reject("Database not initialized.");
+
+                try {
+                    const recording = await getRecordingByIdFromDB(id);
+                    if (!recording) return reject(`Recording with ID ${id} not found.`);
+
+                    recording.transcription = transcription; // Update the transcription
+
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.put(recording); // Put the updated object back
+
+                    request.onsuccess = () => {
+                        console.log(`Transcription updated for recording ID: ${id}`);
+                        resolve();
+                    };
+                    request.onerror = (event) => {
+                        console.error("Error updating transcription:", event.target.error);
+                        reject(event.target.error);
+                    };
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        function deleteRecordingFromDB(id) {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject("Database not initialized.");
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete(id);
+
+                request.onsuccess = () => {
+                    console.log("Recording deleted:", id);
+                    resolve();
+                };
+                request.onerror = (event) => {
+                    console.error("Error deleting recording:", event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+
+        // --- UI Update Functions ---
+        function setStatus(message, isError = false) {
+            statusMessage.textContent = message;
+            statusMessage.className = `mt-3 h-5 ${isError ? 'text-red-600' : 'text-gray-600'}`;
+        }
+
+        function updateRecordButtonState() {
+            const micIconElement = recordButton.querySelector('[data-lucide="mic"]'); // Find the icon element
+            if (isRecording) {
+                recordButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+                recordButton.classList.add('bg-blue-600', 'hover:bg-blue-700', 'recording-pulse');
+                if (micIconElement) micIconElement.classList.add('animate-pulse'); // Simple visual cue
+                setStatus('Recording...');
+            } else {
+                recordButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'recording-pulse');
+                recordButton.classList.add('bg-red-600', 'hover:bg-red-700');
+                 if (micIconElement) micIconElement.classList.remove('animate-pulse');
+                setStatus('Click the mic to record');
+            }
+             recordButton.disabled = false; // Re-enable after potential disable during processing
+        }
+
+        function displayTranscription(text) {
+            transcriptionOutput.value = text || "No transcription available.";
+            transcriptionSection.classList.remove('hidden');
+            // Enable copy button only if there's text
+            if (text && text !== "API Key needed." && !text.startsWith("Error:")) { // Added more robust check
+                 copyButton.disabled = false;
+                 copyButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                 copyButton.classList.add('opacity-100', 'cursor-pointer');
+            } else {
+                 copyButton.disabled = true;
+                 copyButton.classList.add('opacity-50', 'cursor-not-allowed');
+                 copyButton.classList.remove('opacity-100', 'cursor-pointer');
+            }
+        }
+
+        async function renderHistory() {
+            try {
+                const recordings = await getRecordingsFromDB();
+                historyList.innerHTML = ''; // Clear current list
+
+                if (recordings.length === 0) {
+                    noHistoryMessage.classList.remove('hidden');
+                    historyList.appendChild(noHistoryMessage);
+                } else {
+                    noHistoryMessage.classList.add('hidden');
+                    recordings.forEach(rec => {
+                        const div = document.createElement('div');
+                        div.className = 'p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between space-x-3';
+
+                        const infoDiv = document.createElement('div');
+                        infoDiv.className = 'flex-grow min-w-0'; // Added min-w-0 for better truncation
+
+                        const time = document.createElement('p');
+                        time.className = 'text-sm font-medium text-gray-800 truncate'; // Added truncate
+                        time.textContent = `Recorded: ${rec.timestamp.toLocaleString()}`;
+                        time.title = `Recorded: ${rec.timestamp.toLocaleString()}`; // Add title for full date on hover
+
+
+                        const transcriptionPreview = document.createElement('p');
+                        transcriptionPreview.className = 'text-xs text-gray-500 italic truncate';
+                        transcriptionPreview.textContent = rec.transcription ? `"${rec.transcription.substring(0, 60)}..."` : 'Not transcribed yet';
+                        if(rec.transcription) transcriptionPreview.title = rec.transcription; // Add title for full text on hover
+
+                        infoDiv.appendChild(time);
+                        infoDiv.appendChild(transcriptionPreview);
+
+                        const controlsDiv = document.createElement('div');
+                        controlsDiv.className = 'flex-shrink-0 flex items-center space-x-2';
+
+                        // Play Button
+                        const playButton = document.createElement('button');
+                        playButton.innerHTML = `<i data-lucide="play" style="width: 18px; height: 18px;"></i>`; // Use data-lucide
+                        playButton.className = 'p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500';
+                        playButton.title = 'Play Audio';
+                        playButton.onclick = () => playAudio(rec.audioBlob);
+
+                        // Transcribe Button
+                        const transcribeButton = document.createElement('button');
+                        transcribeButton.innerHTML = `<i data-lucide="captions" style="width: 18px; height: 18px;"></i>`; // Use data-lucide
+                        transcribeButton.className = 'p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500';
+                        transcribeButton.title = 'Transcribe Audio';
+                        transcribeButton.onclick = (e) => {
+                            transcribeButton.disabled = true; // Disable while processing
+                            transcribeButton.innerHTML = '...'; // Indicate loading
+                            transcribeAudio(rec.id, rec.audioBlob, rec.mimeType)
+                                .finally(() => {
+                                    // Re-enable button and restore icon regardless of success/failure
+                                    transcribeButton.disabled = false;
+                                    transcribeButton.innerHTML = `<i data-lucide="captions" style="width: 18px; height: 18px;"></i>`;
+                                    lucide.createIcons(); // Re-create icon after changing innerHTML
+                                });
+                        };
+                        transcribeButton.disabled = !currentApiKey; // Disable if no API key
+                        if (!currentApiKey) transcribeButton.title = 'API Key required for transcription';
+
+
+                        // Delete Button
+                        const deleteButton = document.createElement('button');
+                        deleteButton.innerHTML = `<i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>`; // Use data-lucide
+                        deleteButton.className = 'p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500';
+                        deleteButton.title = 'Delete Recording';
+                        deleteButton.onclick = () => deleteRecording(rec.id);
+
+                        controlsDiv.appendChild(playButton);
+                        controlsDiv.appendChild(transcribeButton);
+                        controlsDiv.appendChild(deleteButton);
+
+                        div.appendChild(infoDiv);
+                        div.appendChild(controlsDiv);
+                        historyList.appendChild(div);
+                    });
+                     // Create icons for the newly added history items
+                    lucide.createIcons();
+                }
+            } catch (error) {
+                console.error("Error rendering history:", error);
+                setStatus('Could not load recording history.', true);
+                noHistoryMessage.classList.remove('hidden');
+                historyList.appendChild(noHistoryMessage);
+            }
+        }
+
+        // --- Audio Handling ---
+        async function startRecording() {
+            try {
+                // Request microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                console.log("Microphone access granted."); // Log success
+
+                // Determine supported MIME type (unchanged)
+                const options = { mimeType: 'audio/webm;codecs=opus' };
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    console.log(options.mimeType + ' is not Supported');
+                    options.mimeType = 'audio/ogg;codecs=opus';
+                     if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        console.log(options.mimeType + ' is not Supported');
+                        options.mimeType = 'audio/webm';
+                        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                             console.log(options.mimeType + ' is not Supported');
+                             options.mimeType = ''; // Let browser decide
+                        }
+                    }
+                }
+                console.log("Using MIME type:", options.mimeType || "Browser Default");
+
+                mediaRecorder = new MediaRecorder(stream, options);
+                audioChunks = []; // Reset chunks
+
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                    const mimeType = mediaRecorder.mimeType || 'audio/webm';
+                    console.log("Recording stopped. Blob created:", audioBlob);
+                    console.log("Blob MIME type:", mimeType);
+
+                    stream.getTracks().forEach(track => track.stop()); // Stop tracks
+
+                    try {
+                        setStatus('Saving recording...');
+                        recordButton.disabled = true;
+                        const newId = await addRecordingToDB(audioBlob, mimeType);
+                        setStatus(`Recording saved (ID: ${newId}).`);
+                        await renderHistory();
+                    } catch (error) {
+                        setStatus('Error saving recording.', true);
+                        console.error("Error saving to DB:", error);
+                    } finally {
+                         updateRecordButtonState();
+                    }
+                };
+
+                mediaRecorder.onerror = (event) => {
+                    console.error("MediaRecorder error:", event.error);
+                    setStatus(`Recording error: ${event.error?.name || 'Unknown error'}`, true);
+                    isRecording = false;
+                    updateRecordButtonState();
+                    stream.getTracks().forEach(track => track.stop()); // Stop tracks on error
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                updateRecordButtonState();
+
+            } catch (err) {
+                // *** MODIFIED ERROR HANDLING ***
+                console.error("Error accessing microphone:", err);
+                // Try to get more details from the error object
+                console.error("Error details (stringified):", JSON.stringify(err));
+                console.error("Error name:", err?.name);
+                console.error("Error message:", err?.message);
+
+                let userMessage = 'Error starting recording.'; // Default message
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    userMessage = 'Microphone access denied. Please allow access in browser settings.';
+                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                     userMessage = 'No microphone found. Ensure it is connected and enabled.';
+                } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                     userMessage = 'Microphone is already in use or cannot be read.';
+                } else if (err.message) {
+                    // Use the error message if available and specific checks failed
+                    userMessage = `Error: ${err.message}`;
+                } else {
+                     // Fallback if name/message are unavailable
+                     userMessage = 'An unknown error occurred accessing the microphone. Check browser console for details.';
+                }
+
+                setStatus(userMessage, true);
+                isRecording = false; // Ensure state is correct
+                updateRecordButtonState();
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                try {
+                    mediaRecorder.stop(); // This triggers the 'onstop' event
+                    isRecording = false;
+                    setStatus('Processing recording...');
+                    recordButton.disabled = true; // Disable button while processing
+                } catch (error) {
+                     console.error("Error stopping MediaRecorder:", error);
+                     setStatus('Error stopping recording.', true);
+                     // Attempt to force state reset
+                     isRecording = false;
+                     updateRecordButtonState();
+                     // Manually stop tracks if recorder errored on stop
+                     if (mediaRecorder && mediaRecorder.stream) {
+                         mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                     }
+                }
+            }
+        }
+
+        function playAudio(blob) {
+            try {
+                const audioUrl = URL.createObjectURL(blob);
+                const audio = new Audio(audioUrl);
+                audio.onerror = (e) => {
+                    console.error("Error playing audio:", e);
+                    setStatus('Error playing audio file.', true);
+                    URL.revokeObjectURL(audioUrl); // Clean up
+                };
+                audio.onended = () => {
+                    URL.revokeObjectURL(audioUrl); // Clean up after playing
+                };
+                audio.play();
+            } catch (error) {
+                 console.error("Error creating audio object:", error);
+                 setStatus('Could not play audio.', true);
+            }
+        }
+
+        // --- Transcription ---
+        // (Unchanged from previous version)
+        async function transcribeAudio(id, audioBlob, mimeType) {
+            if (!currentApiKey) {
+                setStatus('Gemini API Key is not set. Cannot transcribe.', true);
+                displayTranscription("API Key needed.");
+                return;
+            }
+            if (!audioBlob) {
+                 setStatus('Invalid audio data for transcription.', true);
+                 return;
+            }
+
+            setStatus(`Transcribing recording ${id}...`);
+            displayTranscription("Transcribing..."); // Show immediate feedback
+            transcriptionSection.classList.remove('hidden'); // Show section
+            copyButton.disabled = true; // Disable copy during transcription
+            copyButton.classList.add('opacity-50', 'cursor-not-allowed');
+            copyButton.classList.remove('opacity-100', 'cursor-pointer');
+
+
+            try {
+                // 1. Convert Blob to Base64
+                const base64Audio = await blobToBase64(audioBlob);
+                console.log("Audio converted to Base64 (first 100 chars):", base64Audio.substring(0, 100));
+                console.log("Using MIME type for API:", mimeType);
+
+
+                // 2. Prepare API Request
+                const requestBody = {
+                    contents: [
+                        {
+                            parts: [
+                                { text: "Please transcribe the following audio recording:" },
+                                {
+                                    inline_data: {
+                                        mime_type: mimeType, // Use the actual mimeType
+                                        data: base64Audio
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    // Optional: Add generation config if needed
+                    // generationConfig: {
+                    //   "temperature": 0.7,
+                    //   "topP": 1,
+                    //   "topK": 1,
+                    //   "maxOutputTokens": 2048,
+                    // }
+                };
+
+                // 3. Make API Call
+                const response = await fetch(GEMINI_API_URL + currentApiKey, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    console.error("Gemini API Error Response:", data);
+                    const errorMsg = data?.error?.message || `HTTP error! Status: ${response.status}`;
+                    throw new Error(errorMsg);
+                }
+
+                // 4. Extract Transcription
+                let transcriptionText = "Transcription not found in response."; // Default
+                 if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
+                    transcriptionText = data.candidates[0].content.parts[0].text;
+                 } else if (data.candidates && data.candidates[0] && data.candidates[0].finishReason === "SAFETY") {
+                     transcriptionText = "Transcription blocked due to safety settings.";
+                 } else {
+                     console.warn("Unexpected API response structure:", data);
+                     if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+                         const textPart = data.candidates[0].content.parts.find(part => part.text);
+                         if (textPart) {
+                             transcriptionText = textPart.text;
+                         }
+                     }
+                 }
+
+
+                console.log("Transcription successful:", transcriptionText);
+                setStatus(`Transcription complete for recording ${id}.`);
+                displayTranscription(transcriptionText);
+
+                // 5. Save transcription to DB and refresh history
+                await updateTranscriptionInDB(id, transcriptionText);
+                await renderHistory();
+
+            } catch (error) {
+                console.error("Transcription failed:", error);
+                setStatus(`Transcription error: ${error.message}`, true);
+                displayTranscription(`Error: ${error.message}`);
+                 transcriptionSection.classList.remove('hidden');
+                copyButton.disabled = true;
+                copyButton.classList.add('opacity-50', 'cursor-not-allowed');
+                copyButton.classList.remove('opacity-100', 'cursor-pointer');
+            }
+        }
+
+        // Helper function to convert Blob to Base64
+        // (Unchanged from previous version)
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64String = reader.result.split(',')[1];
+                    resolve(base64String);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+
+        // --- History Actions ---
+        // (Delete - unchanged from previous version)
+        async function deleteRecording(id) {
+            if (confirm(`Are you sure you want to delete recording ${id}?`)) {
+                try {
+                    await deleteRecordingFromDB(id);
+                    setStatus(`Recording ${id} deleted.`);
+                    await renderHistory(); // Refresh list
+                     // Clear transcription if the deleted item was the one displayed
+                    // This requires knowing which item was last transcribed/displayed
+                    // For simplicity, we won't clear it automatically now.
+                } catch (error) {
+                    setStatus('Error deleting recording.', true);
+                    console.error("Error deleting from DB:", error);
+                }
+            }
+        }
+
+        // --- Event Listeners ---
+        recordButton.addEventListener('click', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                transcriptionOutput.value = '';
+                transcriptionSection.classList.add('hidden');
+                copyButton.disabled = true;
+                copyButton.classList.add('opacity-50', 'cursor-not-allowed');
+                copyButton.classList.remove('opacity-100', 'cursor-pointer');
+                startRecording();
+            }
+        });
+
+        saveApiKeyButton.addEventListener('click', () => {
+            currentApiKey = apiKeyInput.value.trim();
+            if (currentApiKey) {
+                localStorage.setItem('geminiApiKey', currentApiKey);
+                setStatus('API Key saved locally.');
+                renderHistory(); // Refresh to enable/disable transcribe buttons
+            } else {
+                localStorage.removeItem('geminiApiKey');
+                setStatus('API Key removed.', true);
+                 renderHistory(); // Refresh to enable/disable transcribe buttons
+            }
+        });
+
+        copyButton.addEventListener('click', () => {
+            if (transcriptionOutput.value && !copyButton.disabled) { // Check disabled state too
+                navigator.clipboard.writeText(transcriptionOutput.value)
+                    .then(() => {
+                        setStatus('Transcription copied to clipboard!');
+                        const copyIcon = copyButton.querySelector('[data-lucide="copy"]');
+                        const checkIconHTML = `<i data-lucide="check" style="width: 18px; height: 18px; color: green;"></i>`; // Temporary check icon
+                        const originalIconHTML = copyIcon ? copyIcon.outerHTML : `<i data-lucide="copy" style="width: 18px; height: 18px;"></i>`; // Fallback
+
+                        copyButton.innerHTML = checkIconHTML;
+                        lucide.createIcons(); // Render the check icon
+
+                        setTimeout(() => {
+                            copyButton.innerHTML = originalIconHTML;
+                            lucide.createIcons(); // Render the copy icon again
+                         }, 1500);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        setStatus('Failed to copy transcription.', true);
+                    });
+            }
+        });
+
+
+        // --- Initialization ---
+        async function initializeApp() {
+            // *** ADDED: Initialize Lucide icons ***
+            lucide.createIcons();
+
+            // Set initial API key input value
+            apiKeyInput.value = currentApiKey;
+
+            // Initialize IndexedDB
+            try {
+                await initDB();
+                await renderHistory(); // Load history after DB init
+            } catch (error) {
+                 setStatus('Failed to initialize database. History may not work.', true);
+            }
+
+            // Set initial status and button state
+            setStatus('Click the mic to record');
+            updateRecordButtonState();
+
+             // Check for microphone support more robustly
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setStatus('Audio recording (getUserMedia) is not supported by this browser.', true);
+                recordButton.disabled = true;
+                recordButton.title = 'Audio recording not supported';
+            } else if (!window.MediaRecorder) {
+                 setStatus('MediaRecorder API is not supported by this browser. Cannot record.', true);
+                 recordButton.disabled = true;
+                 recordButton.title = 'MediaRecorder not supported';
+            } else {
+                 // Check permissions proactively if possible (might prompt user immediately)
+                 try {
+                    const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                    console.log('Microphone permission state:', permissionStatus.state);
+                    if (permissionStatus.state === 'denied') {
+                        setStatus('Microphone access was previously denied. Please enable it in browser settings.', true);
+                    }
+                    // Listen for changes in permission state
+                    permissionStatus.onchange = () => {
+                        console.log('Microphone permission state changed to:', permissionStatus.state);
+                        if (permissionStatus.state === 'denied') {
+                             setStatus('Microphone access denied.', true);
+                        } else if (permissionStatus.state === 'granted' && statusMessage.textContent.includes('denied')) {
+                             setStatus('Microphone access granted. Click the mic to record.');
+                        }
+                     };
+                 } catch (permError) {
+                     console.warn("Permission API query failed:", permError); // Non-critical, proceed
+                 }
+            }
+        }
+
+        // Start the application
+         // Use DOMContentLoaded to ensure elements exist and Lucide script has loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+    </script>
+</body>
+</html>
