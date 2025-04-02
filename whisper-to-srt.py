@@ -53,14 +53,37 @@ def whisper_to_srt(json_data, output_file=None, max_chars=80):
     # --- FILTERING STEP ---
     filtered_segments = []
     for segment in data['segments']:
-        # Keep segments that:
-        # 1. Have a non-zero start time.
-        # 2. Have a compression ratio less than a threshold (e.g., 1.4).
-        # 3. Do NOT have a start time of 0 if there are segments with non-zero start time
-        if segment['start'] != 0 or all(s['start'] == 0 for s in data['segments']) and segment['compression_ratio'] < 1.4:
+        # Skip segments with:
+        # 1. High no_speech_prob (likely non-speech)
+        # 2. Very negative avg_logprob (low confidence)
+        # 3. Unusual compression_ratio (potential issues)
+        # 4. Zero start time (unless it's the only segment)
+        if (segment.get('no_speech_prob', 0) < 0.5 and  # Less than 50% chance of being non-speech
+            segment.get('avg_logprob', 0) > -0.5 and    # Better than -0.5 log probability
+            0.8 < segment.get('compression_ratio', 1.0) < 2.0 and  # Normal speech patterns
+            (segment['start'] != 0 or all(s['start'] == 0 for s in data['segments']))):
             filtered_segments.append(segment)
 
-    data['segments'] = filtered_segments
+    # Sort segments by start time to ensure proper ordering
+    filtered_segments.sort(key=lambda x: x['start'])
+
+    # Merge overlapping segments
+    merged_segments = []
+    if filtered_segments:
+        current_segment = filtered_segments[0].copy()
+        
+        for next_segment in filtered_segments[1:]:
+            # If segments overlap or are very close (within 0.1s), merge them
+            if next_segment['start'] <= current_segment['end'] + 0.1:
+                current_segment['end'] = max(current_segment['end'], next_segment['end'])
+                current_segment['text'] = current_segment['text'] + ' ' + next_segment['text']
+            else:
+                merged_segments.append(current_segment)
+                current_segment = next_segment.copy()
+        
+        merged_segments.append(current_segment)
+
+    data['segments'] = merged_segments
     # --- END FILTERING ---
 
     srt_lines = []
@@ -71,11 +94,11 @@ def whisper_to_srt(json_data, output_file=None, max_chars=80):
         end_time = segment['end']
         text = segment['text'].strip()
 
-        chunks = split_text_into_chunks(text, max_chars)
-
-        if not chunks:  # Skip empty segments
+        if not text:  # Skip empty segments
             continue
 
+        chunks = split_text_into_chunks(text, max_chars)
+        
         if len(chunks) == 1:
             srt_lines.append(f"{subtitle_index}")
             srt_lines.append(f"{format_time(start_time)} --> {format_time(end_time)}")
@@ -83,6 +106,7 @@ def whisper_to_srt(json_data, output_file=None, max_chars=80):
             srt_lines.append("")  # Empty line
             subtitle_index += 1
         else:
+            # Distribute chunks evenly across segment duration
             chunk_duration = (end_time - start_time) / len(chunks)
             for i, chunk in enumerate(chunks):
                 chunk_start = start_time + i * chunk_duration
