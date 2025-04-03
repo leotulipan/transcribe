@@ -24,12 +24,13 @@ File Uploads: Up to 200 MB per file for direct uploads.
 - ✅ recording history: max 10 entries (auto-delete the oldest)
 - ✅ Settings wheel should toggle the display on/off - not just the X
 - ✅ Dark mode (System/Light/Dark) switch in settings
-- toggle switch to activate ffmpeg encode (on by default)
-- Support different Transcription APIs
-  - toggle switch in front of Gemini API
-  - toggle switch + api key for OpenAI
-    - Additional settings: dropdown for model (whisper, gpt-4o-audio-preview chat completion, gpt-4o-mini-audio-preview chat completion)
-    - language: auto or select from dropdown (for whisper)
+- ✅ remove token in/out from settings screen (only keep them for each recording when we have the info)
+- ✅ toggle switch to activate ffmpeg encode (on by default)
+- ✅ Support different Transcription APIs
+  - ✅ toggle switch in front of Gemini API
+  - ✅ toggle switch + api key for OpenAI
+    - ✅ Additional settings: dropdown for model (whisper, gpt-4o-audio-preview chat completion, gpt-4o-mini-audio-preview chat completion)
+    - ✅ language: auto or select from dropdown (for whisper)
  - groq
     - whisper-large-v3-turbo or distil-whisper-large-v3-en (english only) or whisper-large-v3
     - groq uses the openai api syntax
@@ -40,9 +41,15 @@ File Uploads: Up to 200 MB per file for direct uploads.
   -F temperature=0 \
   -F response_format=text \
   -F timestamp_granularities=["word"] \
-  -F language=en
-        ```
+  -F language=en```
   - other apis coming later (plan for them)
+- info api key: add the links
+  - https://aistudio.google.com/app/apikey
+  - https://platform.openai.com/api-keys
+  - https://console.groq.com/keys
+- only one of the toggles can be active at any one time (google, openai, groq) this forces that model to be used
+- headers and description color in dark mode of the text is too dark: fix
+- input boxes are not adapted to dark mode (white background still)
 - depending on settings auto-set limit of recording length (can be overridden in settings as an input box)
   - with ffmpeg: always 10:00
   - google uncompressed: 9:30
@@ -50,7 +57,3 @@ File Uploads: Up to 200 MB per file for direct uploads.
 
 - File size/splitting
 - File Upload (Drop) over the Rec Button (change icon when drag/drop active)
-- info api key: add the links
-  - https://aistudio.google.com/app/apikey
-  - https://platform.openai.com/api-keys
-  - https://console.groq.com/keys

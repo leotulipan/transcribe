@@ -133,27 +133,88 @@
                 </button>
             </div>
             
-            <div id="apiKeySection" class="mb-4">
-                <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key:</label>
-                <div class="flex items-center space-x-2">
-                    <input type="password" id="apiKey" name="apiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your API key">
-                    <button id="saveApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save</button>
+            <div id="transcriptionApiSection" class="mb-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Transcription API:</h3>
+                
+                <!-- Gemini API -->
+                <div class="mb-3 p-3 border border-gray-200 rounded-md">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-sm font-medium text-gray-700">Google Gemini</h4>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="geminiToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="geminiSettings" class="mt-2">
+                        <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-1">API Key:</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="password" id="apiKey" name="apiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your API key">
+                            <button id="saveApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save</button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Your API key is stored only in your browser's local storage.</p>
+                    </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-2">Your API key is stored only in your browser's local storage and is required for transcription.</p>
+                
+                <!-- OpenAI API -->
+                <div class="mb-3 p-3 border border-gray-200 rounded-md">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-sm font-medium text-gray-700">OpenAI</h4>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="openaiToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="openaiSettings" class="mt-2 hidden">
+                        <label for="openaiApiKey" class="block text-sm font-medium text-gray-700 mb-1">API Key:</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="password" id="openaiApiKey" name="openaiApiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your OpenAI API key">
+                            <button id="saveOpenaiApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save</button>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label for="openaiModel" class="block text-sm font-medium text-gray-700 mb-1">Model:</label>
+                            <select id="openaiModel" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="whisper-1">Whisper</option>
+                                <option value="gpt-4o-audio-preview">GPT-4o Audio Preview</option>
+                                <option value="gpt-4o-mini-audio-preview">GPT-4o Mini Audio Preview</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label for="openaiLanguage" class="block text-sm font-medium text-gray-700 mb-1">Language:</label>
+                            <select id="openaiLanguage" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="auto">Auto-detect</option>
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="nl">Dutch</option>
+                                <option value="pl">Polish</option>
+                                <option value="ru">Russian</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="zh">Chinese</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div id="ffmpegSection" class="mb-4">
                 <h3 class="text-sm font-medium text-gray-700 mb-2">FFmpeg Status:</h3>
-                <p id="ffmpegStatus" class="text-sm text-gray-600">Loading FFmpeg...</p>
+                <div class="flex items-center justify-between mb-2">
+                    <p id="ffmpegStatus" class="text-sm text-gray-600">Loading FFmpeg...</p>
+                    <div class="flex items-center space-x-2">
+                        <label class="text-xs text-gray-500">Enable FFmpeg</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="ffmpegToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
                 <div id="ffmpegLog" class="hidden text-left mt-2"></div>
-            </div>
-
-            <div id="tokenUsageSection" class="mb-4">
-                <h3 class="text-sm font-medium text-gray-700 mb-2">Token Usage:</h3>
-                <p class="text-xs text-gray-600">
-                    Input Tokens: <span id="inputTokens">0</span><br>
-                    Output Tokens: <span id="outputTokens">0</span>
-                </p>
             </div>
             
             <div id="themeSection" class="mb-4">
@@ -216,12 +277,23 @@
         const settingsSection = document.getElementById('settingsSection');
         const closeSettings = document.getElementById('closeSettings');
         const ffmpegStatus = document.getElementById('ffmpegStatus');
+        const geminiToggle = document.getElementById('geminiToggle');
+        const geminiSettings = document.getElementById('geminiSettings');
+        const openaiToggle = document.getElementById('openaiToggle');
+        const openaiSettings = document.getElementById('openaiSettings');
+        const openaiApiKeyInput = document.getElementById('openaiApiKey');
+        const saveOpenaiApiKeyButton = document.getElementById('saveOpenaiApiKey');
+        const openaiModelSelect = document.getElementById('openaiModel');
+        const openaiLanguageSelect = document.getElementById('openaiLanguage');
 
         // --- State Variables (Unchanged) ---
         let mediaRecorder;
         let audioChunks = [];
         let isRecording = false;
         let currentApiKey = localStorage.getItem('geminiApiKey') || '';
+        let currentOpenaiApiKey = localStorage.getItem('openaiApiKey') || '';
+        let openaiModel = localStorage.getItem('openaiModel') || 'whisper-1';
+        let openaiLanguage = localStorage.getItem('openaiLanguage') || 'auto';
         let db;
         let ffmpeg;
         let ffmpegLoaded = false;
@@ -230,12 +302,16 @@
         let tokenUsage = { input: 0, output: 0 }; // Track token usage
         let darkMode = localStorage.getItem('darkMode') || 'system'; // Dark mode preference
         let settingsVisible = false; // Track settings visibility
+        let ffmpegEnabled = localStorage.getItem('ffmpegEnabled') !== 'false'; // FFmpeg enabled by default
+        let geminiEnabled = localStorage.getItem('geminiEnabled') !== 'false'; // Gemini enabled by default
+        let openaiEnabled = localStorage.getItem('openaiEnabled') === 'true'; // OpenAI disabled by default
 
         // --- Constants ---
         const DB_NAME = 'VoiceRecorderDB_MP3';
         const DB_VERSION = 1;
         const STORE_NAME = 'recordings_mp3';
         const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=';
+        const OPENAI_API_URL = 'https://api.openai.com/v1/audio/transcriptions';
         const TARGET_MIME_TYPE = 'audio/mpeg';
         const TARGET_FORMAT = 'mp3';
         // const TARGET_BITRATE = '256k'; // Replaced by quality setting
@@ -244,6 +320,14 @@
 
         // --- FFmpeg Initialization ---
         async function loadFFmpeg() {
+            if (!ffmpegEnabled) {
+                ffmpegStatus.textContent = 'FFmpeg disabled. Audio will not be converted to MP3.';
+                ffmpegLoaded = false;
+                recordButton.disabled = false;
+                recordButton.title = 'Recording enabled (no MP3 conversion)';
+                return;
+            }
+            
             ffmpegStatus.textContent = 'Loading FFmpeg (approx. 30MB)...';
             recordButton.disabled = true;
             ffmpegLog.classList.remove('hidden');
@@ -581,7 +665,7 @@
 
         // --- Audio Handling ---
         async function startRecording() { // Unchanged
-             if (!ffmpegLoaded) { setStatus('FFmpeg not loaded. Cannot record.', true); return; }
+             if (!ffmpegEnabled && !ffmpegLoaded) { setStatus('FFmpeg disabled and not loaded. Cannot record.', true); return; }
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); console.log("Mic access granted.");
                 const options = { mimeType: 'audio/webm;codecs=opus' };
@@ -596,8 +680,27 @@
                     const originalMimeType = mediaRecorder.mimeType || 'audio/webm';
                     console.log("Recording stopped. Original Blob:", originalBlob); console.log("Original MIME type:", originalMimeType);
                     stream.getTracks().forEach(track => track.stop());
-                    await convertAudioAndSave(originalBlob, originalMimeType); // Convert and save
-                    updateRecordButtonState(); // Update button state after conversion attempt
+                    
+                    if (ffmpegEnabled && ffmpegLoaded) {
+                        await convertAudioAndSave(originalBlob, originalMimeType); // Convert and save
+                    } else {
+                        // Save without conversion
+                        setStatus('Saving recording...');
+                        const newId = await addRecordingToDB(originalBlob, originalMimeType);
+                        setStatus(`Recording saved (ID: ${newId}).`);
+                        await renderHistory();
+                        
+                        // Attempt automatic transcription if API key is available
+                        if (currentApiKey) {
+                            setStatus(`Starting automatic transcription for recording ${newId}...`);
+                            await transcribeAudio(newId, originalBlob, originalMimeType);
+                        } else {
+                            setStatus('Recording saved. Add an API key to enable automatic transcription.', true);
+                            displayTranscription("API Key needed for transcription.");
+                        }
+                    }
+                    
+                    updateRecordButtonState(); // Update button state after saving
                 };
                 mediaRecorder.onerror = (event) => { console.error("MediaRecorder error:", event.error); setStatus(`Recording error: ${event.error?.name || 'Unknown'}`, true); isRecording = false; updateRecordButtonState(); stream.getTracks().forEach(track => track.stop()); };
                 mediaRecorder.start(); isRecording = true; updateRecordButtonState();
@@ -747,41 +850,139 @@
             }
         }
 
-        // --- Transcription (Unchanged logic, sends MP3) ---
+        // --- Transcription (Updated to support multiple APIs) ---
         async function transcribeAudio(id, audioBlob, mimeType) {
-            if (!currentApiKey) { setStatus('API Key needed.', true); displayTranscription("API Key needed."); return; }
-            if (!audioBlob) { setStatus('Invalid audio.', true); return; }
-            if (!ffmpegLoaded) { setStatus('FFmpeg not loaded.', true); return;}
-            setStatus(`Transcribing recording ${id}...`); displayTranscription("Transcribing..."); transcriptionSection.classList.remove('hidden'); copyButton.disabled = true; copyButton.classList.add('opacity-50', 'cursor-not-allowed'); copyButton.classList.remove('opacity-100', 'cursor-pointer');
+            // Check if any API is enabled and has a key
+            if (!geminiEnabled && !openaiEnabled) {
+                setStatus('No transcription API enabled.', true);
+                displayTranscription("No transcription API enabled. Please enable an API in settings.");
+                return;
+            }
+            
+            if (geminiEnabled && !currentApiKey) {
+                setStatus('Gemini API Key needed.', true);
+                displayTranscription("Gemini API Key needed for transcription.");
+                return;
+            }
+            
+            if (openaiEnabled && !currentOpenaiApiKey) {
+                setStatus('OpenAI API Key needed.', true);
+                displayTranscription("OpenAI API Key needed for transcription.");
+                return;
+            }
+            
+            if (!audioBlob) {
+                setStatus('Invalid audio.', true);
+                return;
+            }
+            
+            if (ffmpegEnabled && !ffmpegLoaded) {
+                setStatus('FFmpeg not loaded.', true);
+                return;
+            }
+            
+            setStatus(`Transcribing recording ${id}...`);
+            displayTranscription("Transcribing...");
+            transcriptionSection.classList.remove('hidden');
+            copyButton.disabled = true;
+            copyButton.classList.add('opacity-50', 'cursor-not-allowed');
+            copyButton.classList.remove('opacity-100', 'cursor-pointer');
 
             try {
-                const base64Audio = await blobToBase64(audioBlob);
-                const requestBody = { contents: [{ parts: [ { text: "Please transcribe the following audio recording:" }, { inline_data: { mime_type: mimeType, data: base64Audio } } ]}] };
-                const response = await fetch(GEMINI_API_URL + currentApiKey, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
-                const data = await response.json();
-                if (!response.ok) { console.error("API Error:", data); throw new Error(data?.error?.message || `HTTP ${response.status}`); }
-                
-                // Update token usage
+                let transcriptionText = "Transcription not found.";
                 let recordingTokenUsage = { input: 0, output: 0 };
-                if (data.usage) {
-                    recordingTokenUsage.input = data.usage.promptTokenCount || 0;
-                    recordingTokenUsage.output = data.usage.candidatesTokenCount || 0;
-                    
-                    // Update global token usage
-                    tokenUsage.input += recordingTokenUsage.input;
-                    tokenUsage.output += recordingTokenUsage.output;
-                    localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
-                    
-                    // Update token display
-                    updateTokenDisplay();
+                
+                // Try Gemini first if enabled
+                if (geminiEnabled && currentApiKey) {
+                    try {
+                        const base64Audio = await blobToBase64(audioBlob);
+                        const requestBody = { contents: [{ parts: [ { text: "Please transcribe the following audio recording:" }, { inline_data: { mime_type: mimeType, data: base64Audio } } ]}] };
+                        const response = await fetch(GEMINI_API_URL + currentApiKey, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                            console.error("Gemini API Error:", data);
+                            throw new Error(data?.error?.message || `HTTP ${response.status}`);
+                        }
+                        
+                        // Update token usage
+                        if (data.usage) {
+                            recordingTokenUsage.input = data.usage.promptTokenCount || 0;
+                            recordingTokenUsage.output = data.usage.candidatesTokenCount || 0;
+                            
+                            // Update global token usage
+                            tokenUsage.input += recordingTokenUsage.input;
+                            tokenUsage.output += recordingTokenUsage.output;
+                            localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
+                        }
+                        
+                        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                            transcriptionText = data.candidates[0].content.parts[0].text;
+                        } else if (data.candidates?.[0]?.finishReason === "SAFETY") {
+                            transcriptionText = "Blocked: safety.";
+                        } else {
+                            console.warn("Unexpected Gemini API response:", data);
+                            const textPart = data.candidates?.[0]?.content?.parts?.find(p => p.text);
+                            if (textPart) transcriptionText = textPart.text;
+                        }
+                        
+                        console.log("Gemini transcription OK:", transcriptionText);
+                    } catch (error) {
+                        console.error("Gemini transcription failed:", error);
+                        // If Gemini fails and OpenAI is enabled, try OpenAI
+                        if (openaiEnabled && currentOpenaiApiKey) {
+                            throw new Error("Gemini failed, trying OpenAI...");
+                        } else {
+                            throw error;
+                        }
+                    }
                 }
                 
-                let transcriptionText = "Transcription not found.";
-                if (data.candidates?.[0]?.content?.parts?.[0]?.text) { transcriptionText = data.candidates[0].content.parts[0].text; }
-                else if (data.candidates?.[0]?.finishReason === "SAFETY") { transcriptionText = "Blocked: safety."; }
-                else { console.warn("Unexpected API response:", data); const textPart = data.candidates?.[0]?.content?.parts?.find(p => p.text); if (textPart) transcriptionText = textPart.text; }
+                // Try OpenAI if Gemini is not enabled or failed
+                if ((!geminiEnabled || !currentApiKey) && openaiEnabled && currentOpenaiApiKey) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', audioBlob, 'audio.mp3');
+                        formData.append('model', openaiModel);
+                        
+                        // Only add language if not auto
+                        if (openaiLanguage !== 'auto') {
+                            formData.append('language', openaiLanguage);
+                        }
+                        
+                        const response = await fetch(OPENAI_API_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${currentOpenaiApiKey}`
+                            },
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            console.error("OpenAI API Error:", errorData);
+                            throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        transcriptionText = data.text || "Transcription not found.";
+                        console.log("OpenAI transcription OK:", transcriptionText);
+                        
+                        // OpenAI doesn't provide token usage in the same way, so we'll estimate
+                        // Rough estimate: 1 token per 4 characters
+                        const estimatedTokens = Math.ceil(transcriptionText.length / 4);
+                        recordingTokenUsage.input = 0; // We don't know the input tokens
+                        recordingTokenUsage.output = estimatedTokens;
+                        
+                        // Update global token usage
+                        tokenUsage.output += estimatedTokens;
+                        localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
+                    } catch (error) {
+                        console.error("OpenAI transcription failed:", error);
+                        throw error;
+                    }
+                }
                 
-                console.log("Transcription OK:", transcriptionText);
                 setStatus(`Transcription complete (ID: ${id}).`);
                 displayTranscription(transcriptionText);
                 
@@ -802,7 +1003,15 @@
                 }
                 
                 await renderHistory();
-            } catch (error) { console.error("Transcription failed:", error); setStatus(`Transcription error: ${error.message}`, true); displayTranscription(`Error: ${error.message}`); transcriptionSection.classList.remove('hidden'); copyButton.disabled = true; copyButton.classList.add('opacity-50', 'cursor-not-allowed'); copyButton.classList.remove('opacity-100', 'cursor-pointer'); }
+            } catch (error) {
+                console.error("Transcription failed:", error);
+                setStatus(`Transcription error: ${error.message}`, true);
+                displayTranscription(`Error: ${error.message}`);
+                transcriptionSection.classList.remove('hidden');
+                copyButton.disabled = true;
+                copyButton.classList.add('opacity-50', 'cursor-not-allowed');
+                copyButton.classList.remove('opacity-100', 'cursor-pointer');
+            }
         }
 
         // Helper Blob to Base64 (Unchanged)
@@ -813,7 +1022,8 @@
 
         // Event Listeners
         recordButton.addEventListener('click', () => { if (isRecording) { stopRecording(); } else { transcriptionOutput.value = ''; transcriptionSection.classList.add('hidden'); copyButton.disabled = true; copyButton.classList.add('opacity-50', 'cursor-not-allowed'); copyButton.classList.remove('opacity-100', 'cursor-pointer'); startRecording(); } });
-        saveApiKeyButton.addEventListener('click', () => { currentApiKey = apiKeyInput.value.trim(); if (currentApiKey) { localStorage.setItem('geminiApiKey', currentApiKey); setStatus('API Key saved.'); } else { localStorage.removeItem('geminiApiKey'); setStatus('API Key removed.', true); } renderHistory(); });
+        saveApiKeyButton.addEventListener('click', () => { currentApiKey = apiKeyInput.value.trim(); if (currentApiKey) { localStorage.setItem('geminiApiKey', currentApiKey); setStatus('Gemini API Key saved.'); } else { localStorage.removeItem('geminiApiKey'); setStatus('Gemini API Key removed.', true); } renderHistory(); });
+        saveOpenaiApiKeyButton.addEventListener('click', () => { currentOpenaiApiKey = openaiApiKeyInput.value.trim(); if (currentOpenaiApiKey) { localStorage.setItem('openaiApiKey', currentOpenaiApiKey); setStatus('OpenAI API Key saved.'); } else { localStorage.removeItem('openaiApiKey'); setStatus('OpenAI API Key removed.', true); } renderHistory(); });
         copyButton.addEventListener('click', () => { if (transcriptionOutput.value && !copyButton.disabled) { navigator.clipboard.writeText(transcriptionOutput.value).then(() => { setStatus('Copied!'); const copyIcon = copyButton.querySelector('[data-lucide="copy"]'); const checkIconHTML = `<i data-lucide="check" style="width: 18px; height: 18px; color: green;"></i>`; const originalIconHTML = copyIcon ? copyIcon.outerHTML : `<i data-lucide="copy" style="width: 18px; height: 18px;"></i>`; copyButton.innerHTML = checkIconHTML; lucide.createIcons(); setTimeout(() => { copyButton.innerHTML = originalIconHTML; lucide.createIcons(); }, 1500); }).catch(err => { console.error('Copy failed: ', err); setStatus('Copy failed.', true); }); } });
         
         // Settings panel controls
@@ -840,24 +1050,102 @@
             localStorage.setItem('darkMode', darkMode);
             applyTheme();
         });
+        
+        // FFmpeg toggle
+        const ffmpegToggle = document.getElementById('ffmpegToggle');
+        ffmpegToggle.addEventListener('change', async () => {
+            ffmpegEnabled = ffmpegToggle.checked;
+            localStorage.setItem('ffmpegEnabled', ffmpegEnabled);
+            
+            if (ffmpegEnabled) {
+                await loadFFmpeg();
+            } else {
+                ffmpegStatus.textContent = 'FFmpeg disabled. Audio will not be converted to MP3.';
+                ffmpegLoaded = false;
+                recordButton.disabled = false;
+                recordButton.title = 'Recording enabled (no MP3 conversion)';
+                setStatus('Ready to record (no MP3 conversion).');
+            }
+        });
+        
+        // Gemini toggle
+        geminiToggle.addEventListener('change', () => {
+            geminiEnabled = geminiToggle.checked;
+            localStorage.setItem('geminiEnabled', geminiEnabled);
+            
+            if (geminiEnabled) {
+                geminiSettings.classList.remove('hidden');
+            } else {
+                geminiSettings.classList.add('hidden');
+            }
+        });
+        
+        // OpenAI toggle
+        openaiToggle.addEventListener('change', () => {
+            openaiEnabled = openaiToggle.checked;
+            localStorage.setItem('openaiEnabled', openaiEnabled);
+            
+            if (openaiEnabled) {
+                openaiSettings.classList.remove('hidden');
+            } else {
+                openaiSettings.classList.add('hidden');
+            }
+        });
+        
+        // OpenAI model change
+        openaiModelSelect.addEventListener('change', () => {
+            openaiModel = openaiModelSelect.value;
+            localStorage.setItem('openaiModel', openaiModel);
+        });
+        
+        // OpenAI language change
+        openaiLanguageSelect.addEventListener('change', () => {
+            openaiLanguage = openaiLanguageSelect.value;
+            localStorage.setItem('openaiLanguage', openaiLanguage);
+        });
 
         // Initialization
         async function initializeApp() {
             lucide.createIcons();
             apiKeyInput.value = currentApiKey;
-            updateTokenDisplay();
+            openaiApiKeyInput.value = currentOpenaiApiKey;
+            openaiModelSelect.value = openaiModel;
+            openaiLanguageSelect.value = openaiLanguage;
             
             // Set dark mode toggle state
             darkModeToggle.checked = darkMode === 'dark';
             applyTheme();
             
+            // Set FFmpeg toggle state
+            ffmpegToggle.checked = ffmpegEnabled;
+            
+            // Set API toggles
+            geminiToggle.checked = geminiEnabled;
+            openaiToggle.checked = openaiEnabled;
+            
+            // Show/hide API settings based on toggles
+            if (!geminiEnabled) {
+                geminiSettings.classList.add('hidden');
+            }
+            if (!openaiEnabled) {
+                openaiSettings.classList.add('hidden');
+            }
+            
             // Show settings if no API key or if FFmpeg needs attention
-            if (!currentApiKey) {
+            if ((geminiEnabled && !currentApiKey) || (openaiEnabled && !currentOpenaiApiKey)) {
                 settingsSection.classList.remove('hidden');
                 settingsVisible = true;
             }
             
-            await loadFFmpeg(); // Load FFmpeg first
+            if (ffmpegEnabled) {
+                await loadFFmpeg(); // Load FFmpeg first
+            } else {
+                ffmpegStatus.textContent = 'FFmpeg disabled. Audio will not be converted to MP3.';
+                recordButton.disabled = false;
+                recordButton.title = 'Recording enabled (no MP3 conversion)';
+                setStatus('Ready to record (no MP3 conversion).');
+            }
+            
             try { await initDB(); await renderHistory(); } catch (error) { setStatus('DB init failed.', true); }
             updateRecordButtonState(); // Set initial button state
             
