@@ -43,17 +43,19 @@ File Uploads: Up to 200 MB per file for direct uploads.
   -F timestamp_granularities=["word"] \
   -F language=en```
   - other apis coming later (plan for them)
-- info api key: add the links
-  - https://aistudio.google.com/app/apikey
-  - https://platform.openai.com/api-keys
-  - https://console.groq.com/keys
 - only one of the toggles can be active at any one time (google, openai, groq) this forces that model to be used ✅
 - headers and description color in dark mode of the text is too dark: fix ✅
 - input boxes are not adapted to dark mode (white background still) ✅
+- recording whith ffmpeg off needs to work again. dont force ffmpeg usage
 - depending on settings auto-set limit of recording length (can be overridden in settings as an input box)
   - with ffmpeg: always 10:00
   - google uncompressed: 9:30
   - openai: 2:20
+- get rid of the save button next to the api key. auto save on changes
+- info api key: add the links in the settings screens
+  - https://aistudio.google.com/app/apikey
+  - https://platform.openai.com/api-keys
+  - https://console.groq.com/keys
 
 - File size/splitting
 - File Upload (Drop) over the Rec Button (change icon when drag/drop active)

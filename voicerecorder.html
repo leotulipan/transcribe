@@ -689,10 +689,16 @@
                                 lucide.createIcons();
                             });
                         };
-                        transcribeButton.disabled = !currentApiKey || !ffmpegLoaded;
-                        if (!currentApiKey) transcribeButton.title = 'API Key required';
-                        else if (!ffmpegLoaded) transcribeButton.title = 'FFmpeg not loaded';
-                        else if (rec.transcription) transcribeButton.title = 'View Transcription';
+                        transcribeButton.disabled = (!geminiEnabled || !currentApiKey) && (!openaiEnabled || !currentOpenaiApiKey) && (!groqEnabled || !currentGroqApiKey);
+                        if ((!geminiEnabled || !currentApiKey) && (!openaiEnabled || !currentOpenaiApiKey) && (!groqEnabled || !currentGroqApiKey)) {
+                            transcribeButton.title = 'No API enabled or API Key required';
+                        } else if (!ffmpegLoaded) {
+                            transcribeButton.title = 'FFmpeg not loaded';
+                        } else if (rec.transcription) {
+                            transcribeButton.title = 'View Transcription';
+                        } else {
+                            transcribeButton.title = 'Transcribe Audio';
+                        }
 
                         const deleteButton = document.createElement('button');
                         deleteButton.innerHTML = `<i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>`;
@@ -1080,7 +1086,7 @@
                         }
                         
                         // Groq returns plain text, not JSON
-                        const transcriptionText = await response.text();
+                        transcriptionText = await response.text();
                         console.log("Groq transcription OK:", transcriptionText);
                         
                         // Groq doesn't provide token usage in the same way, so we'll estimate
