@@ -149,7 +149,9 @@
                         <label for="apiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</label>
                         <div class="flex items-center space-x-2">
                             <input type="password" id="apiKey" name="apiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your API key">
-                            <button id="saveApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save</button>
+                            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Get API Key">
+                                <i data-lucide="external-link" style="width: 18px; height: 18px;"></i>
+                            </a>
                         </div>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Your API key is stored only in your browser's local storage.</p>
                     </div>
@@ -168,7 +170,9 @@
                         <label for="openaiApiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</label>
                         <div class="flex items-center space-x-2">
                             <input type="password" id="openaiApiKey" name="openaiApiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your OpenAI API key">
-                            <button id="saveOpenaiApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save</button>
+                            <a href="https://platform.openai.com/api-keys" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Get API Key">
+                                <i data-lucide="external-link" style="width: 18px; height: 18px;"></i>
+                            </a>
                         </div>
                         
                         <div class="mt-3">
@@ -214,7 +218,9 @@
                         <label for="groqApiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</label>
                         <div class="flex items-center space-x-2">
                             <input type="password" id="groqApiKey" name="groqApiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your Groq API key">
-                            <button id="saveGroqApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save</button>
+                            <a href="https://console.groq.com/keys" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Get API Key">
+                                <i data-lucide="external-link" style="width: 18px; height: 18px;"></i>
+                            </a>
                         </div>
                         
                         <div class="mt-3">
@@ -261,6 +267,15 @@
                     </div>
                 </div>
                 <div id="ffmpegLog" class="hidden text-left mt-2"></div>
+            </div>
+            
+            <div id="recordingSettingsSection" class="mb-4">
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recording Settings:</h3>
+                <div class="mt-3">
+                    <label for="recordingLimit" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Recording Length Limit (seconds):</label>
+                    <input type="number" id="recordingLimit" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Auto (based on API)">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty for automatic limits (FFmpeg: 600s, Gemini: 570s, OpenAI: 140s)</p>
+                </div>
             </div>
             
             <div id="themeSection" class="mb-4">
@@ -337,6 +352,7 @@
         const saveGroqApiKeyButton = document.getElementById('saveGroqApiKey');
         const groqModelSelect = document.getElementById('groqModel');
         const groqLanguageSelect = document.getElementById('groqLanguage');
+        const recordingLimitInput = document.getElementById('recordingLimit');
 
         // --- State Variables (Unchanged) ---
         let mediaRecorder;
@@ -361,6 +377,8 @@
         let geminiEnabled = localStorage.getItem('geminiEnabled') !== 'false'; // Gemini enabled by default
         let openaiEnabled = localStorage.getItem('openaiEnabled') === 'true'; // OpenAI disabled by default
         let groqEnabled = localStorage.getItem('groqEnabled') === 'true'; // Groq disabled by default
+        let recordingLimit = localStorage.getItem('recordingLimit') || ''; // Recording length limit
+        let recordingTimer = null; // Timer for recording length limit
 
         // --- Constants ---
         const DB_NAME = 'VoiceRecorderDB_MP3';
@@ -538,7 +556,21 @@
                 recordButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'recording-pulse');
                 recordButton.classList.add('bg-red-600', 'hover:bg-red-700');
                 if (micIconElement) micIconElement.classList.remove('animate-pulse');
-                recordButton.disabled = !ffmpegLoaded; // Only disable if FFmpeg is not loaded
+                
+                // Only disable the button if both conditions are true:
+                // 1. FFmpeg is enabled in settings
+                // 2. FFmpeg is not loaded yet
+                if (ffmpegEnabled && !ffmpegLoaded) {
+                    recordButton.disabled = true;
+                    recordButton.title = 'FFmpeg is loading...';
+                } else {
+                    recordButton.disabled = false;
+                    if (!ffmpegEnabled) {
+                        recordButton.title = 'Recording enabled (no MP3 conversion)';
+                    } else {
+                        recordButton.title = 'Record audio and convert to MP3';
+                    }
+                }
             }
         }
         function displayTranscription(text) {
@@ -727,21 +759,27 @@
         }
 
         // --- Audio Handling ---
-        async function startRecording() { // Unchanged
-             if (!ffmpegEnabled && !ffmpegLoaded) { setStatus('FFmpeg disabled and not loaded. Cannot record.', true); return; }
+        async function startRecording() {
+            if (!ffmpegEnabled && !ffmpegLoaded) {
+                setStatus('FFmpeg disabled. Recording without MP3 conversion.');
+            }
+            
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); console.log("Mic access granted.");
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                console.log("Mic access granted.");
                 const options = { mimeType: 'audio/webm;codecs=opus' };
                 if (!MediaRecorder.isTypeSupported(options.mimeType)) options.mimeType = 'audio/ogg;codecs=opus';
                 if (!MediaRecorder.isTypeSupported(options.mimeType)) options.mimeType = 'audio/webm';
                 if (!MediaRecorder.isTypeSupported(options.mimeType)) options.mimeType = '';
                 console.log("Recording with MIME type:", options.mimeType || "Browser Default");
-                mediaRecorder = new MediaRecorder(stream, options); audioChunks = [];
+                mediaRecorder = new MediaRecorder(stream, options);
+                audioChunks = [];
                 mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
                 mediaRecorder.onstop = async () => {
                     const originalBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
                     const originalMimeType = mediaRecorder.mimeType || 'audio/webm';
-                    console.log("Recording stopped. Original Blob:", originalBlob); console.log("Original MIME type:", originalMimeType);
+                    console.log("Recording stopped. Original Blob:", originalBlob);
+                    console.log("Original MIME type:", originalMimeType);
                     stream.getTracks().forEach(track => track.stop());
                     
                     if (ffmpegEnabled && ffmpegLoaded) {
@@ -754,7 +792,7 @@
                         await renderHistory();
                         
                         // Attempt automatic transcription if API key is available
-                        if (currentApiKey) {
+                        if ((geminiEnabled && currentApiKey) || (openaiEnabled && currentOpenaiApiKey) || (groqEnabled && currentGroqApiKey)) {
                             setStatus(`Starting automatic transcription for recording ${newId}...`);
                             await transcribeAudio(newId, originalBlob, originalMimeType);
                         } else {
@@ -765,15 +803,70 @@
                     
                     updateRecordButtonState(); // Update button state after saving
                 };
-                mediaRecorder.onerror = (event) => { console.error("MediaRecorder error:", event.error); setStatus(`Recording error: ${event.error?.name || 'Unknown'}`, true); isRecording = false; updateRecordButtonState(); stream.getTracks().forEach(track => track.stop()); };
-                mediaRecorder.start(); isRecording = true; updateRecordButtonState();
-            } catch (err) { /* Error handling for getUserMedia (unchanged) */
-                console.error("Mic error:", err); console.error("Details:", JSON.stringify(err)); console.error("Name:", err?.name); console.error("Message:", err?.message); let msg = 'Error starting recording.'; if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') msg = 'Mic access denied.'; else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') msg = 'No mic found.'; else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') msg = 'Mic in use.'; else if (err.message) msg = `Error: ${err.message}`; else msg = 'Unknown mic error.'; setStatus(msg, true); isRecording = false; updateRecordButtonState();
+                mediaRecorder.onerror = (event) => {
+                    console.error("MediaRecorder error:", event.error);
+                    setStatus(`Recording error: ${event.error?.name || 'Unknown'}`, true);
+                    isRecording = false;
+                    updateRecordButtonState();
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                mediaRecorder.start();
+                isRecording = true;
+                updateRecordButtonState();
+                
+                // Set up recording length limit timer
+                if (recordingLimit) {
+                    const limitSeconds = parseInt(recordingLimit);
+                    if (!isNaN(limitSeconds) && limitSeconds > 0) {
+                        recordingTimer = setTimeout(() => {
+                            if (isRecording) {
+                                stopRecording();
+                            }
+                        }, limitSeconds * 1000);
+                    }
+                } else {
+                    // Auto-set limit based on enabled API
+                    let autoLimit = 600; // Default 10 minutes
+                    if (!ffmpegEnabled) {
+                        if (geminiEnabled) {
+                            autoLimit = 570; // 9:30 for Gemini
+                        } else if (openaiEnabled) {
+                            autoLimit = 140; // 2:20 for OpenAI
+                        }
+                    }
+                    
+                    recordingTimer = setTimeout(() => {
+                        if (isRecording) {
+                            stopRecording();
+                        }
+                    }, autoLimit * 1000);
+                }
+            } catch (err) {
+                console.error("Mic error:", err);
+                console.error("Details:", JSON.stringify(err));
+                console.error("Name:", err?.name);
+                console.error("Message:", err?.message);
+                let msg = 'Error starting recording.';
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') msg = 'Mic access denied.';
+                else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') msg = 'No mic found.';
+                else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') msg = 'Mic in use.';
+                else if (err.message) msg = `Error: ${err.message}`;
+                else msg = 'Unknown mic error.';
+                setStatus(msg, true);
+                isRecording = false;
+                updateRecordButtonState();
             }
         }
+        
         function stopRecording() {
             if (mediaRecorder && isRecording) {
                 try {
+                    // Clear the recording timer
+                    if (recordingTimer) {
+                        clearTimeout(recordingTimer);
+                        recordingTimer = null;
+                    }
+                    
                     mediaRecorder.stop();
                     isRecording = false;
                     setStatus('Processing recording...');
@@ -1142,11 +1235,84 @@
         async function deleteRecording(id) { if (confirm(`Delete recording ${id}?`)) { try { await deleteRecordingFromDB(id); setStatus(`Recording ${id} deleted.`); await renderHistory(); } catch (error) { setStatus('Error deleting.', true); console.error("Delete error:", error); } } }
 
         // Event Listeners
-        recordButton.addEventListener('click', () => { if (isRecording) { stopRecording(); } else { transcriptionOutput.value = ''; transcriptionSection.classList.add('hidden'); copyButton.disabled = true; copyButton.classList.add('opacity-50', 'cursor-not-allowed'); copyButton.classList.remove('opacity-100', 'cursor-pointer'); startRecording(); } });
-        saveApiKeyButton.addEventListener('click', () => { currentApiKey = apiKeyInput.value.trim(); if (currentApiKey) { localStorage.setItem('geminiApiKey', currentApiKey); setStatus('Gemini API Key saved.'); } else { localStorage.removeItem('geminiApiKey'); setStatus('Gemini API Key removed.', true); } renderHistory(); });
-        saveOpenaiApiKeyButton.addEventListener('click', () => { currentOpenaiApiKey = openaiApiKeyInput.value.trim(); if (currentOpenaiApiKey) { localStorage.setItem('openaiApiKey', currentOpenaiApiKey); setStatus('OpenAI API Key saved.'); } else { localStorage.removeItem('openaiApiKey'); setStatus('OpenAI API Key removed.', true); } renderHistory(); });
-        saveGroqApiKeyButton.addEventListener('click', () => { currentGroqApiKey = groqApiKeyInput.value.trim(); if (currentGroqApiKey) { localStorage.setItem('groqApiKey', currentGroqApiKey); setStatus('Groq API Key saved.'); } else { localStorage.removeItem('groqApiKey'); setStatus('Groq API Key removed.', true); } renderHistory(); });
-        copyButton.addEventListener('click', () => { if (transcriptionOutput.value && !copyButton.disabled) { navigator.clipboard.writeText(transcriptionOutput.value).then(() => { setStatus('Copied!'); const copyIcon = copyButton.querySelector('[data-lucide="copy"]'); const checkIconHTML = `<i data-lucide="check" style="width: 18px; height: 18px; color: green;"></i>`; const originalIconHTML = copyIcon ? copyIcon.outerHTML : `<i data-lucide="copy" style="width: 18px; height: 18px;"></i>`; copyButton.innerHTML = checkIconHTML; lucide.createIcons(); setTimeout(() => { copyButton.innerHTML = originalIconHTML; lucide.createIcons(); }, 1500); }).catch(err => { console.error('Copy failed: ', err); setStatus('Copy failed.', true); }); } });
+        recordButton.addEventListener('click', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                transcriptionOutput.value = '';
+                transcriptionSection.classList.add('hidden');
+                copyButton.disabled = true;
+                copyButton.classList.add('opacity-50', 'cursor-not-allowed');
+                copyButton.classList.remove('opacity-100', 'cursor-pointer');
+                startRecording();
+            }
+        });
+        
+        // Auto-save API keys on input change
+        apiKeyInput.addEventListener('input', () => {
+            currentApiKey = apiKeyInput.value.trim();
+            if (currentApiKey) {
+                localStorage.setItem('geminiApiKey', currentApiKey);
+                setStatus('Gemini API Key saved.');
+            } else {
+                localStorage.removeItem('geminiApiKey');
+                setStatus('Gemini API Key removed.', true);
+            }
+        });
+        
+        openaiApiKeyInput.addEventListener('input', () => {
+            currentOpenaiApiKey = openaiApiKeyInput.value.trim();
+            if (currentOpenaiApiKey) {
+                localStorage.setItem('openaiApiKey', currentOpenaiApiKey);
+                setStatus('OpenAI API Key saved.');
+            } else {
+                localStorage.removeItem('openaiApiKey');
+                setStatus('OpenAI API Key removed.', true);
+            }
+        });
+        
+        groqApiKeyInput.addEventListener('input', () => {
+            currentGroqApiKey = groqApiKeyInput.value.trim();
+            if (currentGroqApiKey) {
+                localStorage.setItem('groqApiKey', currentGroqApiKey);
+                setStatus('Groq API Key saved.');
+            } else {
+                localStorage.removeItem('groqApiKey');
+                setStatus('Groq API Key removed.', true);
+            }
+        });
+        
+        // Recording limit input
+        recordingLimitInput.addEventListener('input', () => {
+            recordingLimit = recordingLimitInput.value.trim();
+            if (recordingLimit) {
+                localStorage.setItem('recordingLimit', recordingLimit);
+                setStatus('Recording limit updated.');
+            } else {
+                localStorage.removeItem('recordingLimit');
+                setStatus('Recording limit reset to auto.');
+            }
+        });
+        
+        copyButton.addEventListener('click', () => {
+            if (transcriptionOutput.value && !copyButton.disabled) {
+                navigator.clipboard.writeText(transcriptionOutput.value).then(() => {
+                    setStatus('Copied!');
+                    const copyIcon = copyButton.querySelector('[data-lucide="copy"]');
+                    const checkIconHTML = `<i data-lucide="check" style="width: 18px; height: 18px; color: green;"></i>`;
+                    const originalIconHTML = copyIcon ? copyIcon.outerHTML : `<i data-lucide="copy" style="width: 18px; height: 18px;"></i>`;
+                    copyButton.innerHTML = checkIconHTML;
+                    lucide.createIcons();
+                    setTimeout(() => {
+                        copyButton.innerHTML = originalIconHTML;
+                        lucide.createIcons();
+                    }, 1500);
+                }).catch(err => {
+                    console.error('Copy failed: ', err);
+                    setStatus('Copy failed.', true);
+                });
+            }
+        });
         
         // Settings panel controls
         settingsButton.addEventListener('click', () => {
@@ -1187,6 +1353,7 @@
                 recordButton.disabled = false;
                 recordButton.title = 'Recording enabled (no MP3 conversion)';
                 setStatus('Ready to record (no MP3 conversion).');
+                updateRecordButtonState();
             }
         });
         
@@ -1294,6 +1461,7 @@
             openaiLanguageSelect.value = openaiLanguage;
             groqModelSelect.value = groqModel;
             groqLanguageSelect.value = groqLanguage;
+            recordingLimitInput.value = recordingLimit;
             
             // Set dark mode toggle state
             darkModeToggle.checked = darkMode === 'dark';
@@ -1324,20 +1492,51 @@
                 settingsVisible = true;
             }
             
+            // Set initial status based on FFmpeg toggle state
             if (ffmpegEnabled) {
-                await loadFFmpeg(); // Load FFmpeg first
+                await loadFFmpeg(); // Load FFmpeg if enabled
             } else {
+                // FFmpeg is disabled, enable recording without conversion
                 ffmpegStatus.textContent = 'FFmpeg disabled. Audio will not be converted to MP3.';
+                ffmpegLoaded = false;
+                setStatus('Ready to record (no MP3 conversion).');
                 recordButton.disabled = false;
                 recordButton.title = 'Recording enabled (no MP3 conversion)';
-                setStatus('Ready to record (no MP3 conversion).');
             }
             
-            try { await initDB(); await renderHistory(); } catch (error) { setStatus('DB init failed.', true); }
-            updateRecordButtonState(); // Set initial button state
+            try {
+                await initDB();
+                await renderHistory();
+            } catch (error) {
+                setStatus('DB init failed.', true);
+            }
             
-            // Mic support checks (unchanged)
-            if (!navigator.mediaDevices?.getUserMedia) { setStatus('getUserMedia not supported.', true); recordButton.disabled = true; recordButton.title = 'Not supported'; } else if (!window.MediaRecorder) { setStatus('MediaRecorder not supported.', true); recordButton.disabled = true; recordButton.title = 'Not supported'; } else { try { const ps = await navigator.permissions.query({ name: 'microphone' }); console.log('Mic perm state:', ps.state); if (ps.state === 'denied') setStatus('Mic denied.', true); ps.onchange = () => { console.log('Mic perm changed:', ps.state); if (ps.state === 'denied') setStatus('Mic denied.', true); else if (statusMessage.textContent.includes('denied')) setStatus('Mic granted.', false); }; } catch (e) { console.warn("Perm query failed:", e); } }
+            // Update the record button state after initialization
+            updateRecordButtonState();
+            
+            // Mic support checks - these will disable the button if mic isn't available
+            if (!navigator.mediaDevices?.getUserMedia) {
+                setStatus('getUserMedia not supported.', true);
+                recordButton.disabled = true;
+                recordButton.title = 'Not supported';
+            } else if (!window.MediaRecorder) {
+                setStatus('MediaRecorder not supported.', true);
+                recordButton.disabled = true;
+                recordButton.title = 'Not supported';
+            } else {
+                try {
+                    const ps = await navigator.permissions.query({ name: 'microphone' });
+                    console.log('Mic perm state:', ps.state);
+                    if (ps.state === 'denied') setStatus('Mic denied.', true);
+                    ps.onchange = () => {
+                        console.log('Mic perm changed:', ps.state);
+                        if (ps.state === 'denied') setStatus('Mic denied.', true);
+                        else if (statusMessage.textContent.includes('denied')) setStatus('Mic granted.', false);
+                    };
+                } catch (e) {
+                    console.warn("Perm query failed:", e);
+                }
+            }
         }
         document.addEventListener('DOMContentLoaded', initializeApp);
 

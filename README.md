@@ -46,24 +46,26 @@ File Uploads: Up to 200 MB per file for direct uploads.
 - only one of the toggles can be active at any one time (google, openai, groq) this forces that model to be used ✅
 - headers and description color in dark mode of the text is too dark: fix ✅
 - input boxes are not adapted to dark mode (white background still) ✅
-- recording whith ffmpeg off needs to work again. dont force ffmpeg usage
-- depending on settings auto-set limit of recording length (can be overridden in settings as an input box)
+- recording whith ffmpeg off needs to work again. dont force ffmpeg usage ✅
+- depending on settings auto-set limit of recording length (can be overridden in settings as an input box) ✅
   - with ffmpeg: always 10:00
   - google uncompressed: 9:30
   - openai: 2:20
-- get rid of the save button next to the api key. auto save on changes
-- info api key: add the links in the settings screens
+- get rid of the save button next to the api key. auto save on changes ✅
+- info api key: add the links in the settings screens ✅
   - https://aistudio.google.com/app/apikey
   - https://platform.openai.com/api-keys
   - https://console.groq.com/keys
-
-- File size/splitting
-- File Upload (Drop) over the Rec Button (change icon when drag/drop active)
+- groq recording limit: 140 sec
+- openai 4o models
+  - error Error: Invalid URL (POST /v1/audio/transcriptions)
 
 - assembly ai:
-
+file size limit 200mb
+recording limit 600s
 toggle for eu/us To use our EU server for transcription, replace api.assemblyai.com with api.eu.assemblyai.com.
-curl -X POST https://api.assemblyai.com/v2/transcript \
+example usage:
+```curl -X POST https://api.assemblyai.com/v2/transcript \
      -H "Authorization: <apiKey>" \
      -H "Content-Type: application/json" \
      -d '{
@@ -121,3 +123,10 @@ curl -X POST https://api.assemblyai.com/v2/transcript \
   "custom_topics": true,
   "dual_channel": false
 }'
+```
+
+- File Upload (Drop) over the Rec Button (change icon when drag/drop active)
+  - do never convert the dropped file. use as is.
+  - reject on file size limit: 25mb openai/groq, 50mb google
+
+- File size/splitting?
