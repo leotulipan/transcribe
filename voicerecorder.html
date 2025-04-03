@@ -22,6 +22,96 @@
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         [data-lucide] { width: 1em; height: 1em; display: inline-block; vertical-align: middle; }
         #ffmpegLog { font-family: monospace; font-size: 0.75rem; max-height: 100px; overflow-y: auto; background-color: #f5f5f5; border: 1px solid #e0e0e0; padding: 5px; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
+        
+        /* Dark mode styles */
+        :root {
+            color-scheme: light dark;
+        }
+        
+        body.dark-mode {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        
+        body.dark-mode .bg-white {
+            background-color: #2d2d2d;
+        }
+        
+        body.dark-mode .text-gray-800 {
+            color: #e0e0e0;
+        }
+        
+        body.dark-mode .text-gray-600 {
+            color: #b0b0b0;
+        }
+        
+        body.dark-mode .text-gray-500 {
+            color: #a0a0a0;
+        }
+        
+        body.dark-mode .bg-gray-50 {
+            background-color: #333333;
+        }
+        
+        body.dark-mode .border-gray-200 {
+            border-color: #444444;
+        }
+        
+        body.dark-mode #ffmpegLog {
+            background-color: #222222;
+            border-color: #444444;
+            color: #e0e0e0;
+        }
+        
+        body.dark-mode .bg-gray-100 {
+            background-color: #1a1a1a;
+        }
+        
+        /* Toggle switch styles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #2196F3;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -64,6 +154,21 @@
                     Input Tokens: <span id="inputTokens">0</span><br>
                     Output Tokens: <span id="outputTokens">0</span>
                 </p>
+            </div>
+            
+            <div id="themeSection" class="mb-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Theme:</h3>
+                <div class="flex items-center space-x-2">
+                    <label class="text-sm text-gray-600">Dark Mode:</label>
+                    <div class="flex items-center space-x-2">
+                        <label class="text-xs text-gray-500">System</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="darkModeToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <label class="text-xs text-gray-500">Dark</label>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -123,6 +228,8 @@
         let currentlyPlayingAudio = null;
         let currentlyPlayingButton = null;
         let tokenUsage = { input: 0, output: 0 }; // Track token usage
+        let darkMode = localStorage.getItem('darkMode') || 'system'; // Dark mode preference
+        let settingsVisible = false; // Track settings visibility
 
         // --- Constants ---
         const DB_NAME = 'VoiceRecorderDB_MP3';
@@ -209,48 +316,67 @@
             });
         }
 
-        // --- IndexedDB Operations (Unchanged) ---
+        // --- IndexedDB Operations ---
         function addRecordingToDB(blob, mimeType) {
             return new Promise((resolve, reject) => {
                 if (!db) return reject("Database not initialized.");
-                const transaction = db.transaction([STORE_NAME], 'readwrite'); const store = transaction.objectStore(STORE_NAME);
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
                 const recording = { audioBlob: blob, mimeType: mimeType, timestamp: new Date(), transcription: null };
                 const request = store.add(recording);
-                request.onsuccess = (event) => resolve(event.target.result); request.onerror = (event) => reject(event.target.error);
+                request.onsuccess = (event) => resolve(event.target.result);
+                request.onerror = (event) => reject(event.target.error);
             });
         }
+
         function getRecordingsFromDB() {
             return new Promise((resolve, reject) => {
                 if (!db) return reject("Database not initialized.");
-                const transaction = db.transaction([STORE_NAME], 'readonly'); const store = transaction.objectStore(STORE_NAME);
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
                 const request = store.getAll();
-                request.onsuccess = (event) => resolve(event.target.result.sort((a, b) => b.timestamp - a.timestamp)); request.onerror = (event) => reject(event.target.error);
+                request.onsuccess = (event) => resolve(event.target.result.sort((a, b) => b.timestamp - a.timestamp));
+                request.onerror = (event) => reject(event.target.error);
             });
         }
-         function getRecordingByIdFromDB(id) {
-             return new Promise((resolve, reject) => {
+
+        function getRecordingByIdFromDB(id) {
+            return new Promise((resolve, reject) => {
                 if (!db) return reject("Database not initialized.");
-                const transaction = db.transaction([STORE_NAME], 'readonly'); const store = transaction.objectStore(STORE_NAME);
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
                 const request = store.get(id);
-                request.onsuccess = (event) => resolve(event.target.result); request.onerror = (event) => reject(event.target.error);
+                request.onsuccess = (event) => resolve(event.target.result);
+                request.onerror = (event) => reject(event.target.error);
             });
         }
+
         function updateTranscriptionInDB(id, transcription) {
-             return new Promise(async (resolve, reject) => {
+            return new Promise(async (resolve, reject) => {
                 if (!db) return reject("Database not initialized.");
                 try {
-                    const recording = await getRecordingByIdFromDB(id); if (!recording) return reject(`Recording ${id} not found.`);
+                    const recording = await getRecordingByIdFromDB(id);
+                    if (!recording) return reject(`Recording ${id} not found.`);
                     recording.transcription = transcription;
-                    const transaction = db.transaction([STORE_NAME], 'readwrite'); const store = transaction.objectStore(STORE_NAME);
-                    const request = store.put(recording); request.onsuccess = () => resolve(); request.onerror = (event) => reject(event.target.error);
-                } catch (error) { reject(error); }
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.put(recording);
+                    request.onsuccess = () => resolve();
+                    request.onerror = (event) => reject(event.target.error);
+                } catch (error) {
+                    reject(error);
+                }
             });
         }
+
         function deleteRecordingFromDB(id) {
             return new Promise((resolve, reject) => {
                 if (!db) return reject("Database not initialized.");
-                const transaction = db.transaction([STORE_NAME], 'readwrite'); const store = transaction.objectStore(STORE_NAME);
-                const request = store.delete(id); request.onsuccess = () => resolve(); request.onerror = (event) => reject(event.target.error);
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete(id);
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(event.target.error);
             });
         }
 
@@ -316,7 +442,26 @@
                 } else {
                     noHistoryMessage.classList.add('hidden');
                     
-                    recordings.forEach(rec => {
+                    // Sort recordings by timestamp (newest first)
+                    recordings.sort((a, b) => b.timestamp - a.timestamp);
+                    
+                    // Limit to 10 entries
+                    const limitedRecordings = recordings.slice(0, 10);
+                    
+                    // If we have more than 10 recordings, delete the oldest ones
+                    if (recordings.length > 10) {
+                        const recordingsToDelete = recordings.slice(10);
+                        for (const rec of recordingsToDelete) {
+                            try {
+                                await deleteRecordingFromDB(rec.id);
+                                console.log(`Auto-deleted old recording ${rec.id}`);
+                            } catch (error) {
+                                console.error(`Error auto-deleting recording ${rec.id}:`, error);
+                            }
+                        }
+                    }
+                    
+                    limitedRecordings.forEach(rec => {
                         const div = document.createElement('div'); 
                         div.className = 'p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between space-x-3';
                         
@@ -342,7 +487,13 @@
                             const minutes = Math.floor(duration / 60);
                             const seconds = Math.floor(duration % 60);
                             const durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                            fileInfo.textContent = `Size: ${fileSizeMB} MB | Duration: ${durationStr}`;
+                            
+                            // Add token usage if available
+                            const tokenInfo = rec.tokenUsage ? 
+                                ` | Tokens: ${rec.tokenUsage.input || 0} in, ${rec.tokenUsage.output || 0} out` : 
+                                '';
+                                
+                            fileInfo.textContent = `Size: ${fileSizeMB} MB | Duration: ${durationStr}${tokenInfo}`;
                             URL.revokeObjectURL(audio.src);
                         };
                         
@@ -611,10 +762,18 @@
                 if (!response.ok) { console.error("API Error:", data); throw new Error(data?.error?.message || `HTTP ${response.status}`); }
                 
                 // Update token usage
+                let recordingTokenUsage = { input: 0, output: 0 };
                 if (data.usage) {
-                    tokenUsage.input += data.usage.promptTokenCount || 0;
-                    tokenUsage.output += data.usage.candidatesTokenCount || 0;
+                    recordingTokenUsage.input = data.usage.promptTokenCount || 0;
+                    recordingTokenUsage.output = data.usage.candidatesTokenCount || 0;
+                    
+                    // Update global token usage
+                    tokenUsage.input += recordingTokenUsage.input;
+                    tokenUsage.output += recordingTokenUsage.output;
                     localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
+                    
+                    // Update token display
+                    updateTokenDisplay();
                 }
                 
                 let transcriptionText = "Transcription not found.";
@@ -625,7 +784,23 @@
                 console.log("Transcription OK:", transcriptionText);
                 setStatus(`Transcription complete (ID: ${id}).`);
                 displayTranscription(transcriptionText);
-                await updateTranscriptionInDB(id, transcriptionText);
+                
+                // Update recording with transcription and token usage
+                const recording = await getRecordingByIdFromDB(id);
+                if (recording) {
+                    recording.transcription = transcriptionText;
+                    recording.tokenUsage = recordingTokenUsage;
+                    
+                    // Update in database
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    await new Promise((resolve, reject) => {
+                        const request = store.put(recording);
+                        request.onsuccess = () => resolve();
+                        request.onerror = (event) => reject(event.target.error);
+                    });
+                }
+                
                 await renderHistory();
             } catch (error) { console.error("Transcription failed:", error); setStatus(`Transcription error: ${error.message}`, true); displayTranscription(`Error: ${error.message}`); transcriptionSection.classList.remove('hidden'); copyButton.disabled = true; copyButton.classList.add('opacity-50', 'cursor-not-allowed'); copyButton.classList.remove('opacity-100', 'cursor-pointer'); }
         }
@@ -643,13 +818,27 @@
         
         // Settings panel controls
         settingsButton.addEventListener('click', () => {
-            settingsSection.classList.remove('hidden');
+            settingsVisible = !settingsVisible;
+            if (settingsVisible) {
+                settingsSection.classList.remove('hidden');
+            } else {
+                settingsSection.classList.add('hidden');
+            }
             lucide.createIcons();
         });
         
         closeSettings.addEventListener('click', () => {
+            settingsVisible = false;
             settingsSection.classList.add('hidden');
             lucide.createIcons();
+        });
+        
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        darkModeToggle.addEventListener('change', () => {
+            darkMode = darkModeToggle.checked ? 'dark' : 'system';
+            localStorage.setItem('darkMode', darkMode);
+            applyTheme();
         });
 
         // Initialization
@@ -658,9 +847,14 @@
             apiKeyInput.value = currentApiKey;
             updateTokenDisplay();
             
+            // Set dark mode toggle state
+            darkModeToggle.checked = darkMode === 'dark';
+            applyTheme();
+            
             // Show settings if no API key or if FFmpeg needs attention
             if (!currentApiKey) {
                 settingsSection.classList.remove('hidden');
+                settingsVisible = true;
             }
             
             await loadFFmpeg(); // Load FFmpeg first
@@ -680,6 +874,34 @@
             }
             document.getElementById('inputTokens').textContent = tokenUsage.input.toLocaleString();
             document.getElementById('outputTokens').textContent = tokenUsage.output.toLocaleString();
+        }
+        
+        // Apply theme based on system preference or user choice
+        function applyTheme() {
+            if (darkMode === 'dark') {
+                document.body.classList.add('dark-mode');
+            } else if (darkMode === 'system') {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                }
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        }
+        
+        // Listen for system theme changes
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                if (darkMode === 'system') {
+                    if (e.matches) {
+                        document.body.classList.add('dark-mode');
+                    } else {
+                        document.body.classList.remove('dark-mode');
+                    }
+                }
+            });
         }
 
     </script>
