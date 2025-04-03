@@ -125,55 +125,55 @@
             </button>
         </header>
 
-        <section id="settingsSection" class="mb-6 p-4 bg-white rounded-lg shadow hidden">
+        <section id="settingsSection" class="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow hidden">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-gray-700">Settings</h2>
-                <button id="closeSettings" class="p-1 text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full">
+                <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-300">Settings</h2>
+                <button id="closeSettings" class="p-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full">
                     <i data-lucide="x" style="width: 20px; height: 20px;"></i>
                 </button>
             </div>
             
             <div id="transcriptionApiSection" class="mb-4">
-                <h3 class="text-sm font-medium text-gray-700 mb-2">Transcription API:</h3>
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Transcription API:</h3>
                 
                 <!-- Gemini API -->
-                <div class="mb-3 p-3 border border-gray-200 rounded-md">
+                <div class="mb-3 p-3 border border-gray-200 dark:border-gray-700 rounded-md">
                     <div class="flex items-center justify-between mb-2">
-                        <h4 class="text-sm font-medium text-gray-700">Google Gemini</h4>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Google Gemini</h4>
                         <label class="toggle-switch">
                             <input type="checkbox" id="geminiToggle" checked>
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
                     <div id="geminiSettings" class="mt-2">
-                        <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-1">API Key:</label>
+                        <label for="apiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</label>
                         <div class="flex items-center space-x-2">
-                            <input type="password" id="apiKey" name="apiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your API key">
+                            <input type="password" id="apiKey" name="apiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your API key">
                             <button id="saveApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save</button>
                         </div>
-                        <p class="text-xs text-gray-500 mt-2">Your API key is stored only in your browser's local storage.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Your API key is stored only in your browser's local storage.</p>
                     </div>
                 </div>
                 
                 <!-- OpenAI API -->
-                <div class="mb-3 p-3 border border-gray-200 rounded-md">
+                <div class="mb-3 p-3 border border-gray-200 dark:border-gray-700 rounded-md">
                     <div class="flex items-center justify-between mb-2">
-                        <h4 class="text-sm font-medium text-gray-700">OpenAI</h4>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">OpenAI</h4>
                         <label class="toggle-switch">
                             <input type="checkbox" id="openaiToggle">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
                     <div id="openaiSettings" class="mt-2 hidden">
-                        <label for="openaiApiKey" class="block text-sm font-medium text-gray-700 mb-1">API Key:</label>
+                        <label for="openaiApiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</label>
                         <div class="flex items-center space-x-2">
-                            <input type="password" id="openaiApiKey" name="openaiApiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your OpenAI API key">
+                            <input type="password" id="openaiApiKey" name="openaiApiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your OpenAI API key">
                             <button id="saveOpenaiApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save</button>
                         </div>
                         
                         <div class="mt-3">
-                            <label for="openaiModel" class="block text-sm font-medium text-gray-700 mb-1">Model:</label>
-                            <select id="openaiModel" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            <label for="openaiModel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Model:</label>
+                            <select id="openaiModel" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                                 <option value="whisper-1">Whisper</option>
                                 <option value="gpt-4o-audio-preview">GPT-4o Audio Preview</option>
                                 <option value="gpt-4o-mini-audio-preview">GPT-4o Mini Audio Preview</option>
@@ -181,8 +181,54 @@
                         </div>
                         
                         <div class="mt-3">
-                            <label for="openaiLanguage" class="block text-sm font-medium text-gray-700 mb-1">Language:</label>
-                            <select id="openaiLanguage" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            <label for="openaiLanguage" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Language:</label>
+                            <select id="openaiLanguage" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="auto">Auto-detect</option>
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="nl">Dutch</option>
+                                <option value="pl">Polish</option>
+                                <option value="ru">Russian</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="zh">Chinese</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Groq API -->
+                <div class="mb-3 p-3 border border-gray-200 dark:border-gray-700 rounded-md">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Groq</h4>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="groqToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="groqSettings" class="mt-2 hidden">
+                        <label for="groqApiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="password" id="groqApiKey" name="groqApiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your Groq API key">
+                            <button id="saveGroqApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save</button>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label for="groqModel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Model:</label>
+                            <select id="groqModel" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="whisper-large-v3-turbo">Whisper Large V3 Turbo</option>
+                                <option value="distil-whisper-large-v3-en">Distil Whisper Large V3 (English)</option>
+                                <option value="whisper-large-v3">Whisper Large V3</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label for="groqLanguage" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Language:</label>
+                            <select id="groqLanguage" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                                 <option value="auto">Auto-detect</option>
                                 <option value="en">English</option>
                                 <option value="es">Spanish</option>
@@ -203,11 +249,11 @@
             </div>
 
             <div id="ffmpegSection" class="mb-4">
-                <h3 class="text-sm font-medium text-gray-700 mb-2">FFmpeg Status:</h3>
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">FFmpeg Status:</h3>
                 <div class="flex items-center justify-between mb-2">
-                    <p id="ffmpegStatus" class="text-sm text-gray-600">Loading FFmpeg...</p>
+                    <p id="ffmpegStatus" class="text-sm text-gray-600 dark:text-gray-400">Loading FFmpeg...</p>
                     <div class="flex items-center space-x-2">
-                        <label class="text-xs text-gray-500">Enable FFmpeg</label>
+                        <label class="text-xs text-gray-500 dark:text-gray-400">Enable FFmpeg</label>
                         <label class="toggle-switch">
                             <input type="checkbox" id="ffmpegToggle" checked>
                             <span class="toggle-slider"></span>
@@ -218,16 +264,16 @@
             </div>
             
             <div id="themeSection" class="mb-4">
-                <h3 class="text-sm font-medium text-gray-700 mb-2">Theme:</h3>
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Theme:</h3>
                 <div class="flex items-center space-x-2">
-                    <label class="text-sm text-gray-600">Dark Mode:</label>
+                    <label class="text-sm text-gray-600 dark:text-gray-400">Dark Mode:</label>
                     <div class="flex items-center space-x-2">
-                        <label class="text-xs text-gray-500">System</label>
+                        <label class="text-xs text-gray-500 dark:text-gray-400">System</label>
                         <label class="toggle-switch">
                             <input type="checkbox" id="darkModeToggle">
                             <span class="toggle-slider"></span>
                         </label>
-                        <label class="text-xs text-gray-500">Dark</label>
+                        <label class="text-xs text-gray-500 dark:text-gray-400">Dark</label>
                     </div>
                 </div>
             </div>
@@ -285,6 +331,12 @@
         const saveOpenaiApiKeyButton = document.getElementById('saveOpenaiApiKey');
         const openaiModelSelect = document.getElementById('openaiModel');
         const openaiLanguageSelect = document.getElementById('openaiLanguage');
+        const groqToggle = document.getElementById('groqToggle');
+        const groqSettings = document.getElementById('groqSettings');
+        const groqApiKeyInput = document.getElementById('groqApiKey');
+        const saveGroqApiKeyButton = document.getElementById('saveGroqApiKey');
+        const groqModelSelect = document.getElementById('groqModel');
+        const groqLanguageSelect = document.getElementById('groqLanguage');
 
         // --- State Variables (Unchanged) ---
         let mediaRecorder;
@@ -292,8 +344,11 @@
         let isRecording = false;
         let currentApiKey = localStorage.getItem('geminiApiKey') || '';
         let currentOpenaiApiKey = localStorage.getItem('openaiApiKey') || '';
+        let currentGroqApiKey = localStorage.getItem('groqApiKey') || '';
         let openaiModel = localStorage.getItem('openaiModel') || 'whisper-1';
         let openaiLanguage = localStorage.getItem('openaiLanguage') || 'auto';
+        let groqModel = localStorage.getItem('groqModel') || 'whisper-large-v3-turbo';
+        let groqLanguage = localStorage.getItem('groqLanguage') || 'auto';
         let db;
         let ffmpeg;
         let ffmpegLoaded = false;
@@ -305,6 +360,7 @@
         let ffmpegEnabled = localStorage.getItem('ffmpegEnabled') !== 'false'; // FFmpeg enabled by default
         let geminiEnabled = localStorage.getItem('geminiEnabled') !== 'false'; // Gemini enabled by default
         let openaiEnabled = localStorage.getItem('openaiEnabled') === 'true'; // OpenAI disabled by default
+        let groqEnabled = localStorage.getItem('groqEnabled') === 'true'; // Groq disabled by default
 
         // --- Constants ---
         const DB_NAME = 'VoiceRecorderDB_MP3';
@@ -312,6 +368,7 @@
         const STORE_NAME = 'recordings_mp3';
         const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=';
         const OPENAI_API_URL = 'https://api.openai.com/v1/audio/transcriptions';
+        const GROQ_API_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
         const TARGET_MIME_TYPE = 'audio/mpeg';
         const TARGET_FORMAT = 'mp3';
         // const TARGET_BITRATE = '256k'; // Replaced by quality setting
@@ -853,7 +910,7 @@
         // --- Transcription (Updated to support multiple APIs) ---
         async function transcribeAudio(id, audioBlob, mimeType) {
             // Check if any API is enabled and has a key
-            if (!geminiEnabled && !openaiEnabled) {
+            if (!geminiEnabled && !openaiEnabled && !groqEnabled) {
                 setStatus('No transcription API enabled.', true);
                 displayTranscription("No transcription API enabled. Please enable an API in settings.");
                 return;
@@ -868,6 +925,12 @@
             if (openaiEnabled && !currentOpenaiApiKey) {
                 setStatus('OpenAI API Key needed.', true);
                 displayTranscription("OpenAI API Key needed for transcription.");
+                return;
+            }
+            
+            if (groqEnabled && !currentGroqApiKey) {
+                setStatus('Groq API Key needed.', true);
+                displayTranscription("Groq API Key needed for transcription.");
                 return;
             }
             
@@ -929,9 +992,9 @@
                         console.log("Gemini transcription OK:", transcriptionText);
                     } catch (error) {
                         console.error("Gemini transcription failed:", error);
-                        // If Gemini fails and OpenAI is enabled, try OpenAI
-                        if (openaiEnabled && currentOpenaiApiKey) {
-                            throw new Error("Gemini failed, trying OpenAI...");
+                        // If Gemini fails and other APIs are enabled, try them
+                        if ((openaiEnabled && currentOpenaiApiKey) || (groqEnabled && currentGroqApiKey)) {
+                            throw new Error("Gemini failed, trying other APIs...");
                         } else {
                             throw error;
                         }
@@ -979,6 +1042,58 @@
                         localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
                     } catch (error) {
                         console.error("OpenAI transcription failed:", error);
+                        // If OpenAI fails and Groq is enabled, try Groq
+                        if (groqEnabled && currentGroqApiKey) {
+                            throw new Error("OpenAI failed, trying Groq...");
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+                
+                // Try Groq if other APIs are not enabled or failed
+                if ((!geminiEnabled || !currentApiKey) && (!openaiEnabled || !currentOpenaiApiKey) && groqEnabled && currentGroqApiKey) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', audioBlob, 'audio.mp3');
+                        formData.append('model', groqModel);
+                        formData.append('temperature', '0');
+                        formData.append('response_format', 'text');
+                        
+                        // Only add language if not auto
+                        if (groqLanguage !== 'auto') {
+                            formData.append('language', groqLanguage);
+                        }
+                        
+                        const response = await fetch(GROQ_API_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${currentGroqApiKey}`
+                            },
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            console.error("Groq API Error:", errorData);
+                            throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
+                        }
+                        
+                        // Groq returns plain text, not JSON
+                        const transcriptionText = await response.text();
+                        console.log("Groq transcription OK:", transcriptionText);
+                        
+                        // Groq doesn't provide token usage in the same way, so we'll estimate
+                        // Rough estimate: 1 token per 4 characters
+                        const estimatedTokens = Math.ceil(transcriptionText.length / 4);
+                        recordingTokenUsage.input = 0; // We don't know the input tokens
+                        recordingTokenUsage.output = estimatedTokens;
+                        
+                        // Update global token usage
+                        tokenUsage.output += estimatedTokens;
+                        localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
+                    } catch (error) {
+                        console.error("Groq transcription failed:", error);
                         throw error;
                     }
                 }
@@ -1024,6 +1139,7 @@
         recordButton.addEventListener('click', () => { if (isRecording) { stopRecording(); } else { transcriptionOutput.value = ''; transcriptionSection.classList.add('hidden'); copyButton.disabled = true; copyButton.classList.add('opacity-50', 'cursor-not-allowed'); copyButton.classList.remove('opacity-100', 'cursor-pointer'); startRecording(); } });
         saveApiKeyButton.addEventListener('click', () => { currentApiKey = apiKeyInput.value.trim(); if (currentApiKey) { localStorage.setItem('geminiApiKey', currentApiKey); setStatus('Gemini API Key saved.'); } else { localStorage.removeItem('geminiApiKey'); setStatus('Gemini API Key removed.', true); } renderHistory(); });
         saveOpenaiApiKeyButton.addEventListener('click', () => { currentOpenaiApiKey = openaiApiKeyInput.value.trim(); if (currentOpenaiApiKey) { localStorage.setItem('openaiApiKey', currentOpenaiApiKey); setStatus('OpenAI API Key saved.'); } else { localStorage.removeItem('openaiApiKey'); setStatus('OpenAI API Key removed.', true); } renderHistory(); });
+        saveGroqApiKeyButton.addEventListener('click', () => { currentGroqApiKey = groqApiKeyInput.value.trim(); if (currentGroqApiKey) { localStorage.setItem('groqApiKey', currentGroqApiKey); setStatus('Groq API Key saved.'); } else { localStorage.removeItem('groqApiKey'); setStatus('Groq API Key removed.', true); } renderHistory(); });
         copyButton.addEventListener('click', () => { if (transcriptionOutput.value && !copyButton.disabled) { navigator.clipboard.writeText(transcriptionOutput.value).then(() => { setStatus('Copied!'); const copyIcon = copyButton.querySelector('[data-lucide="copy"]'); const checkIconHTML = `<i data-lucide="check" style="width: 18px; height: 18px; color: green;"></i>`; const originalIconHTML = copyIcon ? copyIcon.outerHTML : `<i data-lucide="copy" style="width: 18px; height: 18px;"></i>`; copyButton.innerHTML = checkIconHTML; lucide.createIcons(); setTimeout(() => { copyButton.innerHTML = originalIconHTML; lucide.createIcons(); }, 1500); }).catch(err => { console.error('Copy failed: ', err); setStatus('Copy failed.', true); }); } });
         
         // Settings panel controls
@@ -1068,10 +1184,22 @@
             }
         });
         
-        // Gemini toggle
+        // API toggles - only one can be active at a time
         geminiToggle.addEventListener('change', () => {
+            if (geminiToggle.checked) {
+                // Disable other APIs
+                openaiToggle.checked = false;
+                groqToggle.checked = false;
+                openaiEnabled = false;
+                groqEnabled = false;
+                openaiSettings.classList.add('hidden');
+                groqSettings.classList.add('hidden');
+            }
+            
             geminiEnabled = geminiToggle.checked;
             localStorage.setItem('geminiEnabled', geminiEnabled);
+            localStorage.setItem('openaiEnabled', openaiEnabled);
+            localStorage.setItem('groqEnabled', groqEnabled);
             
             if (geminiEnabled) {
                 geminiSettings.classList.remove('hidden');
@@ -1080,15 +1208,49 @@
             }
         });
         
-        // OpenAI toggle
         openaiToggle.addEventListener('change', () => {
+            if (openaiToggle.checked) {
+                // Disable other APIs
+                geminiToggle.checked = false;
+                groqToggle.checked = false;
+                geminiEnabled = false;
+                groqEnabled = false;
+                geminiSettings.classList.add('hidden');
+                groqSettings.classList.add('hidden');
+            }
+            
             openaiEnabled = openaiToggle.checked;
             localStorage.setItem('openaiEnabled', openaiEnabled);
+            localStorage.setItem('geminiEnabled', geminiEnabled);
+            localStorage.setItem('groqEnabled', groqEnabled);
             
             if (openaiEnabled) {
                 openaiSettings.classList.remove('hidden');
             } else {
                 openaiSettings.classList.add('hidden');
+            }
+        });
+        
+        groqToggle.addEventListener('change', () => {
+            if (groqToggle.checked) {
+                // Disable other APIs
+                geminiToggle.checked = false;
+                openaiToggle.checked = false;
+                geminiEnabled = false;
+                openaiEnabled = false;
+                geminiSettings.classList.add('hidden');
+                openaiSettings.classList.add('hidden');
+            }
+            
+            groqEnabled = groqToggle.checked;
+            localStorage.setItem('groqEnabled', groqEnabled);
+            localStorage.setItem('geminiEnabled', geminiEnabled);
+            localStorage.setItem('openaiEnabled', openaiEnabled);
+            
+            if (groqEnabled) {
+                groqSettings.classList.remove('hidden');
+            } else {
+                groqSettings.classList.add('hidden');
             }
         });
         
@@ -1103,14 +1265,29 @@
             openaiLanguage = openaiLanguageSelect.value;
             localStorage.setItem('openaiLanguage', openaiLanguage);
         });
+        
+        // Groq model change
+        groqModelSelect.addEventListener('change', () => {
+            groqModel = groqModelSelect.value;
+            localStorage.setItem('groqModel', groqModel);
+        });
+        
+        // Groq language change
+        groqLanguageSelect.addEventListener('change', () => {
+            groqLanguage = groqLanguageSelect.value;
+            localStorage.setItem('groqLanguage', groqLanguage);
+        });
 
         // Initialization
         async function initializeApp() {
             lucide.createIcons();
             apiKeyInput.value = currentApiKey;
             openaiApiKeyInput.value = currentOpenaiApiKey;
+            groqApiKeyInput.value = currentGroqApiKey;
             openaiModelSelect.value = openaiModel;
             openaiLanguageSelect.value = openaiLanguage;
+            groqModelSelect.value = groqModel;
+            groqLanguageSelect.value = groqLanguage;
             
             // Set dark mode toggle state
             darkModeToggle.checked = darkMode === 'dark';
@@ -1122,6 +1299,7 @@
             // Set API toggles
             geminiToggle.checked = geminiEnabled;
             openaiToggle.checked = openaiEnabled;
+            groqToggle.checked = groqEnabled;
             
             // Show/hide API settings based on toggles
             if (!geminiEnabled) {
@@ -1130,9 +1308,12 @@
             if (!openaiEnabled) {
                 openaiSettings.classList.add('hidden');
             }
+            if (!groqEnabled) {
+                groqSettings.classList.add('hidden');
+            }
             
             // Show settings if no API key or if FFmpeg needs attention
-            if ((geminiEnabled && !currentApiKey) || (openaiEnabled && !currentOpenaiApiKey)) {
+            if ((geminiEnabled && !currentApiKey) || (openaiEnabled && !currentOpenaiApiKey) || (groqEnabled && !currentGroqApiKey)) {
                 settingsSection.classList.remove('hidden');
                 settingsVisible = true;
             }
