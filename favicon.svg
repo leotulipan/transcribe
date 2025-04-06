@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Microphone body -->
+  <path d="M16 20C18.2091 20 20 18.2091 20 16V8C20 5.79086 18.2091 4 16 4C13.7909 4 12 5.79086 12 8V16C12 18.2091 13.7909 20 16 20Z" fill="#4B5563"/>
+  <!-- Microphone stand -->
+  <path d="M16 22C19.3137 22 22 19.3137 22 16H24C24 19.866 20.866 23 17 23V28H15V23C11.134 23 8 19.866 8 16H10C10 19.3137 12.6863 22 16 22Z" fill="#4B5563"/>
+  <!-- Microphone base -->
+  <path d="M16 24C17.1046 24 18 24.8954 18 26V28H14V26C14 24.8954 14.8954 24 16 24Z" fill="#4B5563"/>
+</svg> 

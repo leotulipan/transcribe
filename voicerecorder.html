@@ -3,10 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Recorder & Transcriber (MP3)</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <title data-i18n="app_title">Voice Recorder & Transcriber (MP3)</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
+    
+    <!-- Import language files - note: using type="module" as fallback for browsers with strict CORS -->
+    <script src="i18n/i18n.js"></script>
+    <script type="text/javascript" src="i18n/en.js"></script>
+    <script type="text/javascript" src="i18n/de.js"></script>
 
     <style>
         /* Styles (pulse, scrollbar, layout, disabled, lucide, ffmpegLog) remain the same */
@@ -118,23 +124,77 @@
     <div class="main-container container mx-auto p-4 md:p-8 max-w-4xl">
 
         <header class="mb-8 text-center relative">
-            <h1 class="text-3xl font-bold text-gray-800">Voice Recorder & Transcriber</h1>
-            <p class="text-gray-600">Record audio, save locally, and transcribe using Cloud APIs.</p>
-            <button id="settingsButton" class="absolute top-0 right-0 p-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full">
-                <i data-lucide="settings" style="width: 24px; height: 24px;"></i>
-            </button>
+            <h1 class="text-3xl font-bold text-gray-800" data-i18n="app_title">Voice Recorder & Transcriber</h1>
+            <p class="text-gray-600" data-i18n="app_description">Record audio, save locally, and transcribe using Cloud APIs.</p>
+            <div class="absolute top-0 right-0 flex space-x-2">
+                <button id="helpButton" class="p-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full" data-i18n-title="help_button">
+                    <i data-lucide="help-circle" style="width: 24px; height: 24px;"></i>
+                </button>
+                <button id="settingsButton" class="p-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full" data-i18n-title="settings_button">
+                    <i data-lucide="settings" style="width: 24px; height: 24px;"></i>
+                </button>
+            </div>
         </header>
+
+        <!-- Help Modal -->
+        <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-300" data-i18n="help_title">How to Use This App</h2>
+                    <button id="closeHelp" class="p-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full">
+                        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                    </button>
+                </div>
+                
+                <div class="prose dark:prose-invert max-w-none">
+                    <p data-i18n="help_intro">This voice recorder allows you to record audio from your microphone, save it locally, and transcribe it using various AI services.</p>
+                    
+                    <p class="mt-4 font-medium" data-i18n="help_step1">1. Set up an API key in Settings (click the gear icon ⚙️)</p>
+                    <p class="mt-2 font-medium" data-i18n="help_step2">2. Click the microphone button to start recording</p>
+                    <p class="mt-2 font-medium" data-i18n="help_step3">3. Click again to stop recording</p>
+                    <p class="mt-2 font-medium" data-i18n="help_step4">4. Your recording will be saved in the history section</p>
+                    <p class="mt-2 font-medium" data-i18n="help_step5">5. Click the transcribe button to convert speech to text</p>
+                    
+                    <p class="mt-4 font-medium" data-i18n="help_apis">Supported transcription services:</p>
+                    <ul class="list-disc pl-6 mt-2">
+                        <li data-i18n="help_api_gemini">Google Gemini - Free tier available</li>
+                        <li data-i18n="help_api_openai">OpenAI Whisper - Paid API</li>
+                        <li data-i18n="help_api_groq">Groq - Paid API</li>
+                        <li data-i18n="help_api_assembly">Assembly AI - Paid API with free tier</li>
+                    </ul>
+                    
+                    <p class="mt-4 text-sm text-gray-600 dark:text-gray-400 italic" data-i18n="help_privacy">
+                        Privacy note: Your recordings stay on your device. API keys are stored in your browser's local storage only.
+                    </p>
+                </div>
+                
+                <div class="mt-6 flex justify-end">
+                    <button id="dontShowAgainButton" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400" data-i18n="dont_show_startup">
+                        Don't show on startup
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <section id="settingsSection" class="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow hidden">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-300">Settings</h2>
+                <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-300" data-i18n="settings_title">Settings</h2>
                 <button id="closeSettings" class="p-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full">
                     <i data-lucide="x" style="width: 20px; height: 20px;"></i>
                 </button>
             </div>
             
+            <!-- Add Interface Language Section -->
+            <div id="languageSection" class="mb-4">
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-i18n="language">Interface Language:</h3>
+                <select id="interfaceLanguage" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    <option value="en" data-i18n="lang_en">English</option>
+                    <option value="de" data-i18n="lang_de">Deutsch (German)</option>
+                </select>
+            </div>
+            
             <div id="transcriptionApiSection" class="mb-4">
-                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Transcription API:</h3>
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-i18n="transcription_api">Transcription API:</h3>
                 
                 <!-- Gemini API -->
                 <div class="mb-3 p-3 border border-gray-200 dark:border-gray-700 rounded-md">
@@ -146,14 +206,14 @@
                         </label>
                     </div>
                     <div id="geminiSettings" class="mt-2">
-                        <label for="apiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</label>
+                        <label for="apiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="api_key">API Key:</label>
                         <div class="flex items-center space-x-2">
-                            <input type="password" id="apiKey" name="apiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your API key">
+                            <input type="password" id="apiKey" name="apiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" data-i18n-placeholder="api_key_placeholder">
                             <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Get API Key">
                                 <i data-lucide="external-link" style="width: 18px; height: 18px;"></i>
                             </a>
                         </div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Your API key is stored only in your browser's local storage.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="api_key_note">Your API key is stored only in your browser's local storage.</p>
                     </div>
                 </div>
                 
@@ -167,18 +227,18 @@
                         </label>
                     </div>
                     <div id="openaiSettings" class="mt-2 hidden">
-                        <label for="openaiApiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</label>
+                        <label for="openaiApiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="api_key">API Key:</label>
                         <div class="flex items-center space-x-2">
-                            <input type="password" id="openaiApiKey" name="openaiApiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your OpenAI API key">
+                            <input type="password" id="openaiApiKey" name="openaiApiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" data-i18n-placeholder="api_key_placeholder">
                             <a href="https://platform.openai.com/api-keys" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Get API Key">
                                 <i data-lucide="external-link" style="width: 18px; height: 18px;"></i>
                             </a>
                         </div>
                         
                         <div class="mt-3">
-                            <label for="openaiLanguage" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Language:</label>
+                            <label for="openaiLanguage" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="language_selection">Language:</label>
                             <select id="openaiLanguage" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                <option value="auto">Auto-detect</option>
+                                <option value="auto" data-i18n="auto_detect">Auto-detect</option>
                                 <option value="en">English</option>
                                 <option value="es">Spanish</option>
                                 <option value="fr">French</option>
@@ -277,18 +337,18 @@
                             <label for="assemblyLanguage" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Language:</label>
                             <select id="assemblyLanguage" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                                 <option value="auto">Auto-detect</option>
-                                <option value="en_us">English (US)</option>
-                                <option value="en_uk">English (UK)</option>
-                                <option value="en_au">English (Australia)</option>
-                                <option value="fr_fr">French</option>
-                                <option value="de_de">German</option>
-                                <option value="it_it">Italian</option>
-                                <option value="es_es">Spanish</option>
-                                <option value="pt_pt">Portuguese</option>
-                                <option value="nl_nl">Dutch</option>
-                                <option value="ja_jp">Japanese</option>
-                                <option value="ko_kr">Korean</option>
-                                <option value="zh_cn">Chinese</option>
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="nl">Dutch</option>
+                                <option value="pl">Polish</option>
+                                <option value="ru">Russian</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="zh">Chinese</option>
                             </select>
                         </div>
                     </div>
@@ -296,11 +356,11 @@
             </div>
 
             <div id="ffmpegSection" class="mb-4">
-                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">FFmpeg Status:</h3>
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-i18n="ffmpeg_status">FFmpeg Status:</h3>
                 <div class="flex items-center justify-between mb-2">
-                    <p id="ffmpegStatus" class="text-sm text-gray-600 dark:text-gray-400">Loading FFmpeg...</p>
+                    <p id="ffmpegStatus" class="text-sm text-gray-600 dark:text-gray-400" data-i18n="ffmpeg_disabled">FFmpeg disabled. Audio will not be converted to MP3.</p>
                     <div class="flex items-center space-x-2">
-                        <label class="text-xs text-gray-500 dark:text-gray-400">Enable FFmpeg</label>
+                        <label class="text-xs text-gray-500 dark:text-gray-400" data-i18n="ffmpeg_enable">Enable FFmpeg</label>
                         <label class="toggle-switch">
                             <input type="checkbox" id="ffmpegToggle" checked>
                             <span class="toggle-slider"></span>
@@ -345,8 +405,8 @@
                     <i data-lucide="upload" style="width: 32px; height: 32px;"></i>
                 </div>
             </div>
-            <p id="statusMessage" class="mt-3 text-gray-600 h-5">Loading FFmpeg...</p>
-            <p id="uploadMessage" class="mt-1 text-sm text-gray-500">Drag & drop m4a, wav, or mp3 files here to upload</p>
+            <p id="statusMessage" class="mt-3 text-gray-600 h-5" data-i18n="ready_to_record">Ready to record</p>
+            <p id="uploadMessage" class="mt-1 text-sm text-gray-500" data-i18n="drag_drop">Drag & drop m4a, wav, or mp3 files here to upload</p>
             <div id="ffmpegLog" class="hidden text-left"></div>
         </section>
 
@@ -368,7 +428,7 @@
         </section>
 
         <footer class="mt-8 text-center text-sm text-gray-500">
-            <p>App made with ♥️ and ✨ in Vienna. Uses browser (local ) storage. API Key is not saved in the Cloud.</p>
+            <p data-i18n="footer_text">App made with ♥️ and ✨ in Vienna. Uses browser (local ) storage. API Key is not saved in the Cloud.</p>
         </footer>
 
     </div> <script>
@@ -409,6 +469,11 @@
         const assemblyEuToggle = document.getElementById('assemblyEuToggle');
         const assemblyLanguageSelect = document.getElementById('assemblyLanguage');
         const recordingLimitInput = document.getElementById('recordingLimit');
+        const helpButton = document.getElementById('helpButton');
+        const helpModal = document.getElementById('helpModal');
+        const closeHelp = document.getElementById('closeHelp');
+        const dontShowAgainButton = document.getElementById('dontShowAgainButton');
+        const interfaceLanguage = document.getElementById('interfaceLanguage');
 
         // --- State Variables (Unchanged) ---
         let mediaRecorder;
@@ -431,6 +496,7 @@
         let tokenUsage = { input: 0, output: 0 }; // Track token usage
         let darkMode = localStorage.getItem('darkMode') || 'system'; // Dark mode preference
         let settingsVisible = false; // Track settings visibility
+        let helpVisible = false; // Track help visibility
         let ffmpegEnabled = localStorage.getItem('ffmpegEnabled') !== 'false'; // FFmpeg enabled by default
         let geminiEnabled = localStorage.getItem('geminiEnabled') !== 'false'; // Gemini enabled by default
         let openaiEnabled = localStorage.getItem('openaiEnabled') === 'true'; // OpenAI disabled by default
@@ -439,6 +505,8 @@
         let recordingLimit = localStorage.getItem('recordingLimit') || ''; // Recording length limit
         let recordingTimer = null; // Timer for recording length limit
         let isDraggingFile = false; // Track if file is being dragged over
+        let showHelpOnStartup = localStorage.getItem('showHelpOnStartup') !== 'false'; // Show help on startup by default
+        let currentLanguage = localStorage.getItem('uiLanguage') || 'en'; // Default to English
 
         // --- Constants ---
         const DB_NAME = 'VoiceRecorderDB_MP3';
@@ -466,14 +534,16 @@
         // --- FFmpeg Initialization ---
         async function loadFFmpeg() {
             if (!ffmpegEnabled) {
-                ffmpegStatus.textContent = 'FFmpeg disabled. Audio will not be converted to MP3.';
+                ffmpegStatus.textContent = i18n.t('ffmpeg_disabled');
                 ffmpegLoaded = false;
                 recordButton.disabled = false;
-                recordButton.title = 'Recording enabled (no MP3 conversion)';
+                recordButton.title = i18n.t('ready_to_record');
+                setStatus(i18n.t('ready_to_record'));
+                updateRecordButtonState();
                 return;
             }
             
-            ffmpegStatus.textContent = 'Loading FFmpeg (approx. 30MB)...';
+            ffmpegStatus.textContent = i18n.t('ffmpeg_loading');
             recordButton.disabled = true;
             ffmpegLog.classList.remove('hidden');
             ffmpegLog.textContent = 'Initializing FFmpeg library...\n';
@@ -610,18 +680,23 @@
         }
 
         // --- UI Update Functions (Unchanged) ---
-        function setStatus(message, isError = false) { statusMessage.textContent = message; statusMessage.className = `mt-3 h-5 ${isError ? 'text-red-600' : 'text-gray-600'}`; }
+        function setStatus(message, isError = false) { 
+            // Use translation if the message is a key in our translations
+            const translatedMessage = i18n.t(message);
+            statusMessage.textContent = translatedMessage; 
+            statusMessage.className = `mt-3 h-5 ${isError ? 'text-red-600' : 'text-gray-600'}`; 
+        }
         function updateRecordButtonState() {
             const micIconElement = recordButton.querySelector('[data-lucide="mic"]');
             if (isRecording) {
                 recordButton.classList.remove('bg-red-600', 'hover:bg-red-700');
                 recordButton.classList.add('bg-blue-600', 'hover:bg-blue-700', 'recording-pulse');
                 if (micIconElement) micIconElement.classList.add('animate-pulse');
-                setStatus('Recording...');
+                setStatus(i18n.t('recording'));
                 recordButton.disabled = false; // Ensure button is enabled during recording
             } else {
                 if (!statusMessage.textContent.includes('FFmpeg') && !statusMessage.textContent.includes('Converting')) {
-                    setStatus('Click the mic to record');
+                    setStatus(i18n.t('ready_to_record'));
                 }
                 recordButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'recording-pulse');
                 recordButton.classList.add('bg-red-600', 'hover:bg-red-700');
@@ -632,13 +707,13 @@
                 // 2. FFmpeg is not loaded yet
                 if (ffmpegEnabled && !ffmpegLoaded) {
                     recordButton.disabled = true;
-                    recordButton.title = 'FFmpeg is loading...';
+                    recordButton.title = i18n.t('loading_ffmpeg');
                 } else {
                     recordButton.disabled = false;
                     if (!ffmpegEnabled) {
-                        recordButton.title = 'Recording enabled (no MP3 conversion)';
+                        recordButton.title = i18n.t('ready_to_record');
                     } else {
-                        recordButton.title = 'Record audio and convert to MP3';
+                        recordButton.title = i18n.t('ready_to_record');
                     }
                 }
             }
@@ -1407,25 +1482,47 @@
                         
                         setStatus('Uploading audio to Assembly AI...');
                         
-                        // Step 1: Convert blob to base64
-                        const base64Audio = await blobToBase64(audioBlob);
+                        // Step 1: Upload the audio file directly
+                        const formData = new FormData();
                         
-                        // Step 2: Upload the audio file
+                        // Determine the correct file extension and MIME type
+                        let fileExtension = 'webm';
+                        let mimeTypeToUse = 'audio/webm';
+                        
+                        // Check if the blob already has a type
+                        if (audioBlob.type && audioBlob.type !== 'application/octet-stream') {
+                            mimeTypeToUse = audioBlob.type;
+                            // Extract extension from MIME type
+                            const mimeParts = audioBlob.type.split('/');
+                            if (mimeParts.length > 1) {
+                                fileExtension = mimeParts[1].split(';')[0];
+                            }
+                        }
+                        
+                        // Create a new Blob with the correct MIME type
+                        const audioBlobWithType = new Blob([audioBlob], { type: mimeTypeToUse });
+                        
+                        // Log the file details for debugging
+                        console.log("Original blob type:", audioBlob.type);
+                        console.log("Using MIME type:", mimeTypeToUse);
+                        console.log("File extension:", fileExtension);
+                        console.log("File size:", audioBlob.size);
+                        
+                        // Append the file with the correct name and type
+                        formData.append('audio_file', audioBlobWithType, `audio.${fileExtension}`);
+                        
                         const uploadResponse = await fetch(`${apiUrl}/upload`, {
                             method: 'POST',
                             headers: {
-                                'Authorization': currentAssemblyApiKey,
-                                'Content-Type': 'application/json'
+                                'Authorization': currentAssemblyApiKey
                             },
-                            body: JSON.stringify({
-                                file_data: base64Audio
-                            })
+                            body: formData
                         });
                         
                         if (!uploadResponse.ok) {
-                            const errorData = await uploadResponse.json();
-                            console.error("Assembly AI Upload Error:", errorData);
-                            throw new Error(errorData?.error || `HTTP ${uploadResponse.status}`);
+                            const errorText = await uploadResponse.text();
+                            console.error("Assembly AI Upload Error:", errorText);
+                            throw new Error(`Upload failed: ${errorText}`);
                         }
                         
                         const uploadData = await uploadResponse.json();
@@ -1439,9 +1536,13 @@
                         
                         // Step 3: Create the transcription request
                         const transcriptionRequest = {
-                            audio_url: audioUrl,
-                            language_code: assemblyLanguage !== 'auto' ? assemblyLanguage : undefined
+                            audio_url: audioUrl
                         };
+                        
+                        // Only add language if not auto and not empty
+                        if (assemblyLanguage && assemblyLanguage !== 'auto') {
+                            transcriptionRequest.language_code = assemblyLanguage;
+                        }
                         
                         // Step 4: Submit the transcription request
                         const transcriptionResponse = await fetch(`${apiUrl}/transcript`, {
@@ -1454,9 +1555,9 @@
                         });
                         
                         if (!transcriptionResponse.ok) {
-                            const errorData = await transcriptionResponse.json();
-                            console.error("Assembly AI Transcription Error:", errorData);
-                            throw new Error(errorData?.error || `HTTP ${transcriptionResponse.status}`);
+                            const errorText = await transcriptionResponse.text();
+                            console.error("Assembly AI Transcription Error:", errorText);
+                            throw new Error(`Transcription request failed: ${errorText}`);
                         }
                         
                         const transcriptionData = await transcriptionResponse.json();
@@ -1484,9 +1585,9 @@
                             });
                             
                             if (!pollResponse.ok) {
-                                const errorData = await pollResponse.json();
-                                console.error("Assembly AI Poll Error:", errorData);
-                                throw new Error(errorData?.error || `HTTP ${pollResponse.status}`);
+                                const errorText = await pollResponse.text();
+                                console.error("Assembly AI Poll Error:", errorText);
+                                throw new Error(`Polling failed: ${errorText}`);
                             }
                             
                             const pollData = await pollResponse.json();
@@ -1516,20 +1617,6 @@
                         // Update global token usage
                         tokenUsage.output += estimatedTokens;
                         localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
-                        
-                        transcriptionText = transcriptionData.text || "Transcription not found.";
-                        console.log("Assembly AI transcription OK:", transcriptionText);
-                        
-                        // Update token usage
-                        if (transcriptionData.usage) {
-                            recordingTokenUsage.input = transcriptionData.usage.promptTokenCount || 0;
-                            recordingTokenUsage.output = transcriptionData.usage.candidatesTokenCount || 0;
-                            
-                            // Update global token usage
-                            tokenUsage.input += recordingTokenUsage.input;
-                            tokenUsage.output += recordingTokenUsage.output;
-                            localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
-                        }
                         
                     } catch (error) {
                         console.error("Assembly AI transcription failed:", error);
@@ -1705,11 +1792,11 @@
             if (ffmpegEnabled) {
                 await loadFFmpeg();
             } else {
-                ffmpegStatus.textContent = 'FFmpeg disabled. Audio will not be converted to MP3.';
+                ffmpegStatus.textContent = i18n.t('ffmpeg_disabled');
                 ffmpegLoaded = false;
                 recordButton.disabled = false;
-                recordButton.title = 'Recording enabled (no MP3 conversion)';
-                setStatus('Ready to record (no MP3 conversion).');
+                recordButton.title = i18n.t('ready_to_record');
+                setStatus(i18n.t('ready_to_record'));
                 updateRecordButtonState();
             }
         });
@@ -1889,7 +1976,7 @@
             localStorage.setItem('assemblyLanguage', assemblyLanguage);
         });
 
-        // Initialization
+        // --- Initialization ---
         async function initializeApp() {
             lucide.createIcons();
             apiKeyInput.value = currentApiKey;
@@ -1901,136 +1988,99 @@
             groqLanguageSelect.value = groqLanguage;
             assemblyLanguageSelect.value = assemblyLanguage;
             assemblyEuToggle.checked = assemblyEuServer;
-            recordingLimitInput.value = recordingLimit;
-            
-            // Set dark mode toggle state
-            darkModeToggle.checked = darkMode === 'dark';
-            applyTheme();
-            
-            // Set FFmpeg toggle state
-            ffmpegToggle.checked = ffmpegEnabled;
-            
-            // Set API toggles
             geminiToggle.checked = geminiEnabled;
             openaiToggle.checked = openaiEnabled;
             groqToggle.checked = groqEnabled;
             assemblyToggle.checked = assemblyEnabled;
-            
-            // Show/hide API settings based on toggles
-            if (geminiEnabled) {
-                geminiSettings.classList.remove('hidden');
-            } else {
-                geminiSettings.classList.add('hidden');
-            }
-            if (openaiEnabled) {
-                openaiSettings.classList.remove('hidden');
-            } else {
-                openaiSettings.classList.add('hidden');
-            }
-            if (groqEnabled) {
-                groqSettings.classList.remove('hidden');
-            } else {
-                groqSettings.classList.add('hidden');
-            }
-            if (assemblyEnabled) {
-                assemblySettings.classList.remove('hidden');
-                // Check if API key is available
-                if (!currentAssemblyApiKey) {
-                    setStatus('Assembly AI API Key needed.', true);
-                    displayTranscription("Assembly AI API Key needed for transcription.");
-                } else {
-                    setStatus('Assembly AI ready for transcription.');
-                }
-            } else {
-                assemblySettings.classList.add('hidden');
-            }
-            
-            // Show settings if no API key or if FFmpeg needs attention
-            if ((geminiEnabled && !currentApiKey) || 
-                (openaiEnabled && !currentOpenaiApiKey) || 
-                (groqEnabled && !currentGroqApiKey) || 
-                (assemblyEnabled && !currentAssemblyApiKey)) {
-                settingsSection.classList.remove('hidden');
-                settingsVisible = true;
-            }
-            
-            // Set up drag and drop for file upload
-            setupDragAndDrop();
-            
-            // Update upload message with current API limits
-            updateUploadMessage();
-            
-            // Set initial status based on FFmpeg toggle state
-            if (ffmpegEnabled) {
-                await loadFFmpeg(); // Load FFmpeg if enabled
-            } else {
-                // FFmpeg is disabled, enable recording without conversion
-                ffmpegStatus.textContent = 'FFmpeg disabled. Audio will not be converted to MP3.';
-                ffmpegLoaded = false;
-                setStatus('Ready to record (no MP3 conversion).');
-                recordButton.disabled = false;
-                recordButton.title = 'Recording enabled (no MP3 conversion)';
-            }
-            
-            try {
-                await initDB();
-                await renderHistory();
-            } catch (error) {
-                setStatus('DB init failed.', true);
-            }
-            
-            // Update the record button state after initialization
-            updateRecordButtonState();
-            
-            // Check if any API is enabled and has a key
-            const hasValidApiKey = (geminiEnabled && currentApiKey) || 
-                                 (openaiEnabled && currentOpenaiApiKey) || 
-                                 (groqEnabled && currentGroqApiKey) || 
-                                 (assemblyEnabled && currentAssemblyApiKey);
-            
-            if (!hasValidApiKey) {
-                setStatus('API Key needed for transcription.', true);
-                displayTranscription("API Key needed for transcription.");
-            } else if (assemblyEnabled && currentAssemblyApiKey) {
-                setStatus('Assembly AI ready for transcription.');
-            }
-            
-            // Mic support checks - these will disable the button if mic isn't available
-            if (!navigator.mediaDevices?.getUserMedia) {
-                setStatus('getUserMedia not supported.', true);
-                recordButton.disabled = true;
-                recordButton.title = 'Not supported';
-            } else if (!window.MediaRecorder) {
-                setStatus('MediaRecorder not supported.', true);
-                recordButton.disabled = true;
-                recordButton.title = 'Not supported';
-            } else {
-                try {
-                    const ps = await navigator.permissions.query({ name: 'microphone' });
-                    console.log('Mic perm state:', ps.state);
-                    if (ps.state === 'denied') setStatus('Mic denied.', true);
-                    ps.onchange = () => {
-                        console.log('Mic perm changed:', ps.state);
-                        if (ps.state === 'denied') setStatus('Mic denied.', true);
-                        else if (statusMessage.textContent.includes('denied')) setStatus('Mic granted.', false);
-                    };
-                } catch (e) {
-                    console.warn("Perm query failed:", e);
-                }
-            }
-        }
-        document.addEventListener('DOMContentLoaded', initializeApp);
+            recordingLimitInput.value = recordingLimit;
+            darkModeToggle.checked = darkMode === 'dark';
+            ffmpegToggle.checked = ffmpegEnabled;
+            interfaceLanguage.value = currentLanguage;
 
-        // Update token display
-        function updateTokenDisplay() {
-            const savedUsage = localStorage.getItem('tokenUsage');
-            if (savedUsage) {
-                tokenUsage = JSON.parse(savedUsage);
+            // Initialize i18n system
+            await i18n.init().loadTranslations();
+            i18n.translatePage();
+            
+            // Update theme based on preference
+            applyTheme();
+            
+            // Show help modal on first visit
+            if (showHelpOnStartup) {
+                showHelpModal();
             }
-            document.getElementById('inputTokens').textContent = tokenUsage.input.toLocaleString();
-            document.getElementById('outputTokens').textContent = tokenUsage.output.toLocaleString();
+
+            // Initialize database and load recordings
+            await initDB();
+            await renderHistory();
+            
+            // Set initial status based on FFmpeg state
+            if (ffmpegEnabled) {
+                // If FFmpeg is enabled, load it
+                await loadFFmpeg();
+            } else {
+                // If FFmpeg is disabled, set appropriate status
+                ffmpegStatus.textContent = i18n.t('ffmpeg_disabled');
+                ffmpegLoaded = false;
+                recordButton.disabled = false;
+                recordButton.title = i18n.t('ready_to_record');
+                setStatus(i18n.t('ready_to_record'));
+                updateRecordButtonState(); // Ensure button state is updated
+            }
+            
+            // Update the upload message with the current API limits
+            updateUploadMessage();
         }
         
+        // --- Language switching ---
+        interfaceLanguage.addEventListener('change', async () => {
+            const newLanguage = interfaceLanguage.value;
+            await i18n.setLocale(newLanguage);
+            i18n.translatePage();
+            
+            // Update any dynamically generated content
+            updateUploadMessage();
+            setStatus(ffmpegEnabled ? 
+                (ffmpegLoaded ? i18n.t('ready_to_record') : i18n.t('loading_ffmpeg')) : 
+                i18n.t('ready_to_record'));
+        });
+        
+        // Listen for language changes
+        window.addEventListener('languageChanged', (event) => {
+            // Update the language selector
+            interfaceLanguage.value = event.detail.locale;
+            // Translate the page
+            i18n.translatePage();
+        });
+        
+        // --- Help Modal Functions ---
+        function showHelpModal() {
+            helpModal.classList.remove('hidden');
+            helpVisible = true;
+        }
+        
+        function hideHelpModal() {
+            helpModal.classList.add('hidden');
+            helpVisible = false;
+        }
+        
+        // Add event listeners for help modal
+        helpButton.addEventListener('click', showHelpModal);
+        
+        closeHelp.addEventListener('click', hideHelpModal);
+        
+        dontShowAgainButton.addEventListener('click', () => {
+            localStorage.setItem('showHelpOnStartup', 'false');
+            showHelpOnStartup = false;
+            hideHelpModal();
+        });
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === helpModal) {
+                hideHelpModal();
+            }
+        });
+
         // Apply theme based on system preference or user choice
         function applyTheme() {
             if (darkMode === 'dark') {
@@ -2101,12 +2151,12 @@
                 const files = dt.files;
                 
                 if (files.length === 0) {
-                    setStatus('No file detected.', true);
+                    setStatus(i18n.t('no_file_detected'), true);
                     return;
                 }
                 
                 if (files.length > 1) {
-                    setStatus('Please drop only one file.', true);
+                    setStatus(i18n.t('drop_single_file'), true);
                     return;
                 }
                 
@@ -2117,7 +2167,7 @@
                 const fileExtension = file.name.split('.').pop().toLowerCase();
                 
                 if (!file.type.startsWith('audio/') || !allowedExtensions.includes(fileExtension)) {
-                    setStatus('Please upload only m4a, wav, or mp3 files.', true);
+                    setStatus(i18n.t('file_type_error'), true);
                     return;
                 }
                 
@@ -2127,16 +2177,16 @@
                 
                 if (file.size > maxSize) {
                     const maxSizeMB = maxSize / (1024 * 1024);
-                    setStatus(`File too large for ${selectedAPI}. Max: ${maxSizeMB}MB.`, true);
+                    setStatus(`${i18n.t('file_too_large')} ${selectedAPI}. ${i18n.t('max')}: ${maxSizeMB}MB.`, true);
                     return;
                 }
                 
-                setStatus('Processing uploaded file...');
+                setStatus(i18n.t('processing'));
                 
                 try {
                     // Add the file directly to the database without conversion
                     const newId = await addRecordingToDB(file, file.type);
-                    setStatus(`File uploaded (ID: ${newId}).`);
+                    setStatus(`${i18n.t('file_uploaded')} (ID: ${newId}).`);
                     await renderHistory();
                     
                     // Attempt automatic transcription if API key is available
@@ -2144,15 +2194,15 @@
                         (openaiEnabled && currentOpenaiApiKey) || 
                         (groqEnabled && currentGroqApiKey) || 
                         (assemblyEnabled && currentAssemblyApiKey)) {
-                        setStatus(`Starting automatic transcription for file ${newId}...`);
+                        setStatus(`${i18n.t('starting_transcription')} ${newId}...`);
                         await transcribeAudio(newId, file, file.type);
                     } else {
-                        setStatus('File uploaded. Add an API key to enable transcription.', true);
-                        displayTranscription("API Key needed for transcription.");
+                        setStatus(i18n.t('file_uploaded_no_api'), true);
+                        displayTranscription(i18n.t('api_key_needed'));
                     }
                 } catch (error) {
                     console.error("Error processing uploaded file:", error);
-                    setStatus(`Error processing file: ${error.message}`, true);
+                    setStatus(`${i18n.t('error_processing_file')}: ${error.message}`, true);
                 }
             }
         }
@@ -2168,7 +2218,7 @@
         function updateUploadMessage() {
             const selectedAPI = getSelectedAPI();
             const maxSizeMB = FILE_SIZE_LIMITS[selectedAPI] / (1024 * 1024);
-            uploadMessage.textContent = `Drag & drop m4a, wav, or mp3 files here to upload (max ${maxSizeMB}MB)`;
+            uploadMessage.textContent = `${i18n.t('drag_drop')} (${i18n.t('max')} ${maxSizeMB}MB)`;
         }
         
         function formatFileSize(bytes) {
@@ -2177,6 +2227,8 @@
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
+        // Initialize the app when the DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html>

@@ -17,6 +17,6 @@ AssemblyAI
 File Uploads: Up to 200 MB per file for direct uploads.
 
 # Todo
-- remove gpt4o feature by "stashing" in a branch and reverting to only using whisper
-- all text from an easy definition with english as default so we can translate and add an interface language button in settings
-- ? icon top right next to settings. a modal with a text loaded from a partial (also for translations). modal shown on first load when nothing in localstorage. explain steps to get started
+- come up with a robust i8n plan for on screen text and error messages
+- all text in an easy definition (external file?) with english as default so we can translate and add an interface language button in the settings
+- a ? icon top right next to settings. a modal with a text loaded from a partial (also ready for translations). modal always shown on first load when nothing is yet in localstorage. explain steps to get started
