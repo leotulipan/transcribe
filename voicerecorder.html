@@ -118,8 +118,8 @@
     <div class="main-container container mx-auto p-4 md:p-8 max-w-4xl">
 
         <header class="mb-8 text-center relative">
-            <h1 class="text-3xl font-bold text-gray-800">Voice Recorder & Transcriber (MP3)</h1>
-            <p class="text-gray-600">Record audio, convert to MP3 (VBR ~q1), save locally, and transcribe using Gemini.</p>
+            <h1 class="text-3xl font-bold text-gray-800">Voice Recorder & Transcriber</h1>
+            <p class="text-gray-600">Record audio, save locally, and transcribe using Cloud APIs.</p>
             <button id="settingsButton" class="absolute top-0 right-0 p-2 text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full">
                 <i data-lucide="settings" style="width: 24px; height: 24px;"></i>
             </button>
@@ -355,7 +355,7 @@
                 </div>
             </div>
             <p id="statusMessage" class="mt-3 text-gray-600 h-5">Loading FFmpeg...</p>
-            <p id="uploadMessage" class="mt-1 text-sm text-gray-500">Drag & drop an audio file here to upload</p>
+            <p id="uploadMessage" class="mt-1 text-sm text-gray-500">Drag & drop m4a, wav, or mp3 files here to upload</p>
             <div id="ffmpegLog" class="hidden text-left"></div>
         </section>
 
@@ -377,7 +377,7 @@
         </section>
 
         <footer class="mt-8 text-center text-sm text-gray-500">
-            <p>App by Gemini. Uses browser storage and requires Gemini API Key for transcription.</p>
+            <p>App made with ♥️ and ✨ in Vienna. Uses browser (local ) storage. API Key is not saved in the Cloud.</p>
         </footer>
 
     </div> <script>
@@ -1802,6 +1802,9 @@
             } else {
                 geminiSettings.classList.add('hidden');
             }
+            
+            // Update upload message with new API limits
+            updateUploadMessage();
         });
         
         openaiToggle.addEventListener('change', () => {
@@ -1829,6 +1832,9 @@
             } else {
                 openaiSettings.classList.add('hidden');
             }
+            
+            // Update upload message with new API limits
+            updateUploadMessage();
         });
         
         groqToggle.addEventListener('change', () => {
@@ -1856,6 +1862,9 @@
             } else {
                 groqSettings.classList.add('hidden');
             }
+            
+            // Update upload message with new API limits
+            updateUploadMessage();
         });
         
         // OpenAI model change
@@ -1918,6 +1927,9 @@
             
             // Update transcription button states
             renderHistory();
+            
+            // Update upload message with new API limits
+            updateUploadMessage();
         });
         
         // Assembly API key input
@@ -2013,6 +2025,9 @@
             
             // Set up drag and drop for file upload
             setupDragAndDrop();
+            
+            // Update upload message with current API limits
+            updateUploadMessage();
             
             // Set initial status based on FFmpeg toggle state
             if (ffmpegEnabled) {
@@ -2166,9 +2181,12 @@
                 
                 const file = files[0];
                 
-                // Check if it's an audio file
-                if (!file.type.startsWith('audio/')) {
-                    setStatus('Please upload an audio file.', true);
+                // Check if it's an audio file with allowed extensions
+                const allowedExtensions = ['m4a', 'wav', 'mp3'];
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                
+                if (!file.type.startsWith('audio/') || !allowedExtensions.includes(fileExtension)) {
+                    setStatus('Please upload only m4a, wav, or mp3 files.', true);
                     return;
                 }
                 
@@ -2177,7 +2195,8 @@
                 const maxSize = FILE_SIZE_LIMITS[selectedAPI];
                 
                 if (file.size > maxSize) {
-                    setStatus(`File too large for ${selectedAPI}. Max: ${formatFileSize(maxSize)}.`, true);
+                    const maxSizeMB = maxSize / (1024 * 1024);
+                    setStatus(`File too large for ${selectedAPI}. Max: ${maxSizeMB}MB.`, true);
                     return;
                 }
                 
@@ -2213,6 +2232,12 @@
             if (groqEnabled) return 'groq';
             if (assemblyEnabled) return 'assembly';
             return 'gemini'; // Default
+        }
+        
+        function updateUploadMessage() {
+            const selectedAPI = getSelectedAPI();
+            const maxSizeMB = FILE_SIZE_LIMITS[selectedAPI] / (1024 * 1024);
+            uploadMessage.textContent = `Drag & drop m4a, wav, or mp3 files here to upload (max ${maxSizeMB}MB)`;
         }
         
         function formatFileSize(bytes) {

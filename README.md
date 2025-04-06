@@ -17,9 +17,6 @@ AssemblyAI
 File Uploads: Up to 200 MB per file for direct uploads.
 
 # Todo
-- fix Duration display
-- fix "not transcribed yet" button: currently inactiaved (ffmpeg not loaded) but an api is selected and works for new recordings
-
 -  make sure Upload only accepts extensions m4a, wav, mp3 for now
 - deny upload of files larger than upload size of current selected API (25mb for groq/openai, 200mb assemblyai, 50mb google)
 - remove gpt4o feature by "stashing" in a branch and reverting to only using whisper
