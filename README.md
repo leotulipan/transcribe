@@ -17,8 +17,6 @@ AssemblyAI
 File Uploads: Up to 200 MB per file for direct uploads.
 
 # Todo
--  make sure Upload only accepts extensions m4a, wav, mp3 for now
-- deny upload of files larger than upload size of current selected API (25mb for groq/openai, 200mb assemblyai, 50mb google)
 - remove gpt4o feature by "stashing" in a branch and reverting to only using whisper
 - all text from an easy definition with english as default so we can translate and add an interface language button in settings
 - ? icon top right next to settings. a modal with a text loaded from a partial (also for translations). modal shown on first load when nothing in localstorage. explain steps to get started
