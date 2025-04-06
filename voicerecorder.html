@@ -545,6 +545,8 @@
             
             ffmpegStatus.textContent = i18n.t('ffmpeg_loading');
             recordButton.disabled = true;
+            recordButton.title = i18n.t('loading_ffmpeg');
+            setStatus(i18n.t('loading_ffmpeg') + ' (This might take up to 2 minutes)');
             ffmpegLog.classList.remove('hidden');
             ffmpegLog.textContent = 'Initializing FFmpeg library...\n';
 
@@ -569,6 +571,7 @@
                          console.log(`FFmpeg progress: ${(ratio * 100).toFixed(2)}%`);
                          if (ratio > 0 && ratio < 1) {
                             ffmpegStatus.textContent = `Loading FFmpeg... ${(ratio * 100).toFixed(0)}%`;
+                            setStatus(`Loading FFmpeg... ${(ratio * 100).toFixed(0)}% (This might take up to 2 minutes)`);
                          }
                     },
                     corePath: corePath,
@@ -581,6 +584,8 @@
                 ffmpegStatus.textContent = 'FFmpeg loaded successfully';
                 setStatus('Ready to record.');
                 recordButton.disabled = false;
+                recordButton.title = i18n.t('ready_to_record');
+                updateRecordButtonState();
 
             } catch (error) {
                 console.error("Error loading FFmpeg:", error);
@@ -594,6 +599,7 @@
                 ffmpegLoaded = false;
                 recordButton.disabled = true;
                 recordButton.title = 'FFmpeg failed to load, recording disabled.';
+                setStatus('FFmpeg failed to load. Please try again or disable FFmpeg in settings.', true);
             }
         }
 
@@ -1327,11 +1333,50 @@
                 let transcriptionText = "Transcription not found.";
                 let recordingTokenUsage = { input: 0, output: 0 };
                 
+                // Convert audio to MP3 if FFmpeg is enabled and loaded
+                let audioToTranscribe = audioBlob;
+                let mimeTypeToUse = mimeType;
+                
+                if (ffmpegEnabled && ffmpegLoaded) {
+                    setStatus('Converting audio to MP3 for transcription...');
+                    try {
+                        const arrayBuffer = await audioBlob.arrayBuffer();
+                        const inputData = new Uint8Array(arrayBuffer);
+                        const inputFilename = `input.${mimeType.split('/')[1]?.split(';')[0] || 'bin'}`;
+                        const outputFilename = `output.${TARGET_FORMAT}`;
+
+                        await ffmpeg.FS('writeFile', inputFilename, inputData);
+
+                        const ffmpegCommand = [
+                            '-i', inputFilename,
+                            '-ac', `${TARGET_CHANNELS}`,
+                            '-q:a', TARGET_QUALITY,
+                            outputFilename
+                        ];
+
+                        await ffmpeg.run(...ffmpegCommand);
+
+                        const outputData = ffmpeg.FS('readFile', outputFilename);
+                        audioToTranscribe = new Blob([outputData.buffer], { type: TARGET_MIME_TYPE });
+                        mimeTypeToUse = TARGET_MIME_TYPE;
+
+                        // Clean up
+                        await ffmpeg.FS('unlink', inputFilename);
+                        await ffmpeg.FS('unlink', outputFilename);
+                        
+                        setStatus('Audio converted, starting transcription...');
+                    } catch (error) {
+                        console.error("FFmpeg conversion failed:", error);
+                        setStatus(`Error during MP3 conversion: ${error.message || error}`, true);
+                        throw error;
+                    }
+                }
+                
                 // Try Gemini first if enabled
                 if (geminiEnabled && currentApiKey) {
                     try {
-                        const base64Audio = await blobToBase64(audioBlob);
-                        const requestBody = { contents: [{ parts: [ { text: "Please transcribe the following audio recording:" }, { inline_data: { mime_type: mimeType, data: base64Audio } } ]}] };
+                        const base64Audio = await blobToBase64(audioToTranscribe);
+                        const requestBody = { contents: [{ parts: [ { text: "Please transcribe the following audio recording:" }, { inline_data: { mime_type: mimeTypeToUse, data: base64Audio } } ]}] };
                         const response = await fetch(GEMINI_API_URL + currentApiKey, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
                         const data = await response.json();
                         
@@ -1485,36 +1530,21 @@
                         // Step 1: Upload the audio file directly
                         const formData = new FormData();
                         
-                        // Determine the correct file extension and MIME type
-                        let fileExtension = 'webm';
-                        let mimeTypeToUse = 'audio/webm';
-                        
-                        // Check if the blob already has a type
-                        if (audioBlob.type && audioBlob.type !== 'application/octet-stream') {
-                            mimeTypeToUse = audioBlob.type;
-                            // Extract extension from MIME type
-                            const mimeParts = audioBlob.type.split('/');
-                            if (mimeParts.length > 1) {
-                                fileExtension = mimeParts[1].split(';')[0];
-                            }
-                        }
-                        
                         // Create a new Blob with the correct MIME type
-                        const audioBlobWithType = new Blob([audioBlob], { type: mimeTypeToUse });
+                        const audioBlobWithType = new Blob([audioBlob], { type: 'audio/mpeg' });
                         
                         // Log the file details for debugging
                         console.log("Original blob type:", audioBlob.type);
-                        console.log("Using MIME type:", mimeTypeToUse);
-                        console.log("File extension:", fileExtension);
                         console.log("File size:", audioBlob.size);
                         
-                        // Append the file with the correct name and type
-                        formData.append('audio_file', audioBlobWithType, `audio.${fileExtension}`);
+                        // Append the file with a generic name and correct type
+                        formData.append('audio_file', audioBlobWithType, 'audio.mp3');
                         
                         const uploadResponse = await fetch(`${apiUrl}/upload`, {
                             method: 'POST',
                             headers: {
-                                'Authorization': currentAssemblyApiKey
+                                'Authorization': currentAssemblyApiKey,
+                                'Accept': 'application/json'
                             },
                             body: formData
                         });
