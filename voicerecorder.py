@@ -3,10 +3,6 @@ import socketserver
 import os
 import signal
 import sys
-import json
-import urllib.request
-import urllib.error
-import urllib.parse
 
 PORT = 8080
 
@@ -30,89 +26,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         self.end_headers()
     
-    def do_POST(self):
-        # Proxy route for OpenAI API
-        if self.path.startswith('/api/openai/'):
-            print(f"Proxying OpenAI request: {self.path}")
-            
-            # Extract the actual OpenAI API path
-            openai_path = self.path.replace('/api/openai', '')
-            openai_url = f'https://api.openai.com{openai_path}'
-            
-            print(f"Forwarding to: {openai_url}")
-            
-            # Get content length
-            content_length = int(self.headers.get('Content-Length', 0))
-            
-            # Read request body
-            request_body = self.rfile.read(content_length) if content_length > 0 else b''
-            
-            # Create a proper Request object with all headers
-            headers = {key: value for key, value in self.headers.items() 
-                      if key.lower() not in ('host', 'content-length')}
-            
-            # Create proxy request
-            req = urllib.request.Request(
-                openai_url,
-                data=request_body,
-                headers=headers,
-                method='POST'
-            )
-            
-            try:
-                # Forward request to OpenAI
-                with urllib.request.urlopen(req) as response:
-                    # Read the response data
-                    response_body = response.read()
-                    
-                    # Set the response status code
-                    self.send_response(response.status)
-                    
-                    # Set CORS headers
-                    self.send_header('Access-Control-Allow-Origin', '*')
-                    
-                    # Forward response headers
-                    for header, value in response.getheaders():
-                        if header.lower() not in ('transfer-encoding',):
-                            self.send_header(header, value)
-                    
-                    # End headers
-                    self.end_headers()
-                    
-                    # Write response body
-                    self.wfile.write(response_body)
-                    
-                    print(f"OpenAI API response status: {response.status}")
-            
-            except urllib.error.HTTPError as e:
-                # Handle HTTP errors from OpenAI
-                print(f"OpenAI API error: {e.code} - {e.reason}")
-                
-                self.send_response(e.code)
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                
-                error_data = e.read()
-                self.wfile.write(error_data)
-                
-            except Exception as e:
-                # Handle other errors
-                print(f"Proxy error: {str(e)}")
-                
-                self.send_response(500)
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                
-                error_response = json.dumps({'error': str(e)}).encode('utf-8')
-                self.wfile.write(error_response)
-            
-            return
-        
-        # Handle other POST requests normally
-        return http.server.SimpleHTTPRequestHandler.do_POST(self)
-
     def guess_type(self, path):
         """Override to set correct MIME type for HTML files"""
         if path.endswith('.html'):
@@ -143,7 +56,6 @@ if __name__ == "__main__":
     
     # Print server information
     print(f"Voice Recorder Server running at http://localhost:{PORT}")
-    print(f"API proxy enabled at http://localhost:{PORT}/api/openai/")
     print("\nPress CTRL+C to stop the server")
     print("=" * 50)
     

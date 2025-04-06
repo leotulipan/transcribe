@@ -176,15 +176,6 @@
                         </div>
                         
                         <div class="mt-3">
-                            <label for="openaiModel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Model:</label>
-                            <select id="openaiModel" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                <option value="whisper-1">Whisper</option>
-                                <option value="gpt-4o-audio-preview">GPT-4o Audio Preview</option>
-                                <option value="gpt-4o-mini-audio-preview">GPT-4o Mini Audio Preview</option>
-                            </select>
-                        </div>
-                        
-                        <div class="mt-3">
                             <label for="openaiLanguage" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Language:</label>
                             <select id="openaiLanguage" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                                 <option value="auto">Auto-detect</option>
@@ -405,7 +396,6 @@
         const openaiSettings = document.getElementById('openaiSettings');
         const openaiApiKeyInput = document.getElementById('openaiApiKey');
         const saveOpenaiApiKeyButton = document.getElementById('saveOpenaiApiKey');
-        const openaiModelSelect = document.getElementById('openaiModel');
         const openaiLanguageSelect = document.getElementById('openaiLanguage');
         const groqToggle = document.getElementById('groqToggle');
         const groqSettings = document.getElementById('groqSettings');
@@ -428,7 +418,6 @@
         let currentOpenaiApiKey = localStorage.getItem('openaiApiKey') || '';
         let currentGroqApiKey = localStorage.getItem('groqApiKey') || '';
         let currentAssemblyApiKey = localStorage.getItem('assemblyApiKey') || '';
-        let openaiModel = localStorage.getItem('openaiModel') || 'whisper-1';
         let openaiLanguage = localStorage.getItem('openaiLanguage') || 'auto';
         let groqModel = localStorage.getItem('groqModel') || 'whisper-large-v3-turbo';
         let groqLanguage = localStorage.getItem('groqLanguage') || 'auto';
@@ -456,19 +445,16 @@
         const DB_VERSION = 1;
         const STORE_NAME = 'recordings_mp3';
         const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=';
-        const OPENAI_API_URL = 'https://api.openai.com/v1/audio/transcriptions';
+        const OPENAI_API_URL = 'https://api.openai.com';
         const OPENAI_CHAT_API_URL = 'https://api.openai.com/v1/chat/completions';
         const GROQ_API_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
-        const ASSEMBLY_API_URL_US = 'https://api.assemblyai.com/v2/transcript';
-        const ASSEMBLY_API_URL_EU = 'https://api.eu.assemblyai.com/v2/transcript';
+        const ASSEMBLY_API_URL_US = 'https://api.assemblyai.com/v2';
+        const ASSEMBLY_API_URL_EU = 'https://api.eu.assemblyai.com/v2';
         const TARGET_MIME_TYPE = 'audio/mpeg';
         const TARGET_FORMAT = 'mp3';
         const TARGET_QUALITY = '1';
         const TARGET_CHANNELS = 1;
         
-        // Local proxy URLs for API requests
-        const OPENAI_PROXY_URL = '/api/openai';
-
         // File size limits for different APIs
         const FILE_SIZE_LIMITS = {
             gemini: 50 * 1024 * 1024, // 50MB
@@ -1315,115 +1301,43 @@
                 // Try OpenAI if Gemini is not enabled or failed
                 if ((!geminiEnabled || !currentApiKey) && openaiEnabled && currentOpenaiApiKey) {
                     try {
-                        // Check if the selected model is a GPT-4o audio model
-                        const isGPT4oAudioModel = openaiModel.includes('gpt-4o') && openaiModel.includes('audio');
+                        // Use transcription API for Whisper models
+                        const formData = new FormData();
+                        formData.append('file', audioBlob, 'audio.mp3');
+                        formData.append('model', 'whisper-1');
                         
-                        if (isGPT4oAudioModel) {
-                            // Use chat completions API for GPT-4o audio models
-                            const base64Audio = await blobToBase64(audioBlob);
-                            
-                            console.log("Sending audio to GPT-4o API, base64 length:", base64Audio.length);
-                            
-                            // Create request body for chat completions API
-                            const requestBody = {
-                                model: openaiModel,
-                                messages: [
-                                    {
-                                        role: "user",
-                                        content: [
-                                            {
-                                                type: "text",
-                                                text: "Please transcribe this audio file accurately."
-                                            },
-                                            {
-                                                type: "audio_url",
-                                                audio_url: {
-                                                    url: `data:${audioBlob.type};base64,${base64Audio}`
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ],
-                                temperature: 0 // Lower temperature for more accurate transcription
-                            };
-                            
-                            // Make the API request through our local proxy
-                            const response = await fetch(`${OPENAI_PROXY_URL}/v1/chat/completions`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${currentOpenaiApiKey}`
-                                },
-                                body: JSON.stringify(requestBody)
-                            });
-                            
-                            if (!response.ok) {
-                                const errorData = await response.json();
-                                console.error("OpenAI API Error:", errorData);
-                                throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
-                            }
-                            
-                            const data = await response.json();
-                            
-                            // Extract the transcript from the chat response
-                            if (data.choices && data.choices.length > 0 && data.choices[0].message?.content) {
-                                transcriptionText = data.choices[0].message.content;
-                            } else {
-                                console.warn("Unexpected OpenAI Chat API response:", data);
-                                transcriptionText = "Unexpected response format from OpenAI.";
-                            }
-                            
-                            console.log("OpenAI GPT-4o transcription OK:", transcriptionText);
-                            
-                            // Update token usage from the response
-                            if (data.usage) {
-                                recordingTokenUsage.input = data.usage.prompt_tokens || 0;
-                                recordingTokenUsage.output = data.usage.completion_tokens || 0;
-                                
-                                // Update global token usage
-                                tokenUsage.input += recordingTokenUsage.input;
-                                tokenUsage.output += recordingTokenUsage.output;
-                                localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
-                            }
-                        } else {
-                            // Use transcription API for standard Whisper models
-                            const formData = new FormData();
-                            formData.append('file', audioBlob, 'audio.mp3');
-                            formData.append('model', openaiModel);
-                            
-                            // Only add language if not auto
-                            if (openaiLanguage !== 'auto') {
-                                formData.append('language', openaiLanguage);
-                            }
-                            
-                            const response = await fetch(`${OPENAI_PROXY_URL}/v1/audio/transcriptions`, {
-                                method: 'POST',
-                                headers: {
-                                    'Authorization': `Bearer ${currentOpenaiApiKey}`
-                                },
-                                body: formData
-                            });
-                            
-                            if (!response.ok) {
-                                const errorData = await response.json();
-                                console.error("OpenAI API Error:", errorData);
-                                throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
-                            }
-                            
-                            const data = await response.json();
-                            transcriptionText = data.text || "Transcription not found.";
-                            console.log("OpenAI Whisper transcription OK:", transcriptionText);
-                            
-                            // OpenAI doesn't provide token usage in the same way, so we'll estimate
-                            // Rough estimate: 1 token per 4 characters
-                            const estimatedTokens = Math.ceil(transcriptionText.length / 4);
-                            recordingTokenUsage.input = 0; // We don't know the input tokens
-                            recordingTokenUsage.output = estimatedTokens;
-                            
-                            // Update global token usage
-                            tokenUsage.output += estimatedTokens;
-                            localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
+                        // Only add language if not auto
+                        if (openaiLanguage !== 'auto') {
+                            formData.append('language', openaiLanguage);
                         }
+                        
+                        const response = await fetch(`${OPENAI_API_URL}/v1/audio/transcriptions`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${currentOpenaiApiKey}`
+                            },
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            console.error("OpenAI API Error:", errorData);
+                            throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        transcriptionText = data.text || "Transcription not found.";
+                        console.log("OpenAI Whisper transcription OK:", transcriptionText);
+                        
+                        // OpenAI doesn't provide token usage in the same way, so we'll estimate
+                        // Rough estimate: 1 token per 4 characters
+                        const estimatedTokens = Math.ceil(transcriptionText.length / 4);
+                        recordingTokenUsage.input = 0; // We don't know the input tokens
+                        recordingTokenUsage.output = estimatedTokens;
+                        
+                        // Update global token usage
+                        tokenUsage.output += estimatedTokens;
+                        localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
                     } catch (error) {
                         console.error("OpenAI transcription failed:", error);
                         // If OpenAI fails and Groq is enabled, try Groq
@@ -1530,7 +1444,7 @@
                         };
                         
                         // Step 4: Submit the transcription request
-                        const transcriptionResponse = await fetch(apiUrl, {
+                        const transcriptionResponse = await fetch(`${apiUrl}/transcript`, {
                             method: 'POST',
                             headers: {
                                 'Authorization': currentAssemblyApiKey,
@@ -1562,7 +1476,7 @@
                         while (!completed && attempts < maxAttempts) {
                             await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
                             
-                            const pollResponse = await fetch(`${apiUrl}/${transcriptionId}`, {
+                            const pollResponse = await fetch(`${apiUrl}/transcript/${transcriptionId}`, {
                                 method: 'GET',
                                 headers: {
                                     'Authorization': currentAssemblyApiKey
@@ -1591,6 +1505,30 @@
                         
                         if (!completed) {
                             throw new Error("Transcription timed out after 5 minutes");
+                        }
+                        
+                        // Update token usage (not provided directly by Assembly AI)
+                        // Use a rough estimate based on audio duration
+                        const estimatedTokens = Math.ceil(transcriptionText.length / 4);
+                        recordingTokenUsage.input = 0; // We don't know the input tokens
+                        recordingTokenUsage.output = estimatedTokens;
+                        
+                        // Update global token usage
+                        tokenUsage.output += estimatedTokens;
+                        localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
+                        
+                        transcriptionText = transcriptionData.text || "Transcription not found.";
+                        console.log("Assembly AI transcription OK:", transcriptionText);
+                        
+                        // Update token usage
+                        if (transcriptionData.usage) {
+                            recordingTokenUsage.input = transcriptionData.usage.promptTokenCount || 0;
+                            recordingTokenUsage.output = transcriptionData.usage.candidatesTokenCount || 0;
+                            
+                            // Update global token usage
+                            tokenUsage.input += recordingTokenUsage.input;
+                            tokenUsage.output += recordingTokenUsage.output;
+                            localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
                         }
                         
                     } catch (error) {
@@ -1867,12 +1805,6 @@
             updateUploadMessage();
         });
         
-        // OpenAI model change
-        openaiModelSelect.addEventListener('change', () => {
-            openaiModel = openaiModelSelect.value;
-            localStorage.setItem('openaiModel', openaiModel);
-        });
-        
         // OpenAI language change
         openaiLanguageSelect.addEventListener('change', () => {
             openaiLanguage = openaiLanguageSelect.value;
@@ -1964,7 +1896,6 @@
             openaiApiKeyInput.value = currentOpenaiApiKey;
             groqApiKeyInput.value = currentGroqApiKey;
             assemblyApiKeyInput.value = currentAssemblyApiKey;
-            openaiModelSelect.value = openaiModel;
             openaiLanguageSelect.value = openaiLanguage;
             groqModelSelect.value = groqModel;
             groqLanguageSelect.value = groqLanguage;
