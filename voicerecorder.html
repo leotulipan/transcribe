@@ -750,11 +750,76 @@
                         
                         // Create audio element to get duration
                         const audio = new Audio(URL.createObjectURL(rec.audioBlob));
-                        audio.onloadedmetadata = () => {
-                            const duration = audio.duration;
+                        
+                        // Function to format duration properly
+                        const formatDuration = (duration) => {
+                            if (isNaN(duration) || duration === Infinity || duration <= 0) {
+                                return "Unknown";
+                            }
                             const minutes = Math.floor(duration / 60);
                             const seconds = Math.floor(duration % 60);
-                            const durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                        };
+                        
+                        // Set initial duration text
+                        fileInfo.textContent = `Size: ${fileSizeMB} MB | Duration: Loading...`;
+                        
+                        // Try to get duration using MediaSource API
+                        const getDurationWithMediaSource = async () => {
+                            try {
+                                // Create a MediaSource
+                                const mediaSource = new MediaSource();
+                                const video = document.createElement('video');
+                                video.src = URL.createObjectURL(mediaSource);
+                                
+                                return new Promise((resolve) => {
+                                    mediaSource.addEventListener('sourceopen', async () => {
+                                        try {
+                                            // Create a source buffer
+                                            const sourceBuffer = mediaSource.addSourceBuffer('audio/webm; codecs="opus"');
+                                            
+                                            // Get the audio data
+                                            const arrayBuffer = await rec.audioBlob.arrayBuffer();
+                                            
+                                            // Append the data to the source buffer
+                                            sourceBuffer.addEventListener('updateend', () => {
+                                                if (!sourceBuffer.updating && mediaSource.readyState === 'open') {
+                                                    // Get the duration
+                                                    const duration = mediaSource.duration;
+                                                    // Clean up
+                                                    URL.revokeObjectURL(video.src);
+                                                    resolve(duration);
+                                                }
+                                            });
+                                            
+                                            sourceBuffer.appendBuffer(arrayBuffer);
+                                            sourceBuffer.addEventListener('error', () => {
+                                                URL.revokeObjectURL(video.src);
+                                                resolve(null);
+                                            });
+                                        } catch (error) {
+                                            console.error("MediaSource error:", error);
+                                            URL.revokeObjectURL(video.src);
+                                            resolve(null);
+                                        }
+                                    });
+                                    
+                                    // Set a timeout in case the MediaSource doesn't open
+                                    setTimeout(() => {
+                                        URL.revokeObjectURL(video.src);
+                                        resolve(null);
+                                    }, 3000);
+                                });
+                            } catch (error) {
+                                console.error("MediaSource setup error:", error);
+                                return null;
+                            }
+                        };
+                        
+                        // Handle metadata loaded event
+                        audio.onloadedmetadata = () => {
+                            const duration = audio.duration;
+                            const durationStr = formatDuration(duration);
                             
                             // Add token usage if available
                             const tokenInfo = rec.tokenUsage ? 
@@ -764,6 +829,42 @@
                             fileInfo.textContent = `Size: ${fileSizeMB} MB | Duration: ${durationStr}${tokenInfo}`;
                             URL.revokeObjectURL(audio.src);
                         };
+                        
+                        // Add error handling for audio loading
+                        audio.onerror = () => {
+                            console.error("Error loading audio for duration calculation");
+                            // Try MediaSource as a fallback
+                            getDurationWithMediaSource().then(duration => {
+                                const durationStr = formatDuration(duration);
+                                
+                                // Add token usage if available
+                                const tokenInfo = rec.tokenUsage ? 
+                                    ` | Tokens: ${rec.tokenUsage.input || 0} in, ${rec.tokenUsage.output || 0} out` : 
+                                    '';
+                                    
+                                fileInfo.textContent = `Size: ${fileSizeMB} MB | Duration: ${durationStr}${tokenInfo}`;
+                            }).catch(() => {
+                                fileInfo.textContent = `Size: ${fileSizeMB} MB | Duration: Unknown`;
+                            });
+                            URL.revokeObjectURL(audio.src);
+                        };
+                        
+                        // Set a timeout to handle cases where metadata doesn't load
+                        setTimeout(() => {
+                            if (fileInfo.textContent.includes("Loading...")) {
+                                // Try to get duration directly from the audio element
+                                const duration = audio.duration;
+                                const durationStr = formatDuration(duration);
+                                
+                                // Add token usage if available
+                                const tokenInfo = rec.tokenUsage ? 
+                                    ` | Tokens: ${rec.tokenUsage.input || 0} in, ${rec.tokenUsage.output || 0} out` : 
+                                    '';
+                                    
+                                fileInfo.textContent = `Size: ${fileSizeMB} MB | Duration: ${durationStr}${tokenInfo}`;
+                                URL.revokeObjectURL(audio.src);
+                            }
+                        }, 2000);
                         
                         const transcriptionPreview = document.createElement('p'); 
                         transcriptionPreview.className = 'text-xs text-gray-500 italic truncate'; 
@@ -833,21 +934,22 @@
                             // If there's a transcription, button is always enabled
                             transcribeButton.disabled = false;
                             transcribeButton.title = 'View Transcription';
-                        } else if (!ffmpegLoaded && !assemblyEnabled) {
-                            // If FFmpeg isn't loaded and we're not using Assembly AI, disable the button
-                            transcribeButton.disabled = true;
-                            transcribeButton.title = 'FFmpeg not loaded';
-                        } else if ((!geminiEnabled || !currentApiKey) && 
-                                 (!openaiEnabled || !currentOpenaiApiKey) && 
-                                 (!groqEnabled || !currentGroqApiKey) && 
-                                 (!assemblyEnabled || !currentAssemblyApiKey)) {
-                            // If no API is enabled with a key, disable the button
-                            transcribeButton.disabled = true;
-                            transcribeButton.title = 'No API enabled or API Key required';
                         } else {
-                            // Otherwise, enable the button for transcription
-                            transcribeButton.disabled = false;
-                            transcribeButton.title = 'Transcribe Audio';
+                            // Check if any API is enabled with a valid key
+                            const hasValidApiKey = (geminiEnabled && currentApiKey) || 
+                                                 (openaiEnabled && currentOpenaiApiKey) || 
+                                                 (groqEnabled && currentGroqApiKey) || 
+                                                 (assemblyEnabled && currentAssemblyApiKey);
+                            
+                            if (hasValidApiKey) {
+                                // If any API is enabled with a valid key, enable the button
+                                transcribeButton.disabled = false;
+                                transcribeButton.title = 'Transcribe Audio';
+                            } else {
+                                // If no API is enabled with a key, disable the button
+                                transcribeButton.disabled = true;
+                                transcribeButton.title = 'No API enabled or API Key required';
+                            }
                         }
 
                         const deleteButton = document.createElement('button');
