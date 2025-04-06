@@ -252,6 +252,56 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Assembly AI API -->
+                <div class="mb-3 p-3 border border-gray-200 dark:border-gray-700 rounded-md">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Assembly AI</h4>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="assemblyToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="assemblySettings" class="mt-2 hidden">
+                        <label for="assemblyApiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="password" id="assemblyApiKey" name="assemblyApiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your Assembly AI API key">
+                            <a href="https://www.assemblyai.com/dashboard/api-keys" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Get API Key">
+                                <i data-lucide="external-link" style="width: 18px; height: 18px;"></i>
+                            </a>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <div class="flex items-center space-x-2">
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">EU Server:</label>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="assemblyEuToggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Toggle to use EU server for transcription</p>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label for="assemblyLanguage" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Language:</label>
+                            <select id="assemblyLanguage" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="auto">Auto-detect</option>
+                                <option value="en_us">English (US)</option>
+                                <option value="en_uk">English (UK)</option>
+                                <option value="en_au">English (Australia)</option>
+                                <option value="fr_fr">French</option>
+                                <option value="de_de">German</option>
+                                <option value="it_it">Italian</option>
+                                <option value="es_es">Spanish</option>
+                                <option value="pt_pt">Portuguese</option>
+                                <option value="nl_nl">Dutch</option>
+                                <option value="ja_jp">Japanese</option>
+                                <option value="ko_kr">Korean</option>
+                                <option value="zh_cn">Chinese</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div id="ffmpegSection" class="mb-4">
@@ -294,11 +344,19 @@
             </div>
         </section>
 
-        <section class="mb-6 p-6 bg-white rounded-lg shadow text-center">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700">Record Audio</h2>
-            <button id="recordButton" class="p-4 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out disabled:bg-gray-400" disabled> <i id="micIconPlaceholder" data-lucide="mic" style="width: 32px; height: 32px;"></i>
-            </button>
-            <p id="statusMessage" class="mt-3 text-gray-600 h-5">Loading FFmpeg...</p> <div id="ffmpegLog" class="hidden text-left"></div>
+        <section class="mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow text-center">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">Record Audio</h2>
+            <div class="relative" id="recordButtonContainer">
+                <button id="recordButton" class="p-4 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out disabled:bg-gray-400" disabled> 
+                    <i id="micIconPlaceholder" data-lucide="mic" style="width: 32px; height: 32px;"></i>
+                </button>
+                <div id="dropZoneOverlay" class="absolute inset-0 flex items-center justify-center rounded-full bg-blue-500 bg-opacity-80 text-white hidden">
+                    <i data-lucide="upload" style="width: 32px; height: 32px;"></i>
+                </div>
+            </div>
+            <p id="statusMessage" class="mt-3 text-gray-600 h-5">Loading FFmpeg...</p>
+            <p id="uploadMessage" class="mt-1 text-sm text-gray-500">Drag & drop an audio file here to upload</p>
+            <div id="ffmpegLog" class="hidden text-left"></div>
         </section>
 
         <section id="transcriptionSection" class="mb-6 p-4 bg-white rounded-lg shadow hidden">
@@ -311,8 +369,8 @@
              </div>
         </section>
 
-        <section class="content-grow p-4 bg-white rounded-lg shadow flex flex-col">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700 flex-shrink-0">Recording History (MP3)</h2>
+        <section class="content-grow p-4 bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 flex-shrink-0">Recording History</h2>
             <div id="historyList" class="history-list flex-grow overflow-y-auto space-y-3 pr-2">
                 <p id="noHistoryMessage" class="text-gray-500">No recordings yet.</p>
             </div>
@@ -327,6 +385,9 @@
         const apiKeyInput = document.getElementById('apiKey');
         const saveApiKeyButton = document.getElementById('saveApiKey');
         const recordButton = document.getElementById('recordButton');
+        const recordButtonContainer = document.getElementById('recordButtonContainer');
+        const dropZoneOverlay = document.getElementById('dropZoneOverlay');
+        const uploadMessage = document.getElementById('uploadMessage');
         const statusMessage = document.getElementById('statusMessage');
         const transcriptionSection = document.getElementById('transcriptionSection');
         const transcriptionOutput = document.getElementById('transcriptionOutput');
@@ -352,6 +413,11 @@
         const saveGroqApiKeyButton = document.getElementById('saveGroqApiKey');
         const groqModelSelect = document.getElementById('groqModel');
         const groqLanguageSelect = document.getElementById('groqLanguage');
+        const assemblyToggle = document.getElementById('assemblyToggle');
+        const assemblySettings = document.getElementById('assemblySettings');
+        const assemblyApiKeyInput = document.getElementById('assemblyApiKey');
+        const assemblyEuToggle = document.getElementById('assemblyEuToggle');
+        const assemblyLanguageSelect = document.getElementById('assemblyLanguage');
         const recordingLimitInput = document.getElementById('recordingLimit');
 
         // --- State Variables (Unchanged) ---
@@ -361,10 +427,13 @@
         let currentApiKey = localStorage.getItem('geminiApiKey') || '';
         let currentOpenaiApiKey = localStorage.getItem('openaiApiKey') || '';
         let currentGroqApiKey = localStorage.getItem('groqApiKey') || '';
+        let currentAssemblyApiKey = localStorage.getItem('assemblyApiKey') || '';
         let openaiModel = localStorage.getItem('openaiModel') || 'whisper-1';
         let openaiLanguage = localStorage.getItem('openaiLanguage') || 'auto';
         let groqModel = localStorage.getItem('groqModel') || 'whisper-large-v3-turbo';
         let groqLanguage = localStorage.getItem('groqLanguage') || 'auto';
+        let assemblyLanguage = localStorage.getItem('assemblyLanguage') || 'auto';
+        let assemblyEuServer = localStorage.getItem('assemblyEuServer') === 'true';
         let db;
         let ffmpeg;
         let ffmpegLoaded = false;
@@ -377,8 +446,10 @@
         let geminiEnabled = localStorage.getItem('geminiEnabled') !== 'false'; // Gemini enabled by default
         let openaiEnabled = localStorage.getItem('openaiEnabled') === 'true'; // OpenAI disabled by default
         let groqEnabled = localStorage.getItem('groqEnabled') === 'true'; // Groq disabled by default
+        let assemblyEnabled = localStorage.getItem('assemblyEnabled') === 'true'; // Assembly disabled by default
         let recordingLimit = localStorage.getItem('recordingLimit') || ''; // Recording length limit
         let recordingTimer = null; // Timer for recording length limit
+        let isDraggingFile = false; // Track if file is being dragged over
 
         // --- Constants ---
         const DB_NAME = 'VoiceRecorderDB_MP3';
@@ -386,12 +457,25 @@
         const STORE_NAME = 'recordings_mp3';
         const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=';
         const OPENAI_API_URL = 'https://api.openai.com/v1/audio/transcriptions';
+        const OPENAI_CHAT_API_URL = 'https://api.openai.com/v1/chat/completions';
         const GROQ_API_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
+        const ASSEMBLY_API_URL_US = 'https://api.assemblyai.com/v2/transcript';
+        const ASSEMBLY_API_URL_EU = 'https://api.eu.assemblyai.com/v2/transcript';
         const TARGET_MIME_TYPE = 'audio/mpeg';
         const TARGET_FORMAT = 'mp3';
-        // const TARGET_BITRATE = '256k'; // Replaced by quality setting
-        const TARGET_QUALITY = '1'; // VBR quality setting (-q:a 1)
+        const TARGET_QUALITY = '1';
         const TARGET_CHANNELS = 1;
+        
+        // Local proxy URLs for API requests
+        const OPENAI_PROXY_URL = '/api/openai';
+
+        // File size limits for different APIs
+        const FILE_SIZE_LIMITS = {
+            gemini: 50 * 1024 * 1024, // 50MB
+            openai: 25 * 1024 * 1024, // 25MB
+            groq: 25 * 1024 * 1024,   // 25MB
+            assembly: 200 * 1024 * 1024 // 200MB
+        };
 
         // --- FFmpeg Initialization ---
         async function loadFFmpeg() {
@@ -642,9 +726,20 @@
                         infoDiv.className = 'flex-grow min-w-0';
                         
                         const time = document.createElement('p'); 
-                        time.className = 'text-sm font-medium text-gray-800 truncate'; 
-                        time.textContent = `Recorded MP3: ${rec.timestamp.toLocaleString()}`; 
-                        time.title = `MP3 Recorded: ${rec.timestamp.toLocaleString()}`;
+                        time.className = 'text-sm font-medium text-gray-800 dark:text-gray-300 truncate'; 
+                        // Get the actual format from the MIME type
+                        let format = 'MP3';
+                        if (rec.mimeType) {
+                            if (rec.mimeType.includes('webm')) {
+                                format = 'WEBM';
+                            } else if (rec.mimeType.includes('ogg')) {
+                                format = 'OGG';
+                            } else if (rec.mimeType.includes('wav')) {
+                                format = 'WAV';
+                            }
+                        }
+                        time.textContent = `Recorded ${format}: ${rec.timestamp.toLocaleString()}`; 
+                        time.title = `${format} Recorded: ${rec.timestamp.toLocaleString()}`;
                         
                         // Add file size and duration info
                         const fileInfo = document.createElement('p');
@@ -697,7 +792,18 @@
                             const url = URL.createObjectURL(rec.audioBlob);
                             const a = document.createElement('a');
                             a.href = url;
-                            a.download = `recording_${rec.id}_${rec.timestamp.toISOString().slice(0,19).replace(/[:]/g, '-')}.mp3`;
+                            // Get the correct file extension based on MIME type
+                            let extension = 'mp3';
+                            if (rec.mimeType) {
+                                if (rec.mimeType.includes('webm')) {
+                                    extension = 'webm';
+                                } else if (rec.mimeType.includes('ogg')) {
+                                    extension = 'ogg';
+                                } else if (rec.mimeType.includes('wav')) {
+                                    extension = 'wav';
+                                }
+                            }
+                            a.download = `recording_${rec.id}_${rec.timestamp.toISOString().slice(0,19).replace(/[:]/g, '-')}.${extension}`;
                             document.body.appendChild(a);
                             a.click();
                             document.body.removeChild(a);
@@ -721,14 +827,26 @@
                                 lucide.createIcons();
                             });
                         };
-                        transcribeButton.disabled = (!geminiEnabled || !currentApiKey) && (!openaiEnabled || !currentOpenaiApiKey) && (!groqEnabled || !currentGroqApiKey);
-                        if ((!geminiEnabled || !currentApiKey) && (!openaiEnabled || !currentOpenaiApiKey) && (!groqEnabled || !currentGroqApiKey)) {
-                            transcribeButton.title = 'No API enabled or API Key required';
-                        } else if (!ffmpegLoaded) {
-                            transcribeButton.title = 'FFmpeg not loaded';
-                        } else if (rec.transcription) {
+                        
+                        // Update disabled state logic
+                        if (rec.transcription) {
+                            // If there's a transcription, button is always enabled
+                            transcribeButton.disabled = false;
                             transcribeButton.title = 'View Transcription';
+                        } else if (!ffmpegLoaded && !assemblyEnabled) {
+                            // If FFmpeg isn't loaded and we're not using Assembly AI, disable the button
+                            transcribeButton.disabled = true;
+                            transcribeButton.title = 'FFmpeg not loaded';
+                        } else if ((!geminiEnabled || !currentApiKey) && 
+                                 (!openaiEnabled || !currentOpenaiApiKey) && 
+                                 (!groqEnabled || !currentGroqApiKey) && 
+                                 (!assemblyEnabled || !currentAssemblyApiKey)) {
+                            // If no API is enabled with a key, disable the button
+                            transcribeButton.disabled = true;
+                            transcribeButton.title = 'No API enabled or API Key required';
                         } else {
+                            // Otherwise, enable the button for transcription
+                            transcribeButton.disabled = false;
                             transcribeButton.title = 'Transcribe Audio';
                         }
 
@@ -825,21 +943,12 @@
                         }, limitSeconds * 1000);
                     }
                 } else {
-                    // Auto-set limit based on enabled API
-                    let autoLimit = 600; // Default 10 minutes
-                    if (!ffmpegEnabled) {
-                        if (geminiEnabled) {
-                            autoLimit = 570; // 9:30 for Gemini
-                        } else if (openaiEnabled) {
-                            autoLimit = 140; // 2:20 for OpenAI
-                        }
-                    }
-                    
+                    // Default to 600 seconds (10 minutes) for all recording types
                     recordingTimer = setTimeout(() => {
                         if (isRecording) {
                             stopRecording();
                         }
-                    }, autoLimit * 1000);
+                    }, 600 * 1000);
                 }
             } catch (err) {
                 console.error("Mic error:", err);
@@ -1009,7 +1118,7 @@
         // --- Transcription (Updated to support multiple APIs) ---
         async function transcribeAudio(id, audioBlob, mimeType) {
             // Check if any API is enabled and has a key
-            if (!geminiEnabled && !openaiEnabled && !groqEnabled) {
+            if (!geminiEnabled && !openaiEnabled && !groqEnabled && !assemblyEnabled) {
                 setStatus('No transcription API enabled.', true);
                 displayTranscription("No transcription API enabled. Please enable an API in settings.");
                 return;
@@ -1033,13 +1142,14 @@
                 return;
             }
             
-            if (!audioBlob) {
-                setStatus('Invalid audio.', true);
+            if (assemblyEnabled && !currentAssemblyApiKey) {
+                setStatus('Assembly AI API Key needed.', true);
+                displayTranscription("Assembly AI API Key needed for transcription.");
                 return;
             }
             
-            if (ffmpegEnabled && !ffmpegLoaded) {
-                setStatus('FFmpeg not loaded.', true);
+            if (!audioBlob) {
+                setStatus('Invalid audio.', true);
                 return;
             }
             
@@ -1103,42 +1213,115 @@
                 // Try OpenAI if Gemini is not enabled or failed
                 if ((!geminiEnabled || !currentApiKey) && openaiEnabled && currentOpenaiApiKey) {
                     try {
-                        const formData = new FormData();
-                        formData.append('file', audioBlob, 'audio.mp3');
-                        formData.append('model', openaiModel);
+                        // Check if the selected model is a GPT-4o audio model
+                        const isGPT4oAudioModel = openaiModel.includes('gpt-4o') && openaiModel.includes('audio');
                         
-                        // Only add language if not auto
-                        if (openaiLanguage !== 'auto') {
-                            formData.append('language', openaiLanguage);
+                        if (isGPT4oAudioModel) {
+                            // Use chat completions API for GPT-4o audio models
+                            const base64Audio = await blobToBase64(audioBlob);
+                            
+                            console.log("Sending audio to GPT-4o API, base64 length:", base64Audio.length);
+                            
+                            // Create request body for chat completions API
+                            const requestBody = {
+                                model: openaiModel,
+                                messages: [
+                                    {
+                                        role: "user",
+                                        content: [
+                                            {
+                                                type: "text",
+                                                text: "Please transcribe this audio file accurately."
+                                            },
+                                            {
+                                                type: "audio_url",
+                                                audio_url: {
+                                                    url: `data:${audioBlob.type};base64,${base64Audio}`
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ],
+                                temperature: 0 // Lower temperature for more accurate transcription
+                            };
+                            
+                            // Make the API request through our local proxy
+                            const response = await fetch(`${OPENAI_PROXY_URL}/v1/chat/completions`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${currentOpenaiApiKey}`
+                                },
+                                body: JSON.stringify(requestBody)
+                            });
+                            
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                console.error("OpenAI API Error:", errorData);
+                                throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
+                            }
+                            
+                            const data = await response.json();
+                            
+                            // Extract the transcript from the chat response
+                            if (data.choices && data.choices.length > 0 && data.choices[0].message?.content) {
+                                transcriptionText = data.choices[0].message.content;
+                            } else {
+                                console.warn("Unexpected OpenAI Chat API response:", data);
+                                transcriptionText = "Unexpected response format from OpenAI.";
+                            }
+                            
+                            console.log("OpenAI GPT-4o transcription OK:", transcriptionText);
+                            
+                            // Update token usage from the response
+                            if (data.usage) {
+                                recordingTokenUsage.input = data.usage.prompt_tokens || 0;
+                                recordingTokenUsage.output = data.usage.completion_tokens || 0;
+                                
+                                // Update global token usage
+                                tokenUsage.input += recordingTokenUsage.input;
+                                tokenUsage.output += recordingTokenUsage.output;
+                                localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
+                            }
+                        } else {
+                            // Use transcription API for standard Whisper models
+                            const formData = new FormData();
+                            formData.append('file', audioBlob, 'audio.mp3');
+                            formData.append('model', openaiModel);
+                            
+                            // Only add language if not auto
+                            if (openaiLanguage !== 'auto') {
+                                formData.append('language', openaiLanguage);
+                            }
+                            
+                            const response = await fetch(`${OPENAI_PROXY_URL}/v1/audio/transcriptions`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${currentOpenaiApiKey}`
+                                },
+                                body: formData
+                            });
+                            
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                console.error("OpenAI API Error:", errorData);
+                                throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
+                            }
+                            
+                            const data = await response.json();
+                            transcriptionText = data.text || "Transcription not found.";
+                            console.log("OpenAI Whisper transcription OK:", transcriptionText);
+                            
+                            // OpenAI doesn't provide token usage in the same way, so we'll estimate
+                            // Rough estimate: 1 token per 4 characters
+                            const estimatedTokens = Math.ceil(transcriptionText.length / 4);
+                            recordingTokenUsage.input = 0; // We don't know the input tokens
+                            recordingTokenUsage.output = estimatedTokens;
+                            
+                            // Update global token usage
+                            tokenUsage.output += estimatedTokens;
+                            localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
                         }
-                        
-                        const response = await fetch(OPENAI_API_URL, {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${currentOpenaiApiKey}`
-                            },
-                            body: formData
-                        });
-                        
-                        if (!response.ok) {
-                            const errorData = await response.json();
-                            console.error("OpenAI API Error:", errorData);
-                            throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
-                        }
-                        
-                        const data = await response.json();
-                        transcriptionText = data.text || "Transcription not found.";
-                        console.log("OpenAI transcription OK:", transcriptionText);
-                        
-                        // OpenAI doesn't provide token usage in the same way, so we'll estimate
-                        // Rough estimate: 1 token per 4 characters
-                        const estimatedTokens = Math.ceil(transcriptionText.length / 4);
-                        recordingTokenUsage.input = 0; // We don't know the input tokens
-                        recordingTokenUsage.output = estimatedTokens;
-                        
-                        // Update global token usage
-                        tokenUsage.output += estimatedTokens;
-                        localStorage.setItem('tokenUsage', JSON.stringify(tokenUsage));
                     } catch (error) {
                         console.error("OpenAI transcription failed:", error);
                         // If OpenAI fails and Groq is enabled, try Groq
@@ -1197,6 +1380,123 @@
                     }
                 }
                 
+                // Try Assembly AI if other APIs are not enabled or failed
+                if ((!geminiEnabled || !currentApiKey) && 
+                    (!openaiEnabled || !currentOpenaiApiKey) && 
+                    (!groqEnabled || !currentGroqApiKey) && 
+                    assemblyEnabled && currentAssemblyApiKey) {
+                    try {
+                        // Determine which API URL to use based on the EU/US setting
+                        const apiUrl = assemblyEuServer ? ASSEMBLY_API_URL_EU : ASSEMBLY_API_URL_US;
+                        
+                        setStatus('Uploading audio to Assembly AI...');
+                        
+                        // Step 1: Convert blob to base64
+                        const base64Audio = await blobToBase64(audioBlob);
+                        
+                        // Step 2: Upload the audio file
+                        const uploadResponse = await fetch(`${apiUrl}/upload`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': currentAssemblyApiKey,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                file_data: base64Audio
+                            })
+                        });
+                        
+                        if (!uploadResponse.ok) {
+                            const errorData = await uploadResponse.json();
+                            console.error("Assembly AI Upload Error:", errorData);
+                            throw new Error(errorData?.error || `HTTP ${uploadResponse.status}`);
+                        }
+                        
+                        const uploadData = await uploadResponse.json();
+                        const audioUrl = uploadData.upload_url;
+                        
+                        if (!audioUrl) {
+                            throw new Error("Failed to get upload URL from Assembly AI");
+                        }
+                        
+                        setStatus('Starting transcription with Assembly AI...');
+                        
+                        // Step 3: Create the transcription request
+                        const transcriptionRequest = {
+                            audio_url: audioUrl,
+                            language_code: assemblyLanguage !== 'auto' ? assemblyLanguage : undefined
+                        };
+                        
+                        // Step 4: Submit the transcription request
+                        const transcriptionResponse = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': currentAssemblyApiKey,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(transcriptionRequest)
+                        });
+                        
+                        if (!transcriptionResponse.ok) {
+                            const errorData = await transcriptionResponse.json();
+                            console.error("Assembly AI Transcription Error:", errorData);
+                            throw new Error(errorData?.error || `HTTP ${transcriptionResponse.status}`);
+                        }
+                        
+                        const transcriptionData = await transcriptionResponse.json();
+                        const transcriptionId = transcriptionData.id;
+                        
+                        if (!transcriptionId) {
+                            throw new Error("Failed to get transcription ID from Assembly AI");
+                        }
+                        
+                        setStatus('Waiting for Assembly AI transcription to complete...');
+                        
+                        // Step 5: Poll for transcription completion
+                        let completed = false;
+                        let attempts = 0;
+                        const maxAttempts = 60; // 5 minutes max (5s intervals)
+                        
+                        while (!completed && attempts < maxAttempts) {
+                            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                            
+                            const pollResponse = await fetch(`${apiUrl}/${transcriptionId}`, {
+                                method: 'GET',
+                                headers: {
+                                    'Authorization': currentAssemblyApiKey
+                                }
+                            });
+                            
+                            if (!pollResponse.ok) {
+                                const errorData = await pollResponse.json();
+                                console.error("Assembly AI Poll Error:", errorData);
+                                throw new Error(errorData?.error || `HTTP ${pollResponse.status}`);
+                            }
+                            
+                            const pollData = await pollResponse.json();
+                            
+                            if (pollData.status === 'completed') {
+                                completed = true;
+                                transcriptionText = pollData.text || "Transcription not found.";
+                                console.log("Assembly AI transcription completed:", transcriptionText);
+                            } else if (pollData.status === 'error') {
+                                throw new Error(`Assembly AI error: ${pollData.error || 'Unknown error'}`);
+                            }
+                            
+                            attempts++;
+                            setStatus(`Waiting for transcription... (${attempts * 5}s)`);
+                        }
+                        
+                        if (!completed) {
+                            throw new Error("Transcription timed out after 5 minutes");
+                        }
+                        
+                    } catch (error) {
+                        console.error("Assembly AI transcription failed:", error);
+                        throw error;
+                    }
+                }
+                
                 setStatus(`Transcription complete (ID: ${id}).`);
                 displayTranscription(transcriptionText);
                 
@@ -1228,8 +1528,25 @@
             }
         }
 
-        // Helper Blob to Base64 (Unchanged)
-        function blobToBase64(blob) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onloadend = () => { const base64String = reader.result.split(',')[1]; resolve(base64String); }; reader.onerror = reject; reader.readAsDataURL(blob); }); }
+        // --- Utility Functions ---
+        function formatDuration(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = Math.floor(seconds % 60);
+            return `${min}:${sec.toString().padStart(2, '0')}`;
+        }
+        
+        async function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    // Remove the "data:audio/mpeg;base64," prefix from the data URL
+                    const base64data = reader.result.split(',')[1];
+                    resolve(base64data);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
 
         // History Actions (Unchanged)
         async function deleteRecording(id) { if (confirm(`Delete recording ${id}?`)) { try { await deleteRecordingFromDB(id); setStatus(`Recording ${id} deleted.`); await renderHistory(); } catch (error) { setStatus('Error deleting.', true); console.error("Delete error:", error); } } }
@@ -1363,16 +1680,20 @@
                 // Disable other APIs
                 openaiToggle.checked = false;
                 groqToggle.checked = false;
+                assemblyToggle.checked = false;
                 openaiEnabled = false;
                 groqEnabled = false;
+                assemblyEnabled = false;
                 openaiSettings.classList.add('hidden');
                 groqSettings.classList.add('hidden');
+                assemblySettings.classList.add('hidden');
             }
             
             geminiEnabled = geminiToggle.checked;
             localStorage.setItem('geminiEnabled', geminiEnabled);
             localStorage.setItem('openaiEnabled', openaiEnabled);
             localStorage.setItem('groqEnabled', groqEnabled);
+            localStorage.setItem('assemblyEnabled', assemblyEnabled);
             
             if (geminiEnabled) {
                 geminiSettings.classList.remove('hidden');
@@ -1386,16 +1707,20 @@
                 // Disable other APIs
                 geminiToggle.checked = false;
                 groqToggle.checked = false;
+                assemblyToggle.checked = false;
                 geminiEnabled = false;
                 groqEnabled = false;
+                assemblyEnabled = false;
                 geminiSettings.classList.add('hidden');
                 groqSettings.classList.add('hidden');
+                assemblySettings.classList.add('hidden');
             }
             
             openaiEnabled = openaiToggle.checked;
             localStorage.setItem('openaiEnabled', openaiEnabled);
             localStorage.setItem('geminiEnabled', geminiEnabled);
             localStorage.setItem('groqEnabled', groqEnabled);
+            localStorage.setItem('assemblyEnabled', assemblyEnabled);
             
             if (openaiEnabled) {
                 openaiSettings.classList.remove('hidden');
@@ -1409,16 +1734,20 @@
                 // Disable other APIs
                 geminiToggle.checked = false;
                 openaiToggle.checked = false;
+                assemblyToggle.checked = false;
                 geminiEnabled = false;
                 openaiEnabled = false;
+                assemblyEnabled = false;
                 geminiSettings.classList.add('hidden');
                 openaiSettings.classList.add('hidden');
+                assemblySettings.classList.add('hidden');
             }
             
             groqEnabled = groqToggle.checked;
             localStorage.setItem('groqEnabled', groqEnabled);
             localStorage.setItem('geminiEnabled', geminiEnabled);
             localStorage.setItem('openaiEnabled', openaiEnabled);
+            localStorage.setItem('assemblyEnabled', assemblyEnabled);
             
             if (groqEnabled) {
                 groqSettings.classList.remove('hidden');
@@ -1451,16 +1780,82 @@
             localStorage.setItem('groqLanguage', groqLanguage);
         });
 
+        // Assembly AI toggle
+        assemblyToggle.addEventListener('change', () => {
+            if (assemblyToggle.checked) {
+                // Disable other APIs
+                geminiToggle.checked = false;
+                openaiToggle.checked = false;
+                groqToggle.checked = false;
+                geminiEnabled = false;
+                openaiEnabled = false;
+                groqEnabled = false;
+                geminiSettings.classList.add('hidden');
+                openaiSettings.classList.add('hidden');
+                groqSettings.classList.add('hidden');
+            }
+            
+            assemblyEnabled = assemblyToggle.checked;
+            localStorage.setItem('assemblyEnabled', assemblyEnabled);
+            localStorage.setItem('geminiEnabled', geminiEnabled);
+            localStorage.setItem('openaiEnabled', openaiEnabled);
+            localStorage.setItem('groqEnabled', groqEnabled);
+            
+            if (assemblyEnabled) {
+                assemblySettings.classList.remove('hidden');
+                // Check if API key is available
+                if (!currentAssemblyApiKey) {
+                    setStatus('Assembly AI API Key needed.', true);
+                    displayTranscription("Assembly AI API Key needed for transcription.");
+                } else {
+                    setStatus('Assembly AI ready for transcription.');
+                }
+            } else {
+                assemblySettings.classList.add('hidden');
+            }
+            
+            // Update transcription button states
+            renderHistory();
+        });
+        
+        // Assembly API key input
+        assemblyApiKeyInput.addEventListener('input', () => {
+            currentAssemblyApiKey = assemblyApiKeyInput.value.trim();
+            if (currentAssemblyApiKey) {
+                localStorage.setItem('assemblyApiKey', currentAssemblyApiKey);
+                setStatus('Assembly AI API Key saved.');
+            } else {
+                localStorage.removeItem('assemblyApiKey');
+                setStatus('Assembly AI API Key removed.', true);
+            }
+        });
+        
+        // Assembly EU server toggle
+        assemblyEuToggle.addEventListener('change', () => {
+            assemblyEuServer = assemblyEuToggle.checked;
+            localStorage.setItem('assemblyEuServer', assemblyEuServer);
+            setStatus(`Assembly AI server set to ${assemblyEuServer ? 'EU' : 'US'}.`);
+        });
+        
+        // Assembly language change
+        assemblyLanguageSelect.addEventListener('change', () => {
+            assemblyLanguage = assemblyLanguageSelect.value;
+            localStorage.setItem('assemblyLanguage', assemblyLanguage);
+        });
+
         // Initialization
         async function initializeApp() {
             lucide.createIcons();
             apiKeyInput.value = currentApiKey;
             openaiApiKeyInput.value = currentOpenaiApiKey;
             groqApiKeyInput.value = currentGroqApiKey;
+            assemblyApiKeyInput.value = currentAssemblyApiKey;
             openaiModelSelect.value = openaiModel;
             openaiLanguageSelect.value = openaiLanguage;
             groqModelSelect.value = groqModel;
             groqLanguageSelect.value = groqLanguage;
+            assemblyLanguageSelect.value = assemblyLanguage;
+            assemblyEuToggle.checked = assemblyEuServer;
             recordingLimitInput.value = recordingLimit;
             
             // Set dark mode toggle state
@@ -1474,23 +1869,48 @@
             geminiToggle.checked = geminiEnabled;
             openaiToggle.checked = openaiEnabled;
             groqToggle.checked = groqEnabled;
+            assemblyToggle.checked = assemblyEnabled;
             
             // Show/hide API settings based on toggles
-            if (!geminiEnabled) {
+            if (geminiEnabled) {
+                geminiSettings.classList.remove('hidden');
+            } else {
                 geminiSettings.classList.add('hidden');
             }
-            if (!openaiEnabled) {
+            if (openaiEnabled) {
+                openaiSettings.classList.remove('hidden');
+            } else {
                 openaiSettings.classList.add('hidden');
             }
-            if (!groqEnabled) {
+            if (groqEnabled) {
+                groqSettings.classList.remove('hidden');
+            } else {
                 groqSettings.classList.add('hidden');
+            }
+            if (assemblyEnabled) {
+                assemblySettings.classList.remove('hidden');
+                // Check if API key is available
+                if (!currentAssemblyApiKey) {
+                    setStatus('Assembly AI API Key needed.', true);
+                    displayTranscription("Assembly AI API Key needed for transcription.");
+                } else {
+                    setStatus('Assembly AI ready for transcription.');
+                }
+            } else {
+                assemblySettings.classList.add('hidden');
             }
             
             // Show settings if no API key or if FFmpeg needs attention
-            if ((geminiEnabled && !currentApiKey) || (openaiEnabled && !currentOpenaiApiKey) || (groqEnabled && !currentGroqApiKey)) {
+            if ((geminiEnabled && !currentApiKey) || 
+                (openaiEnabled && !currentOpenaiApiKey) || 
+                (groqEnabled && !currentGroqApiKey) || 
+                (assemblyEnabled && !currentAssemblyApiKey)) {
                 settingsSection.classList.remove('hidden');
                 settingsVisible = true;
             }
+            
+            // Set up drag and drop for file upload
+            setupDragAndDrop();
             
             // Set initial status based on FFmpeg toggle state
             if (ffmpegEnabled) {
@@ -1513,6 +1933,19 @@
             
             // Update the record button state after initialization
             updateRecordButtonState();
+            
+            // Check if any API is enabled and has a key
+            const hasValidApiKey = (geminiEnabled && currentApiKey) || 
+                                 (openaiEnabled && currentOpenaiApiKey) || 
+                                 (groqEnabled && currentGroqApiKey) || 
+                                 (assemblyEnabled && currentAssemblyApiKey);
+            
+            if (!hasValidApiKey) {
+                setStatus('API Key needed for transcription.', true);
+                displayTranscription("API Key needed for transcription.");
+            } else if (assemblyEnabled && currentAssemblyApiKey) {
+                setStatus('Assembly AI ready for transcription.');
+            }
             
             // Mic support checks - these will disable the button if mic isn't available
             if (!navigator.mediaDevices?.getUserMedia) {
@@ -1576,6 +2009,114 @@
                     }
                 }
             });
+        }
+
+        // --- File Upload with Drag and Drop ---
+        function setupDragAndDrop() {
+            const dropZone = recordButtonContainer;
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            // Highlight drop zone when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+            
+            // Handle dropped files
+            dropZone.addEventListener('drop', handleDrop, false);
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            function highlight() {
+                isDraggingFile = true;
+                dropZoneOverlay.classList.remove('hidden');
+            }
+            
+            function unhighlight() {
+                isDraggingFile = false;
+                dropZoneOverlay.classList.add('hidden');
+            }
+            
+            async function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length === 0) {
+                    setStatus('No file detected.', true);
+                    return;
+                }
+                
+                if (files.length > 1) {
+                    setStatus('Please drop only one file.', true);
+                    return;
+                }
+                
+                const file = files[0];
+                
+                // Check if it's an audio file
+                if (!file.type.startsWith('audio/')) {
+                    setStatus('Please upload an audio file.', true);
+                    return;
+                }
+                
+                // Check file size based on selected API
+                const selectedAPI = getSelectedAPI();
+                const maxSize = FILE_SIZE_LIMITS[selectedAPI];
+                
+                if (file.size > maxSize) {
+                    setStatus(`File too large for ${selectedAPI}. Max: ${formatFileSize(maxSize)}.`, true);
+                    return;
+                }
+                
+                setStatus('Processing uploaded file...');
+                
+                try {
+                    // Add the file directly to the database without conversion
+                    const newId = await addRecordingToDB(file, file.type);
+                    setStatus(`File uploaded (ID: ${newId}).`);
+                    await renderHistory();
+                    
+                    // Attempt automatic transcription if API key is available
+                    if ((geminiEnabled && currentApiKey) || 
+                        (openaiEnabled && currentOpenaiApiKey) || 
+                        (groqEnabled && currentGroqApiKey) || 
+                        (assemblyEnabled && currentAssemblyApiKey)) {
+                        setStatus(`Starting automatic transcription for file ${newId}...`);
+                        await transcribeAudio(newId, file, file.type);
+                    } else {
+                        setStatus('File uploaded. Add an API key to enable transcription.', true);
+                        displayTranscription("API Key needed for transcription.");
+                    }
+                } catch (error) {
+                    console.error("Error processing uploaded file:", error);
+                    setStatus(`Error processing file: ${error.message}`, true);
+                }
+            }
+        }
+        
+        function getSelectedAPI() {
+            if (geminiEnabled) return 'gemini';
+            if (openaiEnabled) return 'openai';
+            if (groqEnabled) return 'groq';
+            if (assemblyEnabled) return 'assembly';
+            return 'gemini'; // Default
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
     </script>
