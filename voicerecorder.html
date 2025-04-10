@@ -207,12 +207,12 @@
                     </div>
                     <div id="geminiSettings" class="mt-2">
                         <label for="apiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="api_key">API Key:</label>
-                        <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-2">
                             <input type="password" id="apiKey" name="apiKey" class="flex-grow mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" data-i18n-placeholder="api_key_placeholder">
                             <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Get API Key">
                                 <i data-lucide="external-link" style="width: 18px; height: 18px;"></i>
                             </a>
-                        </div>
+            </div>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="api_key_note">Your API key is stored only in your browser's local storage.</p>
                     </div>
                 </div>
@@ -400,7 +400,7 @@
             <div class="relative" id="recordButtonContainer">
                 <button id="recordButton" class="p-4 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out disabled:bg-gray-400" disabled> 
                     <i id="micIconPlaceholder" data-lucide="mic" style="width: 32px; height: 32px;"></i>
-                </button>
+            </button>
                 <div id="dropZoneOverlay" class="absolute inset-0 flex items-center justify-center rounded-full bg-blue-500 bg-opacity-80 text-white hidden">
                     <i data-lucide="upload" style="width: 32px; height: 32px;"></i>
                 </div>
@@ -645,8 +645,8 @@
             });
         }
 
-        function getRecordingByIdFromDB(id) {
-            return new Promise((resolve, reject) => {
+         function getRecordingByIdFromDB(id) {
+             return new Promise((resolve, reject) => {
                 if (!db) return reject("Database not initialized.");
                 const transaction = db.transaction([STORE_NAME], 'readonly');
                 const store = transaction.objectStore(STORE_NAME);
@@ -657,7 +657,7 @@
         }
 
         function updateTranscriptionInDB(id, transcription) {
-            return new Promise(async (resolve, reject) => {
+             return new Promise(async (resolve, reject) => {
                 if (!db) return reject("Database not initialized.");
                 try {
                     const recording = await getRecordingByIdFromDB(id);
@@ -992,7 +992,7 @@
                             transcribeAudio(rec.id, rec.audioBlob, rec.mimeType).finally(() => {
                                 transcribeButton.disabled = false;
                                 transcribeButton.innerHTML = `<i data-lucide="captions" style="width: 18px; height: 18px;"></i>`;
-                                lucide.createIcons();
+                    lucide.createIcons();
                             });
                         };
                         
@@ -1070,7 +1070,7 @@
                     stream.getTracks().forEach(track => track.stop());
                     
                     if (ffmpegEnabled && ffmpegLoaded) {
-                        await convertAudioAndSave(originalBlob, originalMimeType); // Convert and save
+                    await convertAudioAndSave(originalBlob, originalMimeType); // Convert and save
                     } else {
                         // Save without conversion
                         setStatus('Saving recording...');
@@ -1377,8 +1377,8 @@
                     try {
                         const base64Audio = await blobToBase64(audioToTranscribe);
                         const requestBody = { contents: [{ parts: [ { text: "Please transcribe the following audio recording:" }, { inline_data: { mime_type: mimeTypeToUse, data: base64Audio } } ]}] };
-                        const response = await fetch(GEMINI_API_URL + currentApiKey, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
-                        const data = await response.json();
+                const response = await fetch(GEMINI_API_URL + currentApiKey, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
+                const data = await response.json();
                         
                         if (!response.ok) {
                             console.error("Gemini API Error:", data);
@@ -1536,6 +1536,7 @@
                         // Log the file details for debugging
                         console.log("Original blob type:", audioBlob.type);
                         console.log("File size:", audioBlob.size);
+                        console.log("Using API URL:", apiUrl);
                         
                         // Append the file with a generic name and correct type
                         formData.append('audio_file', audioBlobWithType, 'audio.mp3');
@@ -1544,7 +1545,8 @@
                             method: 'POST',
                             headers: {
                                 'Authorization': currentAssemblyApiKey,
-                                'Accept': 'application/json'
+                                'Accept': 'application/json',
+                                'Content-Type': 'multipart/form-data'
                             },
                             body: formData
                         });
@@ -1552,6 +1554,8 @@
                         if (!uploadResponse.ok) {
                             const errorText = await uploadResponse.text();
                             console.error("Assembly AI Upload Error:", errorText);
+                            console.error("Upload Response Status:", uploadResponse.status);
+                            console.error("Upload Response Headers:", Object.fromEntries(uploadResponse.headers.entries()));
                             throw new Error(`Upload failed: ${errorText}`);
                         }
                         
