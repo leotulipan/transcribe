@@ -223,8 +223,8 @@ def main():
         # PyDub handles time in milliseconds
         twenty_four_minutes = 24 * 60 * 1000
 
-        config = aai.TranscriptionConfig(speaker_labels=args.speaker_labels, format_text=True, language_code="de")
-        # https://www.assemblyai.com/docs/api-reference/transcript#body-parameters
+        config = aai.TranscriptionConfig(speaker_labels=args.speaker_labels, format_text=True, language_code="de", speech_model="best")
+        # https://www.assemblyai.com/docs/api-reference/transcripts/submit
         # speakers_expected
         # language_code="de"
         # speech_model
