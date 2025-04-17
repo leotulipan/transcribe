@@ -101,27 +101,49 @@ def create_srt(words, output_file, chars_per_line=80):
         current_start = None
         current_end = None
         
+        # Handle initial silence
+        if words and words[0]['type'] == 'word' and words[0]['start'] > 0 and args.silentportions > 0:
+            f.write(f"{counter}\n")
+            f.write(f"00:00:00,000 --> {format_time(words[0]['start'])}\n")
+            f.write("(...)\n\n")
+            counter += 1
+        
         for word in words:
+            if word['type'] == 'spacing' and args.silentportions > 0:
+                duration_ms = (word['end'] - word['start']) * 1000
+                if duration_ms >= args.silentportions:
+                    # Write current segment if exists
+                    if current_text:
+                        f.write(f"{counter}\n")
+                        f.write(f"{format_time(current_start)} --> {format_time(current_end)}\n")
+                        f.write(f"{current_text.strip()}\n\n")
+                        counter += 1
+                        current_text = ""
+                    
+                    # Write silent portion
+                    f.write(f"{counter}\n")
+                    f.write(f"{format_time(word['start'])} --> {format_time(word['end'])}\n")
+                    f.write("(...)\n\n")
+                    counter += 1
+                    current_start = None
+                    current_end = None
+                    continue
+            
             if word['type'] == 'word':
                 if current_start is None:
                     current_start = word['start']
                 current_end = word['end']
                 current_text += word['text'] + " "
                 
-                # Check if we need to split due to character limit
                 if len(current_text.strip()) >= chars_per_line:
-                    # Write current segment
                     f.write(f"{counter}\n")
                     f.write(f"{format_time(current_start)} --> {format_time(current_end)}\n")
                     f.write(f"{current_text.strip()}\n\n")
-                    
-                    # Reset for next segment
                     counter += 1
                     current_text = ""
                     current_start = None
                     current_end = None
         
-        # Write any remaining text
         if current_text:
             f.write(f"{counter}\n")
             f.write(f"{format_time(current_start)} --> {format_time(current_end)}\n")
@@ -178,6 +200,8 @@ def main():
     parser.add_argument("--no-convert", help="Send the audio file as-is without conversion", action="store_true")
     parser.add_argument("-l", "--language", help="Language code (ISO-639-1 or ISO-639-3). Examples: en (English), fr (French), de (German)", default=None)
     parser.add_argument("-v", "--verbose", help="Show all log messages in console", action="store_true")
+    parser.add_argument("--force", help="Force re-transcription even if files exist", action="store_true")
+    parser.add_argument("-p", "--silentportions", type=int, help="Mark pauses longer than X milliseconds with (...)", default=0)
     
     args = parser.parse_args()
     pp = pprint.PrettyPrinter(indent=4)
@@ -230,8 +254,19 @@ def main():
         file_dir = os.path.dirname(file_path)
 
         # Check if transcript exists
-        if check_transcript_exists(file_dir, file_name):
-            logger.info(f"Transcript for {file_name} exists!")
+        if check_transcript_exists(file_dir, file_name) and not args.force:
+            logger.info(f"Transcript for {file_name} exists! Using existing JSON to generate SRT and text files.")
+            json_file = os.path.join(file_dir, f"{file_name}.json")
+            with open(json_file, 'r', encoding='utf-8') as f:
+                response_data = json.load(f)
+            
+            # Create text file
+            text_file = os.path.join(file_dir, f"{file_name}.txt")
+            create_text_file(response_data['words'], text_file)
+
+            # Create SRT file
+            srt_file = os.path.join(file_dir, f"{file_name}.srt")
+            create_srt(response_data['words'], srt_file, args.chars_per_line)
             continue
 
         # Convert to FLAC if not already and conversion is not disabled
