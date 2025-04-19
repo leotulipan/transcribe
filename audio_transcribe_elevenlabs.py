@@ -67,22 +67,22 @@ def check_audio_length(file_path):
         raise RuntimeError(f"Audio duration ({duration_seconds:.1f}s) exceeds maximum allowed length ({MAX_AUDIO_LENGTH}s)")
     return True
 
-def convert_to_flac(input_file):
-    """Convert audio/video file to FLAC format (mono, 16-bit)"""
-    logger.info(f"Converting {input_file} to FLAC format...")
+def convert_to_pcm(input_file):
+    """Convert audio/video file to PCM format (mono, 16-bit, 16kHz)"""
+    logger.info(f"Converting {input_file} to PCM format...")
     audio = AudioSegment.from_file(input_file)
     # Convert to mono
     audio = audio.set_channels(1)
-    # Set sample rate to 16kHz (standard for speech)
+    # Set sample rate to 16kHz
     audio = audio.set_frame_rate(16000)
     # Set sample width to 2 bytes (16-bit)
     audio = audio.set_sample_width(2)
     
     # Create output filename
-    output_file = os.path.splitext(input_file)[0] + ".flac"
-    # Export as FLAC
-    audio.export(output_file, format="flac")
-    logger.info(f"FLAC conversion completed: {output_file}")
+    output_file = os.path.splitext(input_file)[0] + ".wav"
+    # Export as PCM WAV
+    audio.export(output_file, format="wav", parameters=["-f", "s16le"])
+    logger.info(f"PCM conversion completed: {output_file}")
     return output_file
 
 def check_file_size(file_path):
@@ -270,8 +270,8 @@ def main():
             continue
 
         # Convert to FLAC if not already and conversion is not disabled
-        if not args.no_convert and file_extension.lower() != '.flac':
-            file_path = convert_to_flac(file_path)
+        if not args.no_convert and file_extension.lower() != '.wav':
+            file_path = convert_to_pcm(file_path)
 
         # Check file size and duration
         try:
@@ -287,12 +287,13 @@ def main():
             logger.info(f"Working directory changed to: {file_dir}")
 
         # Transcribe using ElevenLabs API
-        logger.info("Starting ElevenLabs transcription...")
+        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+        logger.info(f"Starting ElevenLabs transcription... (File size: {file_size_mb:.2f}MB)")
 
         try:
             with open(file_path, 'rb') as audio_file:
                 files = {
-                    'file': ('audio.flac', audio_file, 'audio/flac')
+                    'file': ('audio.wav', audio_file, 'audio/wav')
                 }
                 data = {
                     'model_id': 'scribe_v1',
@@ -300,7 +301,8 @@ def main():
                     'tag_audio_events': 'true',
                     'num_speakers': '2' if args.speaker_labels else None,
                     'timestamps_granularity': 'word',
-                    'diarize': 'true' if args.speaker_labels else 'false'
+                    'diarize': 'true' if args.speaker_labels else 'false',
+                    'file_format': 'pcm_s16le_16'
                 }
                 
                 # Remove None values from data
@@ -335,12 +337,12 @@ def main():
                     logger.info(f"Files saved in: {file_dir}")
 
                 # Delete FLAC file by default unless --keep-flac is specified
-                if not args.keep_flac and file_path.endswith('.flac'):
+                if not args.keep_flac and file_path.endswith('.wav'):
                     try:
                         os.remove(file_path)
-                        logger.info(f"Deleted temporary FLAC file: {file_path}")
+                        logger.info(f"Deleted temporary WAV file: {file_path}")
                     except Exception as e:
-                        logger.error(f"Error deleting FLAC file: {e}")
+                        logger.error(f"Error deleting WAV file: {e}")
 
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400:
