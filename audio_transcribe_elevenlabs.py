@@ -29,9 +29,6 @@ def setup_logger():
     """Configure loguru logger"""
     logger.remove()  # Remove default handler
     
-    # Always log errors to console
-    logger.add(lambda msg: print(msg), level="ERROR")
-    
     # Add file logging
     logger.add(
         "transcribe_{time}.log",
@@ -41,9 +38,13 @@ def setup_logger():
         format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
     )
     
-    # Add console logging for all levels if verbose
-    if args.verbose:
+    # Configure console logging based on verbosity
+    if args.debug:
+        logger.add(lambda msg: print(msg), level="DEBUG")
+    elif args.verbose:
         logger.add(lambda msg: print(msg), level="INFO")
+    else:
+        logger.add(lambda msg: print(msg), level="ERROR")
 
 def in_debug_mode():
     if args.debug:
@@ -67,6 +68,30 @@ def check_audio_length(file_path):
         raise RuntimeError(f"Audio duration ({duration_seconds:.1f}s) exceeds maximum allowed length ({MAX_AUDIO_LENGTH}s)")
     return True
 
+def check_audio_format(audio):
+    """Check if audio meets requirements (mono, 16kHz, 16-bit)"""
+    return (audio.channels == 1 and 
+            audio.frame_rate == 16000 and 
+            audio.sample_width == 2)
+
+def convert_to_flac(input_file):
+    """Convert audio/video file to FLAC format (mono, 16-bit, 16kHz)"""
+    logger.info(f"Converting {input_file} to FLAC format...")
+    audio = AudioSegment.from_file(input_file)
+    # Convert to mono
+    audio = audio.set_channels(1)
+    # Set sample rate to 16kHz
+    audio = audio.set_frame_rate(16000)
+    # Set sample width to 2 bytes (16-bit)
+    audio = audio.set_sample_width(2)
+    
+    # Create output filename
+    output_file = os.path.splitext(input_file)[0] + "_converted.flac"
+    # Export as FLAC
+    audio.export(output_file, format="flac")
+    logger.info(f"FLAC conversion completed: {output_file}")
+    return output_file
+
 def convert_to_pcm(input_file):
     """Convert audio/video file to PCM format (mono, 16-bit, 16kHz)"""
     logger.info(f"Converting {input_file} to PCM format...")
@@ -79,7 +104,7 @@ def convert_to_pcm(input_file):
     audio = audio.set_sample_width(2)
     
     # Create output filename
-    output_file = os.path.splitext(input_file)[0] + ".wav"
+    output_file = os.path.splitext(input_file)[0] + "_converted.wav"
     # Export as PCM WAV
     audio.export(output_file, format="wav", parameters=["-f", "s16le"])
     logger.info(f"PCM conversion completed: {output_file}")
@@ -198,6 +223,7 @@ def main():
     parser.add_argument("-s", "--speaker_labels", help="Use this flag to remove speaker labels", action="store_false", default=True)
     parser.add_argument("--keep-flac", help="Keep the generated FLAC file after processing", action="store_true")
     parser.add_argument("--no-convert", help="Send the audio file as-is without conversion", action="store_true")
+    parser.add_argument("--use-pcm", help="Use PCM format instead of FLAC (larger file size)", action="store_true")
     parser.add_argument("-l", "--language", help="Language code (ISO-639-1 or ISO-639-3). Examples: en (English), fr (French), de (German)", default=None)
     parser.add_argument("-v", "--verbose", help="Show all log messages in console", action="store_true")
     parser.add_argument("--force", help="Force re-transcription even if files exist", action="store_true")
@@ -208,8 +234,7 @@ def main():
 
     # Setup logging
     setup_logger()
-    if in_debug_mode():
-        logger.add(lambda msg: print(msg), level="DEBUG")
+    if args.debug:
         logger.info("Debug mode enabled")
 
     load_dotenv()
@@ -269,9 +294,23 @@ def main():
             create_srt(response_data['words'], srt_file, args.chars_per_line)
             continue
 
-        # Convert to FLAC if not already and conversion is not disabled
-        if not args.no_convert and file_extension.lower() != '.wav':
-            file_path = convert_to_pcm(file_path)
+        # Convert to appropriate format if needed
+        if not args.no_convert:
+            if file_extension.lower() == '.wav':
+                # Check if WAV needs re-encoding
+                audio = AudioSegment.from_file(file_path)
+                if not check_audio_format(audio):
+                    logger.info("WAV file needs re-encoding to meet requirements")
+                    file_path = convert_to_pcm(file_path) if args.use_pcm else convert_to_flac(file_path)
+            elif file_extension.lower() == '.flac' and not args.use_pcm:
+                # Check if FLAC needs re-encoding
+                audio = AudioSegment.from_file(file_path)
+                if not check_audio_format(audio):
+                    logger.info("FLAC file needs re-encoding to meet requirements")
+                    file_path = convert_to_flac(file_path)
+            else:
+                # Convert other formats
+                file_path = convert_to_pcm(file_path) if args.use_pcm else convert_to_flac(file_path)
 
         # Check file size and duration
         try:
@@ -293,7 +332,7 @@ def main():
         try:
             with open(file_path, 'rb') as audio_file:
                 files = {
-                    'file': ('audio.wav', audio_file, 'audio/wav')
+                    'file': ('audio.wav' if args.use_pcm else 'audio.flac', audio_file, 'audio/wav' if args.use_pcm else 'audio/flac')
                 }
                 data = {
                     'model_id': 'scribe_v1',
@@ -302,7 +341,7 @@ def main():
                     'num_speakers': '2' if args.speaker_labels else None,
                     'timestamps_granularity': 'word',
                     'diarize': 'true' if args.speaker_labels else 'false',
-                    'file_format': 'pcm_s16le_16'
+                    'file_format': 'pcm_s16le_16' if args.use_pcm else 'other'
                 }
                 
                 # Remove None values from data
@@ -314,35 +353,37 @@ def main():
                     files=files,
                     data=data
                 )
-                
-                response.raise_for_status()
-                response_data = response.json()
+            
+            response.raise_for_status()
+            response_data = response.json()
 
-                # Save JSON response
-                json_file = os.path.join(file_dir, f"{file_name}.json")
-                with open(json_file, 'w', encoding='utf-8') as f:
-                    json.dump(response_data, f, ensure_ascii=False, indent=2)
-                logger.info(f"JSON response saved to {json_file}")
+            # Save JSON response
+            json_file = os.path.join(file_dir, f"{file_name}.json")
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json.dump(response_data, f, ensure_ascii=False, indent=2)
+            logger.info(f"JSON response saved to {json_file}")
 
-                # Create text file
-                text_file = os.path.join(file_dir, f"{file_name}.txt")
-                create_text_file(response_data['words'], text_file)
+            # Create text file
+            text_file = os.path.join(file_dir, f"{file_name}.txt")
+            create_text_file(response_data['words'], text_file)
 
-                # Create SRT file
-                srt_file = os.path.join(file_dir, f"{file_name}.srt")
-                create_srt(response_data['words'], srt_file, args.chars_per_line)
+            # Create SRT file
+            srt_file = os.path.join(file_dir, f"{file_name}.srt")
+            create_srt(response_data['words'], srt_file, args.chars_per_line)
 
-                logger.info(f"Transcription completed for {file_name}")
-                if file_dir:
-                    logger.info(f"Files saved in: {file_dir}")
+            logger.info(f"Transcription completed for {file_name}")
+            if file_dir:
+                logger.info(f"Files saved in: {file_dir}")
 
-                # Delete FLAC file by default unless --keep-flac is specified
-                if not args.keep_flac and file_path.endswith('.wav'):
-                    try:
-                        os.remove(file_path)
-                        logger.info(f"Deleted temporary WAV file: {file_path}")
-                    except Exception as e:
-                        logger.error(f"Error deleting WAV file: {e}")
+            # Delete temporary file by default unless --keep-flac is specified
+            if not args.keep_flac and (file_path.endswith('_converted.wav') or file_path.endswith('_converted.flac')):
+                try:
+                    # Add a small delay to ensure file is released by OS
+                    time.sleep(0.5)
+                    os.remove(file_path)
+                    logger.info(f"Deleted temporary file: {file_path}")
+                except Exception as e:
+                    logger.error(f"Error deleting temporary file: {e}")
 
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400:
