@@ -24,6 +24,7 @@ from loguru import logger
 args = ""
 headers = None
 MAX_AUDIO_LENGTH = 7200  # seconds
+MAX_DAVINCI_WORDS = 500  # maximum words per subtitle block for davinci mode
 
 def setup_logger():
     """Configure loguru logger"""
@@ -55,10 +56,8 @@ def clear_screen():
     return
 
 def check_transcript_exists(file_path, file_name):
-    transcript_path = os.path.join(file_path, f"{file_name}.txt")
-    srt_path = os.path.join(file_path, f"{file_name}.srt")
     json_path = os.path.join(file_path, f"{file_name}.json")
-    return all(os.path.exists(p) for p in [transcript_path, srt_path, json_path])
+    return os.path.exists(json_path)
 
 def check_audio_length(file_path):
     """Check if audio file is shorter than MAX_AUDIO_LENGTH"""
@@ -120,6 +119,12 @@ def check_file_size(file_path):
 def create_srt(words, output_file, chars_per_line=80):
     """Create SRT file from words data"""
     logger.info(f"Creating SRT file: {output_file}")
+    
+    # Use davinci algorithm if specified
+    if args.davinci_srt:
+        create_davinci_srt(words, output_file)
+        return
+        
     with open(output_file, 'w', encoding='utf-8') as f:
         counter = 1
         current_text = ""
@@ -175,6 +180,117 @@ def create_srt(words, output_file, chars_per_line=80):
             f.write(f"{current_text.strip()}\n\n")
     logger.info("SRT file created successfully")
 
+def create_davinci_srt(words, output_file):
+    """Create SRT file optimized for Davinci Resolve Studio"""
+    logger.info(f"Creating Davinci Resolve optimized SRT file: {output_file}")
+    
+    # Default pause detection is 200ms if not specified
+    pause_detection = args.silentportions if args.silentportions > 0 else 200
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        counter = 1
+        block_words = []
+        block_start = None
+        block_end = None
+        
+        # Handle initial silence
+        if words and words[0]['type'] == 'word' and words[0]['start'] > 0:
+            f.write(f"{counter}\n")
+            f.write(f"00:00:00,000 --> {format_time(words[0]['start'])}\n")
+            f.write("(...)\n\n")
+            counter += 1
+        
+        i = 0
+        while i < len(words):
+            word = words[i]
+            
+            # If we find a spacing that exceeds our pause threshold
+            if word['type'] == 'spacing':
+                duration_ms = (word['end'] - word['start']) * 1000
+                if duration_ms >= pause_detection:
+                    # Process the accumulated block of words
+                    if block_words:
+                        process_davinci_block(f, counter, block_words, block_start, block_end)
+                        counter += 1
+                        block_words = []
+                        block_start = None
+                        block_end = None
+                    
+                    # Write silent portion
+                    f.write(f"{counter}\n")
+                    f.write(f"{format_time(word['start'])} --> {format_time(word['end'])}\n")
+                    f.write("(...)\n\n")
+                    counter += 1
+            
+            # Add word to current block
+            elif word['type'] == 'word':
+                if block_start is None:
+                    block_start = word['start']
+                block_end = word['end']
+                block_words.append(word)
+                
+                # If we've reached the maximum words limit, process the block
+                if len(block_words) >= MAX_DAVINCI_WORDS:
+                    process_davinci_block(f, counter, block_words, block_start, block_end)
+                    counter += 1
+                    block_words = []
+                    block_start = None
+                    block_end = None
+            
+            i += 1
+        
+        # Process any remaining words
+        if block_words:
+            process_davinci_block(f, counter, block_words, block_start, block_end)
+    
+    logger.info("Davinci Resolve SRT file created successfully")
+
+def process_davinci_block(f, counter, block_words, start_time, end_time):
+    """Process a block of words for Davinci Resolve SRT format"""
+    if not block_words:
+        return
+    
+    # Check if we need to split the block
+    if len(block_words) > MAX_DAVINCI_WORDS:
+        # Find sentence boundaries to split at
+        sentences = []
+        current_sentence = []
+        sentence_end_markers = ['.', '!', '?', ':', ';']
+        
+        for word in block_words:
+            current_sentence.append(word)
+            if word['text'] and word['text'][-1] in sentence_end_markers:
+                sentences.append(current_sentence)
+                current_sentence = []
+        
+        # Add any remaining words as a sentence
+        if current_sentence:
+            sentences.append(current_sentence)
+        
+        # Write each sentence as a separate block
+        current_start = start_time
+        current_counter = counter
+        
+        for i, sentence in enumerate(sentences):
+            if not sentence:
+                continue
+                
+            sentence_text = " ".join([w['text'] for w in sentence])
+            sentence_end = sentence[-1]['end']
+            
+            f.write(f"{current_counter}\n")
+            f.write(f"{format_time(current_start)} --> {format_time(sentence_end)}\n")
+            f.write(f"{sentence_text}\n\n")
+            
+            current_start = sentence_end
+            current_counter += 1
+    else:
+        # Write the entire block
+        block_text = " ".join([w['text'] for w in block_words])
+        f.write(f"{counter}\n")
+        f.write(f"{format_time(start_time)} --> {format_time(end_time)}\n")
+        f.write(f"{block_text}\n\n")
+
 def format_time(seconds):
     """Convert seconds to SRT time format (HH:MM:SS,mmm)"""
     hours = int(seconds // 3600)
@@ -228,6 +344,7 @@ def main():
     parser.add_argument("-v", "--verbose", help="Show all log messages in console", action="store_true")
     parser.add_argument("--force", help="Force re-transcription even if files exist", action="store_true")
     parser.add_argument("-p", "--silentportions", type=int, help="Mark pauses longer than X milliseconds with (...)", default=0)
+    parser.add_argument("--davinci-srt", "-D", help="Export SRT for Davinci Resolve with optimized subtitle blocks", action="store_true")
     
     args = parser.parse_args()
     pp = pprint.PrettyPrinter(indent=4)
