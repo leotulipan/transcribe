@@ -189,11 +189,8 @@ def create_davinci_srt(words, output_file):
     pause_detection = args.silentportions if args.silentportions > 0 else 200
     padding = args.padding if hasattr(args, 'padding') else 30
     
-    # Always pre-process words to identify filler words
-    processed_words = process_filler_words(words, pause_detection)
-    
-    # Merge consecutive or overlapping pauses
-    merged_words = merge_consecutive_pauses(processed_words)
+    # Always pre-process words to identify filler words, regardless of --remove-fillers flag
+    words = process_filler_words(words, pause_detection)
     
     with open(output_file, 'w', encoding='utf-8') as f:
         counter = 1
@@ -202,15 +199,15 @@ def create_davinci_srt(words, output_file):
         block_end = None
         
         # Handle initial silence
-        if merged_words and merged_words[0]['type'] == 'word' and merged_words[0]['start'] > 0:
+        if words and words[0]['type'] == 'word' and words[0]['start'] > 0:
             f.write(f"{counter}\n")
-            f.write(f"00:00:00,000 --> {format_time(merged_words[0]['start'])}\n")
+            f.write(f"00:00:00,000 --> {format_time(words[0]['start'])}\n")
             f.write("(...)\n\n")
             counter += 1
         
         i = 0
-        while i < len(merged_words):
-            word = merged_words[i]
+        while i < len(words):
+            word = words[i]
             
             # If we find a spacing that exceeds our pause threshold
             if word['type'] == 'spacing':
@@ -256,91 +253,15 @@ def create_davinci_srt(words, output_file):
         if block_words:
             process_davinci_block(f, counter, block_words, block_start, block_end)
     
+    # Post-process the SRT file to merge consecutive pause entries
+    merge_consecutive_pauses(output_file)
+    
     logger.info("Davinci Resolve SRT file created successfully")
-
-def merge_consecutive_pauses(words):
-    """Merge consecutive or overlapping pause/spacing entries"""
-    logger.info("Merging consecutive pauses...")
-    
-    if not words:
-        return []
-    
-    result = []
-    i = 0
-    
-    while i < len(words):
-        current = words[i]
-        
-        # If current item is a spacing, look ahead for consecutive spacings
-        if current['type'] == 'spacing':
-            # Store the start time of the first spacing
-            start_time = current['start']
-            end_time = current['end']
-            speaker_id = current.get('speaker_id', 'Unknown')
-            
-            # Look ahead for consecutive or overlapping spacings
-            j = i + 1
-            merged = False
-            
-            while j < len(words) and words[j]['type'] == 'spacing':
-                # Check if this spacing overlaps or is consecutive with our current merged spacing
-                next_spacing = words[j]
-                
-                # If overlapping or very close (within 0.01s)
-                if next_spacing['start'] <= end_time + 0.01:
-                    # Take the later end time
-                    end_time = max(end_time, next_spacing['end'])
-                    merged = True
-                    j += 1
-                else:
-                    # Not consecutive, stop here
-                    break
-            
-            # Add the merged spacing
-            merged_spacing = {
-                'type': 'spacing',
-                'start': start_time,
-                'end': end_time,
-                'text': ' ',
-                'speaker_id': speaker_id
-            }
-            result.append(merged_spacing)
-            
-            # Skip all the merged spacings
-            i = j if merged else i + 1
-        else:
-            # Not a spacing, add as is
-            result.append(current)
-            i += 1
-    
-    # Ensure no back-to-back pauses by removing any pause that's not between two words
-    final_result = []
-    has_word_before = False
-    
-    for i, item in enumerate(result):
-        if item['type'] == 'spacing':
-            # Check if there's a word before and after this spacing
-            has_word_after = i < len(result) - 1 and result[i + 1]['type'] == 'word'
-            
-            if has_word_before and has_word_after:
-                final_result.append(item)
-            else:
-                logger.debug(f"Removing isolated pause at {item['start']}-{item['end']}")
-        else:
-            final_result.append(item)
-            has_word_before = True
-    
-    logger.info(f"Merged {len(words) - len(final_result)} pause items")
-    return final_result
 
 def process_filler_words(words, pause_threshold):
     """Process words to identify and mark filler words as pauses"""
     import re
     logger.info("Processing filler words...")
-    
-    # Only do actual removal if the flag is set
-    if not args.remove_fillers:
-        return words
     
     # Create regex patterns for each filler word (case insensitive, ignoring punctuation)
     filler_patterns = [re.compile(f"^{re.escape(word)}[,.!?]*$", re.IGNORECASE) for word in FILLER_WORDS]
@@ -360,15 +281,7 @@ def process_filler_words(words, pause_threshold):
                 next_spacing = i < len(words) - 1 and words[i+1]['type'] == 'spacing'
                 
                 if prev_spacing and next_spacing:
-                    # Merge previous word's end time with padding if exists
-                    if len(processed_words) > 0 and processed_words[-1]['type'] == 'word' and args.padding > 0:
-                        processed_words[-1]['end'] += args.padding / 1000.0
-                    
-                    # Remove the previous spacing (pop from processed words)
-                    if processed_words and processed_words[-1]['type'] == 'spacing':
-                        processed_words.pop()
-                    
-                    # Create a merged spacing element replacing: prev spacing + filler + next spacing
+                    # Create a new spacing element replacing previous spacing + filler + next spacing
                     filler_pause = {
                         'type': 'spacing',
                         'start': words[i-1]['start'],
@@ -377,7 +290,17 @@ def process_filler_words(words, pause_threshold):
                         'speaker_id': words[i].get('speaker_id', 'Unknown')
                     }
                     
-                    # Add the merged pause
+                    # Apply padding to the preceding word if it exists
+                    if len(processed_words) > 0 and processed_words[-1]['type'] == 'word':
+                        # Record the original end time
+                        orig_end = processed_words[-1]['end']
+                        # Add padding (convert to seconds)
+                        if args.padding > 0:
+                            processed_words[-1]['end'] += args.padding / 1000.0
+                        
+                        logger.debug(f"Added {args.padding}ms padding to word ending at {orig_end}")
+                    
+                    # Add the filler pause
                     processed_words.append(filler_pause)
                     
                     # Skip the filler word and the next spacing
@@ -478,6 +401,93 @@ def handle_error_response(response):
         logger.error(f"API Error: {status} - {message}")
     except:
         logger.error(f"Raw error response: {response.text}")
+
+def merge_consecutive_pauses(srt_file):
+    """Post-process SRT file to merge consecutive pause entries"""
+    import re
+    logger.info("Post-processing SRT file to merge consecutive pauses...")
+    
+    # Read the SRT file
+    with open(srt_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    # Split into entries
+    entries = re.split(r'\n\n+', content.strip())
+    
+    # Process entries
+    merged_entries = []
+    i = 0
+    while i < len(entries):
+        if i < len(entries) - 1:
+            current = entries[i]
+            next_entry = entries[i + 1]
+            
+            # Check if both are pause entries
+            current_is_pause = "(...)" in current
+            next_is_pause = "(...)" in next_entry
+            
+            if current_is_pause and next_is_pause:
+                # Extract timestamps from current entry
+                current_match = re.search(r'(\d+)\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\n', current)
+                
+                # Extract timestamps from next entry
+                next_match = re.search(r'(\d+)\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\n', next_entry)
+                
+                if current_match and next_match:
+                    current_index = current_match.group(1)
+                    current_start = current_match.group(2)
+                    current_end = current_match.group(3)
+                    
+                    next_start = next_match.group(2)
+                    next_end = next_match.group(3)
+                    
+                    # Get the earlier start time and later end time
+                    merged_start = min_timestamp(current_start, next_start)
+                    merged_end = max_timestamp(current_end, next_end)
+                    
+                    # Create merged entry
+                    merged_entry = f"{current_index}\n{merged_start} --> {merged_end}\n(...)"
+                    merged_entries.append(merged_entry)
+                    
+                    # Skip the next entry
+                    i += 2
+                    continue
+        
+        # If no merge happened, add the current entry as is
+        merged_entries.append(entries[i])
+        i += 1
+    
+    # Write back the merged content
+    with open(srt_file, 'w', encoding='utf-8') as f:
+        f.write('\n\n'.join(merged_entries))
+    
+    logger.info(f"Merged {len(entries) - len(merged_entries)} consecutive pause entries")
+
+def min_timestamp(ts1, ts2):
+    """Return the earlier of two timestamps in SRT format (HH:MM:SS,mmm)"""
+    h1, m1, rest1 = ts1.split(':')
+    s1, ms1 = rest1.split(',')
+    
+    h2, m2, rest2 = ts2.split(':')
+    s2, ms2 = rest2.split(',')
+    
+    time1 = int(h1) * 3600 + int(m1) * 60 + int(s1) + int(ms1) / 1000.0
+    time2 = int(h2) * 3600 + int(m2) * 60 + int(s2) + int(ms2) / 1000.0
+    
+    return ts1 if time1 <= time2 else ts2
+
+def max_timestamp(ts1, ts2):
+    """Return the later of two timestamps in SRT format (HH:MM:SS,mmm)"""
+    h1, m1, rest1 = ts1.split(':')
+    s1, ms1 = rest1.split(',')
+    
+    h2, m2, rest2 = ts2.split(':')
+    s2, ms2 = rest2.split(',')
+    
+    time1 = int(h1) * 3600 + int(m1) * 60 + int(s1) + int(ms1) / 1000.0
+    time2 = int(h2) * 3600 + int(m2) * 60 + int(s2) + int(ms2) / 1000.0
+    
+    return ts1 if time1 >= time2 else ts2
 
 def main():
     global args, headers
