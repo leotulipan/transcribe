@@ -25,7 +25,8 @@ args = ""
 headers = None
 MAX_AUDIO_LENGTH = 7200  # seconds
 MAX_DAVINCI_WORDS = 500  # maximum words per subtitle block for davinci mode
-
+FILLER_WORDS = ["äh", "ähm"]  # List of filler words to potentially remove
+#fill = {'Also,': '', 'dann': '', 'Äh': '', 'ja,': '', 'so': '', 'oder': '', 'weil,': '', 'einfach,': '', 'genau': '', 'quasi': '', 'ähm,': '', 'dann,': '', 'eigentlich,': '', 'weil': '', 'so,': '', 'Ähm,': '', 'eben': '', 'glaube': '', 'Ja,': '', 'mal': '', 'Genau': '', 'eben,': '', 'irgendwie': '', 'mal,': '', 'äh,': '', 'glaube,': '', 'ja': '', 'einfach': '', 'halt': '', 'So': ''}
 def setup_logger():
     """Configure loguru logger"""
     logger.remove()  # Remove default handler
@@ -188,6 +189,10 @@ def create_davinci_srt(words, output_file):
     pause_detection = args.silentportions if args.silentportions > 0 else 200
     padding = args.padding if hasattr(args, 'padding') else 30
     
+    # Pre-process words to identify filler words
+    if args.remove_fillers:
+        words = process_filler_words(words, pause_detection)
+    
     with open(output_file, 'w', encoding='utf-8') as f:
         counter = 1
         block_words = []
@@ -250,6 +255,66 @@ def create_davinci_srt(words, output_file):
             process_davinci_block(f, counter, block_words, block_start, block_end)
     
     logger.info("Davinci Resolve SRT file created successfully")
+
+def process_filler_words(words, pause_threshold):
+    """Process words to identify and mark filler words as pauses"""
+    import re
+    logger.info("Processing filler words...")
+    
+    # Create regex patterns for each filler word (case insensitive, ignoring punctuation)
+    filler_patterns = [re.compile(f"^{re.escape(word)}[,.!?]*$", re.IGNORECASE) for word in FILLER_WORDS]
+    
+    # New list to store processed words
+    processed_words = []
+    i = 0
+    
+    while i < len(words):
+        # Check if current item is a word and might be a filler
+        if words[i]['type'] == 'word':
+            is_filler = any(pattern.match(words[i]['text']) for pattern in filler_patterns)
+            
+            if is_filler and i > 0 and i < len(words) - 1:
+                # Check if surrounded by spacings
+                prev_spacing = i > 0 and words[i-1]['type'] == 'spacing'
+                next_spacing = i < len(words) - 1 and words[i+1]['type'] == 'spacing'
+                
+                if prev_spacing and next_spacing:
+                    # Create a new spacing element replacing previous spacing + filler + next spacing
+                    filler_pause = {
+                        'type': 'spacing',
+                        'start': words[i-1]['start'],
+                        'end': words[i+1]['end'],
+                        'text': ' ',
+                        'speaker_id': words[i].get('speaker_id', 'Unknown')
+                    }
+                    
+                    # Apply padding to the preceding word if it exists
+                    if len(processed_words) > 0 and processed_words[-1]['type'] == 'word':
+                        # Record the original end time
+                        orig_end = processed_words[-1]['end']
+                        # Add padding (convert to seconds)
+                        if args.padding > 0:
+                            processed_words[-1]['end'] += args.padding / 1000.0
+                        
+                        logger.debug(f"Added {args.padding}ms padding to word ending at {orig_end}")
+                    
+                    # Add the filler pause
+                    processed_words.append(filler_pause)
+                    
+                    # Skip the filler word and the next spacing
+                    i += 2
+                    continue
+            
+            # Not a filler word or not surrounded by spacings, add as-is
+            processed_words.append(words[i])
+        else:
+            # Not a word, add as-is
+            processed_words.append(words[i])
+        
+        i += 1
+    
+    logger.info(f"Filler word processing complete. Removed {len(words) - len(processed_words)} elements")
+    return processed_words
 
 def process_davinci_block(f, counter, block_words, start_time, end_time):
     """Process a block of words for Davinci Resolve SRT format"""
@@ -352,6 +417,7 @@ def main():
     parser.add_argument("-p", "--silentportions", type=int, help="Mark pauses longer than X milliseconds with (...)", default=0)
     parser.add_argument("--davinci-srt", "-D", help="Export SRT for Davinci Resolve with optimized subtitle blocks", action="store_true")
     parser.add_argument("--padding", type=int, help="Add X milliseconds padding to word end times (default: 30ms)", default=30)
+    parser.add_argument("--remove-fillers", help="Remove filler words like 'äh' and 'ähm' and treat them as pauses", action="store_true")
     
     args = parser.parse_args()
     pp = pprint.PrettyPrinter(indent=4)
