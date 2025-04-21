@@ -189,9 +189,11 @@ def create_davinci_srt(words, output_file):
     pause_detection = args.silentportions if args.silentportions > 0 else 200
     padding = args.padding if hasattr(args, 'padding') else 30
     
-    # Pre-process words to identify filler words
-    if args.remove_fillers:
-        words = process_filler_words(words, pause_detection)
+    # Always pre-process words to identify filler words
+    processed_words = process_filler_words(words, pause_detection)
+    
+    # Merge consecutive or overlapping pauses
+    merged_words = merge_consecutive_pauses(processed_words)
     
     with open(output_file, 'w', encoding='utf-8') as f:
         counter = 1
@@ -200,15 +202,15 @@ def create_davinci_srt(words, output_file):
         block_end = None
         
         # Handle initial silence
-        if words and words[0]['type'] == 'word' and words[0]['start'] > 0:
+        if merged_words and merged_words[0]['type'] == 'word' and merged_words[0]['start'] > 0:
             f.write(f"{counter}\n")
-            f.write(f"00:00:00,000 --> {format_time(words[0]['start'])}\n")
+            f.write(f"00:00:00,000 --> {format_time(merged_words[0]['start'])}\n")
             f.write("(...)\n\n")
             counter += 1
         
         i = 0
-        while i < len(words):
-            word = words[i]
+        while i < len(merged_words):
+            word = merged_words[i]
             
             # If we find a spacing that exceeds our pause threshold
             if word['type'] == 'spacing':
@@ -256,10 +258,89 @@ def create_davinci_srt(words, output_file):
     
     logger.info("Davinci Resolve SRT file created successfully")
 
+def merge_consecutive_pauses(words):
+    """Merge consecutive or overlapping pause/spacing entries"""
+    logger.info("Merging consecutive pauses...")
+    
+    if not words:
+        return []
+    
+    result = []
+    i = 0
+    
+    while i < len(words):
+        current = words[i]
+        
+        # If current item is a spacing, look ahead for consecutive spacings
+        if current['type'] == 'spacing':
+            # Store the start time of the first spacing
+            start_time = current['start']
+            end_time = current['end']
+            speaker_id = current.get('speaker_id', 'Unknown')
+            
+            # Look ahead for consecutive or overlapping spacings
+            j = i + 1
+            merged = False
+            
+            while j < len(words) and words[j]['type'] == 'spacing':
+                # Check if this spacing overlaps or is consecutive with our current merged spacing
+                next_spacing = words[j]
+                
+                # If overlapping or very close (within 0.01s)
+                if next_spacing['start'] <= end_time + 0.01:
+                    # Take the later end time
+                    end_time = max(end_time, next_spacing['end'])
+                    merged = True
+                    j += 1
+                else:
+                    # Not consecutive, stop here
+                    break
+            
+            # Add the merged spacing
+            merged_spacing = {
+                'type': 'spacing',
+                'start': start_time,
+                'end': end_time,
+                'text': ' ',
+                'speaker_id': speaker_id
+            }
+            result.append(merged_spacing)
+            
+            # Skip all the merged spacings
+            i = j if merged else i + 1
+        else:
+            # Not a spacing, add as is
+            result.append(current)
+            i += 1
+    
+    # Ensure no back-to-back pauses by removing any pause that's not between two words
+    final_result = []
+    has_word_before = False
+    
+    for i, item in enumerate(result):
+        if item['type'] == 'spacing':
+            # Check if there's a word before and after this spacing
+            has_word_after = i < len(result) - 1 and result[i + 1]['type'] == 'word'
+            
+            if has_word_before and has_word_after:
+                final_result.append(item)
+            else:
+                logger.debug(f"Removing isolated pause at {item['start']}-{item['end']}")
+        else:
+            final_result.append(item)
+            has_word_before = True
+    
+    logger.info(f"Merged {len(words) - len(final_result)} pause items")
+    return final_result
+
 def process_filler_words(words, pause_threshold):
     """Process words to identify and mark filler words as pauses"""
     import re
     logger.info("Processing filler words...")
+    
+    # Only do actual removal if the flag is set
+    if not args.remove_fillers:
+        return words
     
     # Create regex patterns for each filler word (case insensitive, ignoring punctuation)
     filler_patterns = [re.compile(f"^{re.escape(word)}[,.!?]*$", re.IGNORECASE) for word in FILLER_WORDS]
@@ -279,7 +360,15 @@ def process_filler_words(words, pause_threshold):
                 next_spacing = i < len(words) - 1 and words[i+1]['type'] == 'spacing'
                 
                 if prev_spacing and next_spacing:
-                    # Create a new spacing element replacing previous spacing + filler + next spacing
+                    # Merge previous word's end time with padding if exists
+                    if len(processed_words) > 0 and processed_words[-1]['type'] == 'word' and args.padding > 0:
+                        processed_words[-1]['end'] += args.padding / 1000.0
+                    
+                    # Remove the previous spacing (pop from processed words)
+                    if processed_words and processed_words[-1]['type'] == 'spacing':
+                        processed_words.pop()
+                    
+                    # Create a merged spacing element replacing: prev spacing + filler + next spacing
                     filler_pause = {
                         'type': 'spacing',
                         'start': words[i-1]['start'],
@@ -288,17 +377,7 @@ def process_filler_words(words, pause_threshold):
                         'speaker_id': words[i].get('speaker_id', 'Unknown')
                     }
                     
-                    # Apply padding to the preceding word if it exists
-                    if len(processed_words) > 0 and processed_words[-1]['type'] == 'word':
-                        # Record the original end time
-                        orig_end = processed_words[-1]['end']
-                        # Add padding (convert to seconds)
-                        if args.padding > 0:
-                            processed_words[-1]['end'] += args.padding / 1000.0
-                        
-                        logger.debug(f"Added {args.padding}ms padding to word ending at {orig_end}")
-                    
-                    # Add the filler pause
+                    # Add the merged pause
                     processed_words.append(filler_pause)
                     
                     # Skip the filler word and the next spacing
