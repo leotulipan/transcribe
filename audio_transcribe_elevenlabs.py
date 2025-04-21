@@ -186,6 +186,7 @@ def create_davinci_srt(words, output_file):
     
     # Default pause detection is 200ms if not specified
     pause_detection = args.silentportions if args.silentportions > 0 else 200
+    padding = args.padding if hasattr(args, 'padding') else 30
     
     with open(output_file, 'w', encoding='utf-8') as f:
         counter = 1
@@ -221,6 +222,11 @@ def create_davinci_srt(words, output_file):
                     f.write(f"{format_time(word['start'])} --> {format_time(word['end'])}\n")
                     f.write("(...)\n\n")
                     counter += 1
+                else:
+                    # Add padding to the previous word if it exists
+                    if block_words:
+                        block_words[-1]['end'] += padding / 1000.0
+                        block_end = block_words[-1]['end']
             
             # Add word to current block
             elif word['type'] == 'word':
@@ -345,6 +351,7 @@ def main():
     parser.add_argument("--force", help="Force re-transcription even if files exist", action="store_true")
     parser.add_argument("-p", "--silentportions", type=int, help="Mark pauses longer than X milliseconds with (...)", default=0)
     parser.add_argument("--davinci-srt", "-D", help="Export SRT for Davinci Resolve with optimized subtitle blocks", action="store_true")
+    parser.add_argument("--padding", type=int, help="Add X milliseconds padding to word end times (default: 30ms)", default=30)
     
     args = parser.parse_args()
     pp = pprint.PrettyPrinter(indent=4)
