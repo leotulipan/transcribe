@@ -1,0 +1,116 @@
+---
+description: 
+globs: *.py
+alwaysApply: false
+---
+# You are an expert in Python command line tool development.
+
+# Testing
+
+- use `uv run <scripname_to_test.py> --parameters"`
+- NEVER use the -r (regenerate) option. It needs to be able to run like this
+
+## Key Principles
+
+- Write concise, technical responses with accurate Python examples.
+- Use functional, declarative programming; avoid classes where possible.
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., is_active, has_permission).
+- Use lowercase with underscores for directories and files (e.g., routers/user_routes.py).
+- Favor named exports for routes and utility functions.
+- Use the Receive an Object, Return an Object (RORO) pattern.
+  
+## Python
+
+- Use def for pure functions and async def for asynchronous operations.
+- Use type hints for all function signatures. Prefer Pydantic models over raw dictionaries for input validation.
+- File structure: exported router, sub-routes, utilities, static content, types (models, schemas).
+- Avoid unnecessary curly braces in conditional statements.
+- For single-line statements in conditionals, omit curly braces.
+- Use concise, one-line syntax for simple conditional statements (e.g., if condition: do_something()).
+
+## Comments and docstrings
+
+- you never remove comments and docstrings.
+- you update comments and docstrings when you update the function.
+- for new functions you create valid docstrings on creation.
+
+## Error Handling and Validation
+
+- Prioritize error handling and edge cases:
+- Handle errors and edge cases at the beginning of functions.
+- Use early returns for error conditions to avoid deeply nested if statements.
+- Place the happy path last in the function for improved readability.
+- Avoid unnecessary else statements; use the if-return pattern instead.
+- Use guard clauses to handle preconditions and invalid states early.
+- Implement proper error logging and user-friendly error messages.
+- Use custom error types or error factories for consistent error handling.
+  
+## Dependencies
+
+- dotenv
+- argparse
+- secrets
+  using a SECRETS_KEY from .env to save authentication tokens, login information to disk
+
+## UV Project Management
+
+- Use uv for all project management tasks instead of pip or direct Python commands
+- Project structure follows standard uv conventions with pyproject.toml and uv.lock
+- no direct editing of pyproject.toml - we only use uv for this
+
+### Project Setup and Management
+
+- Initialize projects with `uv init` to create proper project structure
+- Create virtual environments automatically with uv commands
+- Manage dependencies through pyproject.toml, not requirements.txt
+- Use lockfiles (uv.lock) for reproducible environments
+
+### Dependency Management
+
+- Add dependencies with `uv add [package]` instead of pip install
+  - Example: `uv add requests loguru python-dotenv`
+  - Specify versions with `uv add 'requests==2.31.0'`
+  - Add git dependencies with `uv add requests --git https://github.com/org/repo`
+- Remove dependencies with `uv remove [package]`
+- Update lockfile with `uv lock`
+- Sync environment with lockfile using `uv sync`
+
+### Running Code
+
+- Execute scripts with `uv run [script.py]` instead of python directly
+  - Example: `uv run wordpress_posts2md.py --test --verbose`
+- Run arbitrary commands in the project environment with `uv run -- [command]`
+  - Example: `uv run -- flask run -p 3000`
+- uv automatically verifies and updates dependencies before running
+
+### Building and Distribution
+
+- Build packages with `uv build` to create distributions
+- Resulting artifacts are placed in the dist/ directory
+
+### Benefits
+
+- Consistent, reproducible environments across machines
+- Automatic dependency resolution and conflict detection
+- Faster installation and environment updates
+- Cross-platform lockfiles for team collaboration
+- No manual virtual environment management needed
+  
+## Performance Optimization
+
+- Minimize blocking I/O operations; use asynchronous operations for all database calls and external API requests.
+- Implement caching for static and frequently accessed data using tools like Redis or in-memory stores.
+- Optimize data serialization and deserialization with Pydantic.
+- Use lazy loading techniques for large datasets and substantial API responses.
+  
+## Key Conventions
+
+1. Limit blocking operations in routes:
+
+- Favor asynchronous and non-blocking flows.
+- Use dedicated async functions for database and external API operations.
+- Structure routes and dependencies clearly to optimize readability and maintainability.
+  
+Refer to API documentation for best practices.
+  

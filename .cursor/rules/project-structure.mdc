@@ -1,0 +1,74 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Project structure and setup:
+
+*   **Environment & Dependencies**: Managed using `uv`. Dependencies are listed in `pyproject.toml` and locked in `uv.lock`. 
+   
+    Initial Setup:
+        - `uv init` - Creates new project with basic pyproject.toml
+        - `uv venv` - Creates virtual environment
+
+    Package Management:
+        - `uv add <package>` - Adds new dependency and updates lockfile
+        - `uv remove <package>` - Removes dependency and updates lockfile
+        - `uv sync` - Updates environment to match lockfile
+
+    Running:
+        - `uv run -- <command>` - Runs command in project env (auto-syncs first)
+        - `uv run <script.py>` - Runs Python script in project env
+
+    Building:
+        - `uv build` - Builds dist packages (.whl and .tar.gz)
+
+    Verification:
+        - `uv pip list` - Shows installed packages
+        - `uv pip freeze` - Shows exact package versions
+   
+*   **Code Structure**:
+    *   Main application code resides in the `{PROJECTNAME}` directory.
+    *   `{PROJECTNAME}/__init__.py` marks it as a Python package.
+    *   `{PROJECTNAME}/main.py` contains the core logic and the main `async` pipeline orchestration.
+    *   `{PROJECTNAME}/__main__.py` provides an entry point to run the package directly using `python -m {PROJECTNAME}`.
+    *   Helper modules are likely in `{PROJECTNAME}/utils/`.
+
+*   **Running the Code**:
+    *   Run using `uv run -- <command>`
+    *   Alternatively, run as a script: `uv run <script.py>`
+    
+*   **Script Scaffolding**:
+    *   Scripts are designed to be callable (`main.py` has `cli_entry_point`).
+    *   Uses `argparse` for command-line argument parsing.
+    *   Uses `loguru` for logging, implementing a -v verbose toggle for debugging
+    *   Uses `python-dotenv` to load environment variables from a `.env` file.
+    *   utilizes `asyncio` for concurrent operations, if the need arises
+
+        **Async Patterns Used**:
+
+        * **Worker Pool Pattern**: Workers consume tasks from a shared queue
+        * **Producer-Consumer Pattern**: `ready_queue` with multiple consumers
+        * **Task Queue Pattern**: `asyncio.Queue` for work distribution
+        * **Dependency Graph Pattern**: Directed acyclic graph for execution ordering
+        * **Semaphore Pattern**: `MAX_CONCURRENT_AGENTS` limits concurrent tasks
+        * **Mutex Pattern**: `asyncio.Lock` for thread-safe state access
+        * **Pipeline Pattern**: Sequential data processing with dependencies
+        * **Task Pattern**: `asyncio.create_task` for concurrent execution
+        * **Sentinel Pattern**: `None` signals worker shutdown
+
+        **Async implementation**:
+            *   `process_step`: Handles individual agent processing.
+            *   `worker`: Manages concurrent agent execution with a queue.
+            *   `run_pipeline`: Orchestrates the overall pipeline flow.
+            *   `main`: Entry point for async execution.
+            *   Uses `asyncio.Queue` for task distribution.
+            *   Uses `asyncio.Lock` for thread-safe state access.
+            *   Uses `asyncio.gather` for concurrent task execution.
+            *   Uses `asyncio.run` to start the async event loop.
+
+
+*   **Other**:
+    *   `.env` file stores sensitive information like API keys (example in `.env.example`).
+    *   `pyproject.toml` defines project metadata, dependencies, and build system (`hatchling`) and is managed via `uv` commands wherever possible and NOT edited directly.
+    *   Includes tests in the `test/` directory.

@@ -1,0 +1,24 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Python Script Execution Guidelines
+
+When running Python scripts in this project, always use the `uv run` command instead of running Python scripts directly:
+
+```bash
+# CORRECT WAY ✓
+uv run script_name.py --args
+
+# INCORRECT WAY ✗
+python script_name.py --args
+```
+
+Using `uv run` ensures:
+1. All dependencies are properly loaded
+2. The correct virtual environment is activated
+3. Consistent behavior across different systems
+
+This applies to all scripts, including test files like `test_audio_event_handling.py` and the main `audio_transcribe_elevenlabs_adapted.py` script.
+
