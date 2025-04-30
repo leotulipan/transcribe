@@ -82,44 +82,25 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
             if not word:
                 continue
                 
-            # Check if the word dictionary has a 'type' key
-            word_type = word.get('type')
-            
-            if word_type == 'spacing' and silentportions > 0:
-                duration_ms = (word['end'] - word['start']) * 1000
-                if duration_ms >= silentportions:
-                    # Write current segment if exists
-                    if current_text:
-                        f.write(f"{counter}\n")
-                        f.write(f"{format_time(current_start)} --> {format_time(current_end)}\n")
-                        f.write(f"{current_text.strip()}\n\n")
-                        counter += 1
-                        current_text = ""
-                    
-                    # Write silent portion
-                    f.write(f"{counter}\n")
-                    f.write(f"{format_time(word['start'])} --> {format_time(word['end'])}\n")
-                    f.write("(...)\n\n")
-                    counter += 1
-                    current_start = None
-                    current_end = None
-                    continue
-            
-            elif word_type == 'word':
-                if current_start is None:
-                    current_start = word['start']
-                current_end = word['end']
-                current_text += word['text'] + " "
+            # Get word text - Groq uses 'word' key instead of 'text'
+            word_text = word.get('word', word.get('text', ''))
+            if not word_text:
+                continue
                 
-                if len(current_text.strip()) >= chars_per_line:
-                    f.write(f"{counter}\n")
-                    f.write(f"{format_time(current_start)} --> {format_time(current_end)}\n")
-                    f.write(f"{current_text.strip()}\n\n")
-                    counter += 1
-                    current_text = ""
-                    current_start = None
-                    current_end = None
-            elif word_type == 'audio_event':
+            if current_start is None:
+                current_start = word['start']
+            current_end = word['end']
+            current_text += word_text + " "
+            
+            if len(current_text.strip()) >= chars_per_line:
+                f.write(f"{counter}\n")
+                f.write(f"{format_time(current_start)} --> {format_time(current_end)}\n")
+                f.write(f"{current_text.strip()}\n\n")
+                counter += 1
+                current_text = ""
+                current_start = None
+                current_end = None
+            elif word.get('type') == 'audio_event':
                 # Write current segment if exists
                 if current_text:
                     f.write(f"{counter}\n")
@@ -135,7 +116,7 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                 f.write(f"{format_time(word['start'])} --> {format_time(word['end'])}\n")
                 f.write(f"({word['text']})\n\n")
                 counter += 1
-            elif word_type is None:
+            elif word.get('type') is None:
                 # Handle words without type key (assume they are regular words)
                 if current_start is None:
                     current_start = word['start']
@@ -393,44 +374,18 @@ def create_davinci_srt(words: List[Dict[str, Any]], output_file: Union[str, Path
 
 def create_text_file(words: List[Dict[str, Any]], output_file: Union[str, Path]) -> None:
     """
-    Create plain text file from words data.
+    Create text file from words data.
     
     Args:
-        words: List of word dictionaries with timing info
+        words: List of word dictionaries with text info
         output_file: Path to output text file
-        
-    From: elevenlabs - Create plain text transcript
     """
     logger.info(f"Creating text file: {output_file}")
+    
     with open(output_file, 'w', encoding='utf-8') as f:
-        current_speaker = None
-        for word in words:
-            # Skip empty or None entries
-            if not word:
-                continue
-                
-            # Check if the word dictionary has a 'type' key
-            word_type = word.get('type')
-            
-            if word_type is None:
-                # Handle words without type key (assume they are regular words)
-                speaker = word.get('speaker_id', 'Unknown')
-                if speaker != current_speaker:
-                    if current_speaker is not None:
-                        f.write("\n")
-                    f.write(f"Speaker {speaker}: ")
-                    current_speaker = speaker
-                f.write(word.get('text', '') + " ")
-            elif word_type == 'word':
-                speaker = word.get('speaker_id', 'Unknown')
-                if speaker != current_speaker:
-                    if current_speaker is not None:
-                        f.write("\n")
-                    f.write(f"Speaker {speaker}: ")
-                    current_speaker = speaker
-                f.write(word['text'] + " ")
-            elif word_type == 'audio_event':
-                f.write(f"({word['text']}) ")
+        # Groq format has 'word' key instead of 'text'
+        text = " ".join([word.get('word', word.get('text', '')) for word in words])
+        f.write(text)
     logger.info("Text file created successfully")
 
 
