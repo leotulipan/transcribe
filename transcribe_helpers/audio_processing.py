@@ -31,18 +31,23 @@ def check_audio_length(file_path: Union[str, Path], max_length: int = 7200) -> b
     return True
 
 
-def check_audio_format(audio: AudioSegment) -> bool:
+def check_audio_format(audio: AudioSegment, file_extension: str = None) -> bool:
     """
     Check if audio meets requirements (mono, 16kHz, 16-bit).
     
     Args:
         audio: AudioSegment object to check
+        file_extension: Optional file extension to determine if format checks should be bypassed
         
     Returns:
-        True if audio meets requirements, False otherwise
+        True if audio meets requirements or is FLAC (bypass), False otherwise
     
     From: elevenlabs - Verify audio has correct specifications
     """
+    # Always return True for FLAC files to bypass format checks
+    if file_extension is not None and file_extension.lower() == '.flac':
+        return True
+        
     return (audio.channels == 1 and 
             audio.frame_rate == 16000 and 
             audio.sample_width == 2)

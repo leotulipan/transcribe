@@ -143,7 +143,7 @@ def main():
                 # Check if WAV needs re-encoding
                 from pydub import AudioSegment
                 audio = AudioSegment.from_file(file_path)
-                if not check_audio_format(audio):
+                if not check_audio_format(audio, file_extension):
                     logger.info("WAV file needs re-encoding to meet requirements")
                     converted_file = convert_to_pcm(file_path) if args.use_pcm else convert_to_flac(file_path)
                     file_path = converted_file
@@ -151,7 +151,7 @@ def main():
                 # Check if FLAC needs re-encoding
                 from pydub import AudioSegment
                 audio = AudioSegment.from_file(file_path)
-                if not check_audio_format(audio):
+                if not check_audio_format(audio, file_extension):
                     logger.info("FLAC file needs re-encoding to meet requirements")
                     converted_file = convert_to_flac(file_path)
                     file_path = converted_file
