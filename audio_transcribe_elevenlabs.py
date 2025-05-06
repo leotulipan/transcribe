@@ -18,8 +18,10 @@ import requests
 from datetime import datetime
 import time
 import argparse
+import sys
 from pathlib import Path
 from loguru import logger
+from pydub import AudioSegment
 
 # Import transcribe_helpers package
 from transcribe_helpers import (
@@ -28,7 +30,7 @@ from transcribe_helpers import (
     # utils
     setup_logger, check_transcript_exists, 
     # output_formatters
-    create_srt, create_davinci_srt, create_text_file
+    create_srt, create_davinci_srt, create_text_file, create_word_level_srt
 )
 
 # Global variables
@@ -42,7 +44,8 @@ def get_args():
     parser = argparse.ArgumentParser(description="Audio transcription using ElevenLabs API.")
     parser.add_argument("audio_path", type=str, help="Path to the input audio file or pattern.")
     parser.add_argument("-d", "--debug", help="Debug mode", action="store_true")
-    parser.add_argument("-c", "--chars_per_line", type=int, default=80, help="Maximum characters per line in SRT file")
+    parser.add_argument("-c", "--chars_per_line", type=int, default=80, help="Maximum characters per line in SRT file (default: 80). Ignored if -C/--word-srt is set.")
+    parser.add_argument("-C", "--word-srt", action="store_true", help="Output SRT with each word as its own subtitle (word-level SRT, disables -c/--chars_per_line)")
     parser.add_argument("-s", "--speaker_labels", help="Use this flag to remove speaker labels", action="store_false", default=True)
     parser.add_argument("--keep-flac", help="Keep the generated FLAC file after processing", action="store_true")
     parser.add_argument("--no-convert", help="Send the audio file as-is without conversion", action="store_true")
@@ -67,6 +70,14 @@ def handle_error_response(response):
     except:
         logger.error(f"Raw error response: {response.text}")
 
+def exit_with_message(message, exit_code=1):
+    """
+    Print a clean exit message and exit the program.
+    Bypasses logger for user-friendly output regardless of debug mode.
+    """
+    print(f"\n{message}")
+    sys.exit(exit_code)
+
 def main():
     global args, headers
     args = get_args()
@@ -77,8 +88,12 @@ def main():
         logger.info("Debug mode enabled")
 
     load_dotenv()
+    api_key = os.getenv("ELEVENLABS_API_KEY")
+    if not api_key:
+        exit_with_message("Error: ELEVENLABS_API_KEY not found in environment variables. Please add it to your .env file.")
+        
     headers = {
-        "xi-api-key": os.getenv("ELEVENLABS_API_KEY"),
+        "xi-api-key": api_key,
         "Accept": "application/json"
     }
 
@@ -132,6 +147,8 @@ def main():
             srt_file = os.path.join(file_dir, f"{file_name}.srt")
             if args.davinci_srt:
                 create_davinci_srt(response_data['words'], srt_file, args.silentportions, args.padding)
+            elif args.word_srt:
+                create_word_level_srt(response_data['words'], srt_file, remove_fillers=args.remove_fillers, filler_words=FILLER_WORDS)
             else:
                 create_srt(response_data['words'], srt_file, args.chars_per_line, args.silentportions)
             continue
@@ -141,7 +158,6 @@ def main():
         if not args.no_convert:
             if file_extension.lower() == '.wav':
                 # Check if WAV needs re-encoding
-                from pydub import AudioSegment
                 audio = AudioSegment.from_file(file_path)
                 if not check_audio_format(audio, file_extension):
                     logger.info("WAV file needs re-encoding to meet requirements")
@@ -149,7 +165,6 @@ def main():
                     file_path = converted_file
             elif file_extension.lower() == '.flac' and not args.use_pcm:
                 # Check if FLAC needs re-encoding
-                from pydub import AudioSegment
                 audio = AudioSegment.from_file(file_path)
                 if not check_audio_format(audio, file_extension):
                     logger.info("FLAC file needs re-encoding to meet requirements")
@@ -164,6 +179,27 @@ def main():
         try:
             check_file_size(file_path)
             check_audio_length(file_path, MAX_AUDIO_LENGTH)
+            
+            # Verify file format and readability
+            try:
+                probe_audio = AudioSegment.from_file(file_path)
+                audio_info = f"{len(probe_audio)/1000:.1f}s, {probe_audio.channels} channel(s), {probe_audio.frame_rate}Hz, {probe_audio.sample_width*8}bit"
+                logger.info(f"Audio verified: {audio_info}")
+                
+                # Warn about potential issues with stereo audio when not using --no-convert flag
+                if probe_audio.channels > 1 and not args.no_convert:
+                    logger.warning("Stereo audio detected. ElevenLabs works best with mono audio.")
+                    if file_extension.lower() == '.flac':
+                        logger.warning("Since this is a FLAC file and we're bypassing conversion, you may encounter issues.")
+                        logger.warning("Consider using --use-pcm to force conversion to mono if transcription fails.")
+            except Exception as e:
+                error_msg = f"Cannot read audio file: {e}"
+                if args.debug:
+                    logger.error(error_msg)
+                    logger.error("File may be corrupted or in an unsupported format")
+                else:
+                    exit_with_message(error_msg)
+                continue
         except RuntimeError as e:
             logger.error(f"Error: {e}")
             continue
@@ -195,6 +231,14 @@ def main():
                 # Remove None values from data
                 data = {k: v for k, v in data.items() if v is not None}
                 
+                # Log detailed request information in debug mode
+                if args.debug:
+                    logger.debug(f"API Request: POST https://api.elevenlabs.io/v1/speech-to-text")
+                    logger.debug(f"Headers: {json.dumps({k: v for k, v in headers.items() if k != 'xi-api-key'})}")
+                    logger.debug(f"Data: {json.dumps(data)}")
+                    logger.debug(f"File: {file_path} ({file_size_mb:.2f}MB, {'PCM WAV' if args.use_pcm else 'FLAC'})")
+                    logger.debug(f"Content-Type: {'audio/wav' if args.use_pcm else 'audio/flac'}")
+                
                 start_time = time.time()
                 response = requests.post(
                     "https://api.elevenlabs.io/v1/speech-to-text",
@@ -222,6 +266,8 @@ def main():
             srt_file = os.path.join(file_dir, f"{file_name}.srt")
             if args.davinci_srt:
                 create_davinci_srt(response_data['words'], srt_file, args.silentportions, args.padding)
+            elif args.word_srt:
+                create_word_level_srt(response_data['words'], srt_file, remove_fillers=args.remove_fillers, filler_words=FILLER_WORDS)
             else:
                 create_srt(response_data['words'], srt_file, args.chars_per_line, args.silentportions)
 
@@ -242,6 +288,40 @@ def main():
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400:
                 handle_error_response(e.response)
+            elif e.response.status_code == 429:
+                try:
+                    error_json = e.response.json()
+                    detail = error_json.get('detail', {})
+                    
+                    # Check if this is a system_busy error
+                    if isinstance(detail, dict) and detail.get('status') == 'system_busy':
+                        error_message = detail.get('message', 'The system is experiencing heavy traffic')
+                        exit_with_message(f"ElevenLabs API: {error_message}\nPlease try again later.")
+                    else:
+                        # Regular rate limit error
+                        logger.error(f"Rate limit exceeded (429 Too Many Requests). You've reached your ElevenLabs API request limit.")
+                        logger.error(f"Consider waiting a while before trying again or check your subscription plan.")
+                        
+                        if 'detail' in error_json:
+                            logger.error(f"API Message: {error_json['detail']}")
+                            
+                        # Check for rate limit headers
+                        headers = e.response.headers
+                        if 'Retry-After' in headers:
+                            retry_after = headers['Retry-After']
+                            logger.error(f"API suggests retrying after {retry_after} seconds")
+                except Exception as parse_error:
+                    if args.debug:
+                        logger.error(f"Error parsing API response: {parse_error}")
+                    logger.error("Rate limit exceeded. Please try again later or check your API plan.")
+            elif e.response.status_code == 401:
+                exit_with_message("Authentication error: Invalid API key or unauthorized access. Check your ELEVENLABS_API_KEY.")
+            elif e.response.status_code == 403:
+                exit_with_message("Access forbidden: Your account doesn't have permission to use this feature.")
+            elif e.response.status_code == 413:
+                exit_with_message(f"File too large: The audio file ({file_size_mb:.1f}MB) exceeds the API's maximum size limit.")
+            elif e.response.status_code >= 500:
+                exit_with_message("ElevenLabs server error. Please try again later.")
             else:
                 logger.error(f"HTTP Error: {e}")
             continue

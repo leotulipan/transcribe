@@ -77,21 +77,23 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
             f.write("(...)\n\n")
             counter += 1
         
-        for word in words:
-            # Skip empty or None entries
+        for idx, word in enumerate(words):
             if not word:
                 continue
-                
-            # Get word text - Groq uses 'word' key instead of 'text'
             word_text = word.get('word', word.get('text', ''))
             if not word_text:
                 continue
-                
             if current_start is None:
                 current_start = word['start']
             current_end = word['end']
-            current_text += word_text + " "
-            
+            # Only add a space if not a spacing, and previous word is not spacing
+            if word.get('type') == 'spacing':
+                current_text += word_text
+            else:
+                prev_is_spacing = idx > 0 and words[idx-1].get('type') == 'spacing'
+                if not prev_is_spacing and current_text:
+                    current_text += ' '
+                current_text += word_text
             if len(current_text.strip()) >= chars_per_line:
                 f.write(f"{counter}\n")
                 f.write(f"{format_time(current_start)} --> {format_time(current_end)}\n")
@@ -101,7 +103,6 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                 current_start = None
                 current_end = None
             elif word.get('type') == 'audio_event':
-                # Write current segment if exists
                 if current_text:
                     f.write(f"{counter}\n")
                     f.write(f"{format_time(current_start)} --> {format_time(current_end)}\n")
@@ -110,19 +111,18 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                     current_text = ""
                     current_start = None
                     current_end = None
-                
-                # Write audio event as its own subtitle
                 f.write(f"{counter}\n")
                 f.write(f"{format_time(word['start'])} --> {format_time(word['end'])}\n")
                 f.write(f"({word['text']})\n\n")
                 counter += 1
             elif word.get('type') is None:
-                # Handle words without type key (assume they are regular words)
                 if current_start is None:
                     current_start = word['start']
                 current_end = word['end']
-                current_text += word.get('text', '') + " "
-                
+                prev_is_spacing = idx > 0 and words[idx-1].get('type') == 'spacing'
+                if not prev_is_spacing and current_text:
+                    current_text += ' '
+                current_text += word.get('text', '')
                 if len(current_text.strip()) >= chars_per_line:
                     f.write(f"{counter}\n")
                     f.write(f"{format_time(current_start)} --> {format_time(current_end)}\n")
@@ -131,7 +131,6 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                     current_text = ""
                     current_start = None
                     current_end = None
-        
         if current_text:
             f.write(f"{counter}\n")
             f.write(f"{format_time(current_start)} --> {format_time(current_end)}\n")
@@ -381,10 +380,19 @@ def create_text_file(words: List[Dict[str, Any]], output_file: Union[str, Path])
         output_file: Path to output text file
     """
     logger.info(f"Creating text file: {output_file}")
-    
+    text = ""
+    for idx, word in enumerate(words):
+        word_text = word.get('word', word.get('text', ''))
+        if not word_text:
+            continue
+        if word.get('type') == 'spacing':
+            text += word_text
+        else:
+            prev_is_spacing = idx > 0 and words[idx-1].get('type') == 'spacing'
+            if not prev_is_spacing and text:
+                text += ' '
+            text += word_text
     with open(output_file, 'w', encoding='utf-8') as f:
-        # Groq format has 'word' key instead of 'text'
-        text = " ".join([word.get('word', word.get('text', '')) for word in words])
         f.write(text)
     logger.info("Text file created successfully")
 
@@ -542,3 +550,39 @@ def export_subtitles(transcript_id: str, headers: Dict[str, str],
         return filename
     else:
         raise RuntimeError(f"Subtitle export failed: {response.text}")
+
+
+def create_word_level_srt(words: List[Dict[str, Any]], output_file: Union[str, Path], remove_fillers: bool = False, filler_words: Optional[list] = None) -> None:
+    """
+    Create SRT file with each word as its own subtitle (no spacings).
+    If remove_fillers is True, skip filler words and audio events (parenthesis noise mentions).
+    """
+    logger.info(f"Creating word-level SRT file: {output_file}")
+    if filler_words is None:
+        filler_words = ["äh", "ähm"]
+    import re
+    filler_patterns = [re.compile(f"^{re.escape(word)}[,.!?]*$", re.IGNORECASE) for word in filler_words]
+    with open(output_file, 'w', encoding='utf-8') as f:
+        counter = 1
+        for word in words:
+            if not word:
+                continue
+            if word.get('type') == 'spacing':
+                continue  # skip spacings
+            if remove_fillers:
+                # skip audio events (parenthesis noise mentions)
+                if word.get('type') == 'audio_event':
+                    continue
+                # skip filler words
+                if word.get('type') == 'word' and any(p.match(word['text']) for p in filler_patterns):
+                    continue
+            start = word['start']
+            end = word['end']
+            text = word.get('word', word.get('text', ''))
+            if not text:
+                continue
+            f.write(f"{counter}\n")
+            f.write(f"{format_time(start)} --> {format_time(end)}\n")
+            f.write(f"{text}\n\n")
+            counter += 1
+    logger.info("Word-level SRT file created successfully")
