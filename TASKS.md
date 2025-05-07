@@ -25,30 +25,36 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [x] Make sure all scripts skip re-encoding if a JSON is already present
 - [x] Add the API that was used to the end of the JSON filename
 
-## In Progress Tasks
+- [x] Implement standardized parsers for each JSON format
+  - [x] Create parser for AssemblyAI format
+  - [x] Create parser for ElevenLabs format
+  - [x] Create parser for Groq format
+  - [x] Create unified data model for consistent access
 
-- [ ] Refactor to a unified API class
-  - [ ] Create base transcription class with common methods
-  - [ ] Implement AssemblyAI-specific implementation (submit and wait)
-  - [ ] Implement direct response APIs (Groq, ElevenLabs)
-  - [ ] Add error handling and retry logic
+- [x] Refactor to a unified API class
+  - [x] Create base transcription class with common methods
+  - [x] Implement AssemblyAI-specific implementation (submit and wait)
+  - [x] Implement direct response APIs (Groq, ElevenLabs)
+  - [x] Add error handling and retry logic; debug output and info with loguru
+
+- [x] Unify all transcription scripts into a NEW central script
+  - [x] Create master script with engine/model selection
+  - [x] **CLI Framework:** Using Click instead of argparse for better user experience
+  - [x] Created utils package with parsers, formatters, and API classes
+  - [x] api (+ model where appropriate) selection via cli. defaults to groq
+  - [x] check if API key is set and works before trying to access the selected api for more error robustness
+  - [x] Create unified command line interface
+
+- [x] pyinstaller and executable: preparation and setup
+  - [x] Created package structure for Python package deployment
+  - [x] Setup entry points for command-line usage
+  - [x] Added PyInstaller configuration and build script
 
 ## Future Tasks
 
-- [ ] Implement standardized parsers for each JSON format
-  - [ ] Create parser for AssemblyAI format
-  - [ ] Create parser for ElevenLabs format
-  - [ ] Create parser for Groq format
-  - [ ] Create unified data model for consistent access
-
-- [ ] Unify all transcription scripts
-  - [ ] Create master script with engine/model selection
-  - [ ] Implement clicker interface similar to notion-cli
-  - [ ] Add configuration management
-  - [ ] Create unified command line interface
-
 - [ ] Add back OpenAI official Whisper support
 - [ ] Add local-whisper/faster-whisper as local transcription option
+- [ ] Create PyInstaller setup to create standalone executables (Windows focus, cross-platform desirable)
 
 - [ ] Streamline output formatting options
   - [ ] Implement standard SRT output format
@@ -58,17 +64,43 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [ ] Refactor timing options (fps, padding) to be more intuitive
   - [ ] Add format-specific configuration options
 
+- [ ] clean up. remove old unused scripts and util libaries
+
+- [ ] double check language codes work as expected in all apis and if necessary write a converter (ie some api need de for German some deu or de_DE)
+
 ## Implementation Plan
 
-The tool will be refactored to use a unified class architecture that handles all API interactions while providing a consistent interface. A common parser will handle different JSON formats from various APIs, transforming them into a standardized internal format.
+The tool has been refactored to use a unified class architecture that handles all API interactions while providing a consistent interface. A common parser handles different JSON formats from various APIs, transforming them into a standardized internal format.
 
-Output options will be streamlined with sensible defaults while maintaining flexibility for different use cases.
+Output options have been streamlined with sensible defaults while maintaining flexibility for different use cases.
 
 ### Relevant Files
 
-- `transcribe.py` - Main entry point (to be created)
-- `assemblyai_transcribe.py` - AssemblyAI implementation
-- `elevenlabs_transcribe.py` - ElevenLabs implementation
-- `groq_transcribe.py` - Groq implementation
-- `utils/parsers.py` - JSON parsing utilities (to be created)
-- `utils/formatters.py` - Output formatting utilities (to be created)
+- ✅ `transcribe.py` - Main entry point (implemented)
+- ✅ `assemblyai_transcribe.py` - AssemblyAI implementation (existing)
+- ✅ `elevenlabs_transcribe.py` - ElevenLabs implementation (existing)
+- ✅ `groq_transcribe.py` - Groq implementation (existing)
+- ✅ `utils/parsers.py` - JSON parsing utilities (implemented)
+- ✅ `utils/formatters.py` - Output formatting utilities (implemented)
+- ✅ `utils/transcription_api.py` - Unified API classes (implemented)
+- ✅ `utils/__init__.py` - Utils package initialization (implemented)
+
+### How to Use the Unified Tool
+
+The unified tool supports a consistent interface for all APIs:
+
+```bash
+# Basic usage
+uv run .\transcribe.py --api assemblyai "path/to/audio.wav"
+
+# With language selection
+uv run .\transcribe.py --api groq --language de "path/to/audio.wav"
+
+# With custom output formats
+uv run .\transcribe.py --api elevenlabs --output text --output srt --output davinci_srt "path/to/audio.wav"
+
+# With DaVinci Resolve optimized output
+uv run .\transcribe.py --api groq --davinci-srt "path/to/audio.wav"
+```
+
+All APIs support the same command-line options, with sensible defaults for each API. The tool automatically detects existing transcripts and can regenerate different output formats from existing JSON files.

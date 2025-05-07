@@ -4,6 +4,7 @@ globs:
 alwaysApply: false
 ---
 # Task List Management
+# based on https://github.com/elie222/inbox-zero/blob/main/.cursor/rules/task-list.mdc
 
 Guidelines for creating and managing task lists in markdown files to track project progress
 

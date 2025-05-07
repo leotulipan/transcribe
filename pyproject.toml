@@ -1,22 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "scripts-transcribe"
+name = "audio-transcribe"
 version = "0.1.0"
-description = "Transcript with AssemlyAI to txt and srt of file or a whole folder"
-readme = "README.md"
-requires-python = ">=3.12"
+description = "Unified audio transcription tool supporting multiple APIs"
+authors = [
+    {name = "Audio Transcribe Team"}
+]
+license = {text = "MIT"}
+requires-python = ">=3.8"
 dependencies = [
-    "argparse>=1.4.0",
-    "assemblyai>=0.34.0",
-    "datetime>=5.5",
-    "elevenlabs>=1.52.0",
-    "glob2>=0.7",
-    "librosa>=0.11.0",
-    "load-dotenv>=0.1.0",
-    "loguru>=0.7.3",
-    "os-sys>=0.9.1",
-    "pprintpp>=0.4.0",
-    "pydub>=0.25.1",
-    "python-dateutil>=2.9.0.post0",
-    "python-dotenv>=1.0.1",
-    "requests>=2.32.3",
+    "click",
+    "loguru",
+    "pydub",
+    "python-dotenv",
+    "requests",
+    "assemblyai",
+    "groq",
+]
+readme = "README.md"
+
+[project.optional-dependencies]
+dev = [
+    "pyinstaller",
+]
+
+[project.scripts]
+transcribe = "audio_transcribe.cli:main"
+
+[tool.setuptools]
+packages = ["audio_transcribe", "audio_transcribe.utils", "audio_transcribe.transcribe_helpers"]
+
+[tool.pyinstaller]
+hiddenimports = [
+    "loguru",
+    "assemblyai",
+    "groq",
+    "python-dotenv",
+    "requests",
+    "pydub"
 ]

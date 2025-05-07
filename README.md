@@ -1,3 +1,157 @@
+# Audio Transcribe
+
+A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs, Groq) with options for different output formats.
+
+## Features
+
+- Support for multiple transcription APIs:
+  - AssemblyAI (with speaker diarization)
+  - ElevenLabs 
+  - Groq (AI model-based)
+- Various output formats:
+  - Standard text output
+  - SRT subtitles
+  - Word-level SRT (each word as its own subtitle)
+  - DaVinci Resolve optimized SRT
+- Extensive configuration options:
+  - Language selection
+  - Silent portion detection
+  - Timing adjustments (paddings and FPS-based)
+  - Filler word removal
+
+## Installation
+
+### From Source (Development)
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd audio-transcribe
+   ```
+
+2. Create a virtual environment and install with uv:
+   ```bash
+   uv venv
+   uv pip install -e .
+   ```
+
+### Building Executable
+
+To build a standalone executable:
+
+```bash
+uv run build.py
+```
+
+The executable will be placed in the `./dist` directory. The build script:
+- Creates a clean virtual environment
+- Installs all required dependencies using UV
+- Packages the application with PyInstaller
+- Creates a standalone executable with all dependencies included
+
+## Usage
+
+### Basic Usage
+
+```bash
+transcribe path/to/audio.wav --api assemblyai
+```
+
+Or using the standalone executable:
+
+```bash
+dist/transcribe.exe path/to/audio.wav --api assemblyai
+```
+
+### With Language Selection
+
+```bash
+transcribe path/to/audio.wav --api groq --language de
+```
+
+### With Custom Output Formats
+
+```bash
+transcribe path/to/audio.wav --api elevenlabs --output text --output srt --output davinci_srt
+```
+
+### DaVinci Resolve Optimized Output
+
+```bash
+transcribe path/to/audio.wav --api groq --davinci-srt
+```
+
+### All Options
+
+```
+Usage: transcribe.exe [OPTIONS] AUDIO_PATH
+
+  Transcribe audio files using various APIs with configurable output formats.
+
+Options:
+  -a, --api [assemblyai|elevenlabs|groq]
+                                  API to use for transcription (default: groq)
+  -l, --language TEXT             Language code (ISO-639-1 or ISO-639-3)
+  -o, --output [text|srt|word_srt|davinci_srt|json|all]
+                                  Output format(s) to generate (default:
+                                  text,srt)
+  -c, --chars-per-line INTEGER    Maximum characters per line in SRT file
+                                  (default: 80)
+  -C, --word-srt                  Output SRT with each word as its own
+                                  subtitle
+  -D, --davinci-srt               Output SRT optimized for DaVinci Resolve
+  -p, --silent-portions INTEGER   Mark pauses longer than X milliseconds with
+                                  (...)
+  --padding-start INTEGER         Milliseconds to offset word start times
+                                  (negative=earlier, positive=later)
+  --padding-end INTEGER           Milliseconds to offset word end times
+                                  (negative=earlier, positive=later)
+  --show-pauses                   Add (...) text for pauses longer than
+                                  silent-portions value
+  --remove-fillers / --no-remove-fillers
+                                  Remove filler words like 'äh' and 'ähm' and
+                                  treat them as pauses
+  --speaker-labels / --no-speaker-labels
+                                  Enable/disable speaker diarization
+                                  (AssemblyAI only)
+  --fps FLOAT                     Frames per second for frame-based editing
+                                  (e.g., 24, 29.97, 30)
+  --fps-offset-start INTEGER      Frames to offset from start time (default:
+                                  -1, negative=earlier, positive=later)
+  --fps-offset-end INTEGER        Frames to offset from end time (default: 0,
+                                  negative=earlier, positive=later)
+  --use-input                     Use original input file without conversion
+                                  (default is to convert to FLAC)
+  --use-pcm                       Convert to PCM WAV format instead of FLAC
+                                  (larger file size)
+  --keep-flac                     Keep the generated FLAC file after
+                                  processing
+  -m, --model TEXT                Model to use for transcription (Groq only)
+  --chunk-length INTEGER          Length of each chunk in seconds for long
+                                  audio (Groq only)
+  --overlap INTEGER               Overlap between chunks in seconds (Groq
+                                  only)
+  -f, --force                     Force re-transcription even if transcript
+                                  exists
+  -d, --debug                     Enable debug logging
+  -v, --verbose                   Show all log messages in console
+  --help                          Show this message and exit.
+```
+
+## API Keys
+
+You need to set up API keys for the transcription services you intend to use. Create a `.env` file with the following variables:
+
+```
+ASSEMBLYAI_API_KEY=your_assemblyai_key
+ELEVENLABS_API_KEY=your_elevenlabs_key
+GROQ_API_KEY=your_groq_key
+```
+
+## License
+
+MIT
+
 ## File Size limits
 
 Google Gemini
