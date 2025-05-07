@@ -24,6 +24,7 @@ from pydub import AudioSegment
 # Docs https://github.com/jiaaro/pydub/blob/master/API.markdown
 
 import assemblyai as aai
+from transcribe_helpers import create_word_level_srt
 
 # global variables
 args = ""
@@ -63,22 +64,13 @@ def export_subtitles(transcript_id, subtitle_format, file_name):
     Returns:
         str: The filename of the saved subtitle file.
     """
-    # Set the API endpoint for exporting subtitles
-    url = f"https://api.assemblyai.com/v2/transcript/{transcript_id}/{subtitle_format}"
-
-    # Send a GET request to the API to get the subtitle data
-    response = requests.get(url, headers=headers)
-
-    # Check if the response status code is successful (200)
-    if response.status_code == 200:
-        # Save the subtitle data to a local file
-        filename = f"{file_name}.{subtitle_format}"
-        with open(filename, "wb") as subtitle_file:
-            subtitle_file.write(response.content)
-        return filename
-    else:
-        raise RuntimeError(f"Subtitle export failed: {response.text}")
+    # Import from transcribe_helpers if it hasn't been imported yet
+    from transcribe_helpers.output_formatters import export_subtitles as th_export_subtitles
     
+    # Call the function from transcribe_helpers
+    return th_export_subtitles(transcript_id, headers, subtitle_format, file_name, 
+                             args.fps, args.fps_offset_start, args.fps_offset_end)
+
 def main():
     global args, headers
     parser = argparse.ArgumentParser()
@@ -89,6 +81,11 @@ def main():
     group.add_argument("-i", "--id", help="ID of an already done transcription")
     # speaker_labels
     parser.add_argument("-s", "--speaker_labels", help="Use this flag to remove speaker labels", action="store_false", default=True) 
+    parser.add_argument("-C", "--word-srt", action="store_true", help="Output SRT with each word as its own subtitle (word-level SRT)")
+    parser.add_argument("--remove-fillers", help="Remove filler words like 'äh' and 'ähm' and treat them as pauses", action="store_true")
+    parser.add_argument("--fps", type=float, help="Frames per second for frame-based editing (e.g., 24, 29.97, 30)", default=None)
+    parser.add_argument("--fps-offset-start", type=int, help="Frames to offset from start time (default: 1)", default=1)
+    parser.add_argument("--fps-offset-end", type=int, help="Frames to offset from end time (default: 0)", default=0)
     
     args = parser.parse_args()
 
@@ -273,6 +270,7 @@ def main():
         sentences_url = f"https://api.assemblyai.com/v2/transcript/{transcript.id}/sentences"
         sentences_response = requests.get(sentences_url, headers=headers)
             
+        # Get sentences and create text output
         with open(os.path.join(file_dir, f"{file_name}.txt"), "w") as f:
             current_speaker = ""
             # Iterate over the "sentences" list
@@ -290,19 +288,70 @@ def main():
                         f.write(f"{text}\n")
                 else:
                     f.write(f"{text}\n")
-                    
-        # with open(os.path.join(file_dir, f"{file_name}.srt"), "w") as f:         
-        #     f.write(transcript.export_subtitles_srt(chars_per_caption=65))
-        export_subtitles(transcript.id, "srt", file_name)
         
-        # text_transcript = ""        
-        # for utterance in transcript.utterances:
-        #     text_transcript += f"Speaker {utterance.speaker}: {utterance.text}\n"
-                    
-        # # Save the transcript
+        # Create SRT files
+        if args.word_srt:
+            # Get words from the transcript to create word-level SRT
+            words_url = f"https://api.assemblyai.com/v2/transcript/{transcript.id}/words"
+            words_response = requests.get(words_url, headers=headers)
+            
+            if words_response.status_code == 200:
+                words_data = json.loads(words_response.text)
+                # Convert AssemblyAI words format to the format expected by create_word_level_srt
+                words = []
+                for word in words_data.get('words', []):
+                    words.append({
+                        'text': word['text'],
+                        'start': word['start'] / 1000.0,  # Convert from ms to seconds
+                        'end': word['end'] / 1000.0,     # Convert from ms to seconds
+                        'type': 'word'
+                    })
+                
+                # Define filler words
+                filler_words = ["äh", "ähm"]
+                
+                # Create word-level SRT
+                srt_file = os.path.join(file_dir, f"{file_name}.srt")
+                create_word_level_srt(words, srt_file, remove_fillers=args.remove_fillers, 
+                                     filler_words=filler_words, fps=args.fps, 
+                                     fps_offset_start=args.fps_offset_start, 
+                                     fps_offset_end=args.fps_offset_end)
+                print(f"Word-level SRT saved to {file_name}.srt")
+            else:
+                print(f"Failed to get word-level data: {words_response.status_code} - {words_response.text}")
+                # Try to get the entire transcript data instead
+                transcript_url = f"https://api.assemblyai.com/v2/transcript/{transcript.id}"
+                transcript_response = requests.get(transcript_url, headers=headers)
+                
+                if transcript_response.status_code == 200:
+                    transcript_data = json.loads(transcript_response.text)
+                    if 'words' in transcript_data and transcript_data['words']:
+                        words = []
+                        for word in transcript_data['words']:
+                            words.append({
+                                'text': word['text'],
+                                'start': word['start'] / 1000.0,  # Convert from ms to seconds
+                                'end': word['end'] / 1000.0,      # Convert from ms to seconds
+                                'type': 'word'
+                            })
+                        
+                        # Create word-level SRT
+                        srt_file = os.path.join(file_dir, f"{file_name}.srt")
+                        create_word_level_srt(words, srt_file, remove_fillers=args.remove_fillers, 
+                                            filler_words=filler_words, fps=args.fps, 
+                                            fps_offset_start=args.fps_offset_start, 
+                                            fps_offset_end=args.fps_offset_end)
+                        print(f"Word-level SRT saved to {file_name}.srt using transcript data")
+                    else:
+                        print("No word-level data found in transcript. Using standard SRT export instead.")
+                        export_subtitles(transcript.id, "srt", file_name)
+                else:
+                    print(f"Failed to get transcript data. Using standard SRT export instead.")
+                    export_subtitles(transcript.id, "srt", file_name)
+        else:
+            # Standard SRT export
+            export_subtitles(transcript.id, "srt", file_name)
         
-        # with open(os.path.join(file_dir, f"{file_name}.txt"), "w") as f:
-        #     f.write(text_transcript)
         print(f"Transcript saved to {file_name}.txt")
         
 if __name__ == '__main__':

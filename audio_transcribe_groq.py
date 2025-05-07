@@ -34,7 +34,7 @@ from transcribe_helpers import (
     # utils
     setup_logger, check_transcript_exists, 
     # output_formatters
-    create_srt, create_davinci_srt, create_text_file
+    create_srt, create_davinci_srt, create_text_file, create_word_level_srt
 )
 
 # Global variables
@@ -48,6 +48,7 @@ def get_args():
     parser.add_argument("audio_path", type=str, help="Path to the input audio file or pattern.")
     parser.add_argument("-d", "--debug", help="Debug mode", action="store_true")
     parser.add_argument("-c", "--chars_per_line", type=int, default=80, help="Maximum characters per line in SRT file")
+    parser.add_argument("-C", "--word-srt", action="store_true", help="Output SRT with each word as its own subtitle (word-level SRT)")
     parser.add_argument("-s", "--speaker_labels", help="Use this flag to remove speaker labels", action="store_false", default=True)
     parser.add_argument("--keep-flac", help="Keep the generated FLAC file after processing", action="store_true")
     parser.add_argument("--no-convert", help="Send the audio file as-is without conversion", action="store_true")
@@ -62,6 +63,9 @@ def get_args():
     parser.add_argument("-m", "--model", type=str, default="whisper-large-v3", help="Model to use (default: whisper-large-v3)")
     parser.add_argument("--chunk-length", type=int, default=600, help="Length of each chunk in seconds (default: 600)")
     parser.add_argument("--overlap", type=int, default=10, help="Overlap between chunks in seconds (default: 10)")
+    parser.add_argument("--fps", type=float, help="Frames per second for frame-based editing (e.g., 24, 29.97, 30)", default=None)
+    parser.add_argument("--fps-offset-start", type=int, help="Frames to offset from start time (default: 1)", default=1)
+    parser.add_argument("--fps-offset-end", type=int, help="Frames to offset from end time (default: 0)", default=0)
     return parser.parse_args()
 
 def find_longest_common_sequence(sequences: list[str], match_by_words: bool = True) -> str:
@@ -429,9 +433,16 @@ def main():
             # Create SRT file
             srt_file = os.path.join(file_dir, f"{file_name_without_ext}.srt")
             if args.davinci_srt:
-                create_davinci_srt(response_data['words'], srt_file, args.silentportions, args.padding)
+                create_davinci_srt(response_data['words'], srt_file, args.silentportions, args.padding,
+                                   args.fps, args.fps_offset_start, args.fps_offset_end)
+            elif args.word_srt:
+                create_word_level_srt(response_data['words'], srt_file, remove_fillers=args.remove_fillers, 
+                                     filler_words=FILLER_WORDS, fps=args.fps, 
+                                     offset_frame_start=args.fps_offset_start, 
+                                     offset_frame_end=args.fps_offset_end)
             else:
-                create_srt(response_data['words'], srt_file, args.chars_per_line, args.silentportions)
+                create_srt(response_data['words'], srt_file, args.chars_per_line, args.silentportions,
+                          args.fps, args.fps_offset_start, args.fps_offset_end)
             continue
 
         # Change to file directory
@@ -460,9 +471,16 @@ def main():
             # Create SRT file
             srt_file = os.path.join(file_dir, f"{file_name_without_ext}.srt")
             if args.davinci_srt:
-                create_davinci_srt(response_data['words'], srt_file, args.silentportions, args.padding)
+                create_davinci_srt(response_data['words'], srt_file, args.silentportions, args.padding,
+                                   args.fps, args.fps_offset_start, args.fps_offset_end)
+            elif args.word_srt:
+                create_word_level_srt(response_data['words'], srt_file, remove_fillers=args.remove_fillers, 
+                                     filler_words=FILLER_WORDS, fps=args.fps, 
+                                     offset_frame_start=args.fps_offset_start, 
+                                     offset_frame_end=args.fps_offset_end)
             else:
-                create_srt(response_data['words'], srt_file, args.chars_per_line, args.silentportions)
+                create_srt(response_data['words'], srt_file, args.chars_per_line, args.silentportions,
+                          args.fps, args.fps_offset_start, args.fps_offset_end)
 
             logger.info(f"Transcription completed for {file_name}")
             

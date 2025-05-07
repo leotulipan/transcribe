@@ -10,51 +10,87 @@ from loguru import logger
 def process_filler_words(words: List[Dict[str, Any]], pause_threshold: int, 
                         filler_words: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     """
-    Process words to identify and remove filler words, treating them as pauses.
+    Pre-process words to remove filler words and handle them as pauses.
+    Also removes audio_events and text in parentheses.
     
     Args:
         words: List of word dictionaries with timing info
-        pause_threshold: Duration in ms to detect pauses
-        filler_words: List of filler words to remove, defaults to ["äh", "ähm"]
+        pause_threshold: Minimum duration in ms to mark silent portions
+        filler_words: List of filler words to remove (if None, use defaults)
         
     Returns:
-        Processed list of words with filler words removed
-    
-    From: elevenlabs - Remove filler words from transcript
+        Processed list of words with fillers removed
     """
+    if not words:
+        return words
+    
     if filler_words is None:
         filler_words = ["äh", "ähm"]
     
-    logger.info("Processing filler words...")
+    logger.info(f"Processing words to remove filler words and audio events: {filler_words}")
     
-    # Create regex patterns for each filler word (case insensitive, ignoring punctuation)
-    filler_patterns = [re.compile(f"^{re.escape(word)}[,.!?]*$", re.IGNORECASE) for word in filler_words]
-    
-    # New list to store processed words
     processed_words = []
     i = 0
     
     while i < len(words):
-        # Skip empty entries
+        # Skip None or empty entries
         if not words[i]:
             i += 1
             continue
-            
-        # Get word type, defaulting to 'word' if not present
-        word_type = words[i].get('type')
         
-        # Always keep audio events without modification
-        if word_type == 'audio_event':
-            processed_words.append(words[i])
+        # Check if current item is an audio_event
+        if words[i].get('type') == 'audio_event':
+            # Check if we have both previous and next spacing
+            prev_spacing = i > 0 and words[i-1].get('type') == 'spacing'
+            next_spacing = i < len(words) - 1 and words[i+1].get('type') == 'spacing'
+            
+            if prev_spacing and next_spacing:
+                # Create a new spacing element replacing previous spacing + event + next spacing
+                merged_pause = {
+                    'type': 'spacing',
+                    'start': words[i-1]['start'],
+                    'end': words[i+1]['end'],
+                    'text': ' ',
+                    'speaker_id': words[i].get('speaker_id', 'Unknown')
+                }
+                processed_words.append(merged_pause)
+                # Skip the audio event and the next spacing
+                i += 2
+                continue
+            # If we don't have spacings on both sides, just skip the audio event
             i += 1
             continue
+        
+        # Check if current item is a word with text in parentheses
+        if words[i].get('type') == 'word' and words[i].get('text', '').startswith('(') and words[i].get('text', '').endswith(')'):
+            # Check if we have both previous and next spacing
+            prev_spacing = i > 0 and words[i-1].get('type') == 'spacing'
+            next_spacing = i < len(words) - 1 and words[i+1].get('type') == 'spacing'
             
-        # Check if current item is a word and might be a filler
-        if word_type == 'word':
-            is_filler = any(pattern.match(words[i]['text']) for pattern in filler_patterns)
+            if prev_spacing and next_spacing:
+                # Create a new spacing element replacing previous spacing + parenthesized word + next spacing
+                merged_pause = {
+                    'type': 'spacing',
+                    'start': words[i-1]['start'],
+                    'end': words[i+1]['end'],
+                    'text': ' ',
+                    'speaker_id': words[i].get('speaker_id', 'Unknown')
+                }
+                processed_words.append(merged_pause)
+                # Skip the parenthesized word and the next spacing
+                i += 2
+                continue
+            # If we don't have spacings on both sides, just skip the parenthesized word
+            i += 1
+            continue
+        
+        # Check if current item is a word with text that could be a filler word
+        if words[i].get('type') == 'word':
+            word_text = words[i].get('text', '').lower()
             
-            if is_filler and i > 0 and i < len(words) - 1:
-                # Check if surrounded by spacings
+            # If the word is a filler word
+            if word_text in filler_words:
+                # Check if we have both previous and next spacing
                 prev_spacing = i > 0 and words[i-1].get('type') == 'spacing'
                 next_spacing = i < len(words) - 1 and words[i+1].get('type') == 'spacing'
                 
@@ -93,7 +129,7 @@ def process_filler_words(words: List[Dict[str, Any]], pause_threshold: int,
         
         i += 1
     
-    logger.info(f"Filler word processing complete. Removed {len(words) - len(processed_words)} elements")
+    logger.info(f"Word processing complete. Removed {len(words) - len(processed_words)} elements")
     return processed_words
 
 

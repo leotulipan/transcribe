@@ -44,19 +44,31 @@ def get_args():
     parser = argparse.ArgumentParser(description="Audio transcription using ElevenLabs API.")
     parser.add_argument("audio_path", type=str, help="Path to the input audio file or pattern.")
     parser.add_argument("-d", "--debug", help="Debug mode", action="store_true")
-    parser.add_argument("-c", "--chars_per_line", type=int, default=80, help="Maximum characters per line in SRT file (default: 80). Ignored if -C/--word-srt is set.")
-    parser.add_argument("-C", "--word-srt", action="store_true", help="Output SRT with each word as its own subtitle (word-level SRT, disables -c/--chars_per_line)")
-    parser.add_argument("-s", "--speaker_labels", help="Use this flag to remove speaker labels", action="store_false", default=True)
-    parser.add_argument("--keep-flac", help="Keep the generated FLAC file after processing", action="store_true")
-    parser.add_argument("--no-convert", help="Send the audio file as-is without conversion", action="store_true")
-    parser.add_argument("--use-pcm", help="Use PCM format instead of FLAC (larger file size)", action="store_true")
-    parser.add_argument("-l", "--language", help="Language code (ISO-639-1 or ISO-639-3)", default=None)
     parser.add_argument("-v", "--verbose", help="Show all log messages in console", action="store_true")
     parser.add_argument("--force", help="Force re-transcription even if files exist", action="store_true")
-    parser.add_argument("-p", "--silentportions", type=int, help="Mark pauses longer than X milliseconds with (...)", default=0)
-    parser.add_argument("--davinci-srt", "-D", help="Export SRT for Davinci Resolve with optimized subtitle blocks", action="store_true")
-    parser.add_argument("--padding", type=int, help="Add X milliseconds padding to word end times (default: 30ms)", default=30)
-    parser.add_argument("--remove-fillers", help="Remove filler words like 'äh' and 'ähm' and treat them as pauses", action="store_true")
+    
+    # File format options - create a mutually exclusive group
+    format_group = parser.add_mutually_exclusive_group()
+    format_group.add_argument("--no-convert", help="[DEPRECATED] Use --use-input instead", action="store_true")
+    format_group.add_argument("--use-pcm", help="Convert to PCM WAV format (larger file size)", action="store_true")
+    format_group.add_argument("--use-input", help="Use original input file without conversion (default is to convert to FLAC)", action="store_true")
+    
+    parser.add_argument("--keep-flac", help="Keep the generated FLAC file after processing", action="store_true")
+    parser.add_argument("-l", "--language", help="Language code (ISO-639-1 or ISO-639-3)", default=None)
+    parser.add_argument("-c", "--chars-per-line", type=int, default=80, help="Maximum characters per line in SRT file (default: 80). Ignored if -C/--word-srt is set.")
+    parser.add_argument("-C", "--word-srt", action="store_true", help="Output SRT with each word as its own subtitle (word-level SRT, disables -c/--chars-per-line)")
+    parser.add_argument("-D", "--davinci-srt", help="Export SRT for Davinci Resolve with optimized subtitle blocks (sets: chars-per-line=500, silentportions=250ms, padding-start=-125ms, remove_fillers=True, max 500 words/block). Can override with additional args.", action="store_true")
+    parser.add_argument("-p", "--silentportions", type=int, help="Mark pauses longer than X milliseconds with (...) (with -D: default 250ms)", default=0)
+    parser.add_argument("--padding-start", type=int, help="Milliseconds to offset word start times into preceding silence (negative=earlier, positive=later, default: 0ms, with -D: -125ms)", default=0)
+    parser.add_argument("--padding-end", type=int, help="Milliseconds to offset word end times into following silence (negative=earlier, positive=later, default: 0ms)", default=0)
+    parser.add_argument("--padding", type=int, help="DEPRECATED: Use --padding-end instead", default=None)
+    parser.add_argument("--remove-fillers", dest="remove_fillers", help="Remove filler words, audio events, and text in parentheses (auto-enabled with -D)", action="store_true")
+    parser.add_argument("--no-remove-fillers", dest="remove_fillers", help="Do not remove filler words (can override -D default)", action="store_false")
+    parser.set_defaults(remove_fillers=False)
+    parser.add_argument("-s", "--speaker_labels", help="Use this flag to remove speaker labels", action="store_false", default=True)
+    parser.add_argument("--fps", type=float, help="Frames per second for frame-based editing (e.g., 24, 29.97, 30)", default=None)
+    parser.add_argument("--fps-offset-start", type=int, help="Frames to offset from start time (default: -1, negative=earlier, positive=later)", default=-1)
+    parser.add_argument("--fps-offset-end", type=int, help="Frames to offset from end time (default: 0, negative=earlier, positive=later)", default=0)
     return parser.parse_args()
 
 def handle_error_response(response):
@@ -146,16 +158,53 @@ def main():
             # Create SRT file
             srt_file = os.path.join(file_dir, f"{file_name}.srt")
             if args.davinci_srt:
-                create_davinci_srt(response_data['words'], srt_file, args.silentportions, args.padding)
+                create_davinci_srt(
+                    response_data['words'], 
+                    srt_file, 
+                    args.silentportions,
+                    args.padding_start,
+                    args.padding_end, 
+                    args.fps, 
+                    args.fps_offset_start, 
+                    args.fps_offset_end,
+                    remove_fillers=args.remove_fillers,
+                    filler_words=FILLER_WORDS
+                )
             elif args.word_srt:
-                create_word_level_srt(response_data['words'], srt_file, remove_fillers=args.remove_fillers, filler_words=FILLER_WORDS)
+                create_word_level_srt(
+                    response_data['words'], 
+                    srt_file, 
+                    remove_fillers=args.remove_fillers, 
+                    filler_words=FILLER_WORDS, 
+                    fps=args.fps, 
+                    fps_offset_start=args.fps_offset_start, 
+                    fps_offset_end=args.fps_offset_end,
+                    padding_start=args.padding_start,
+                    padding_end=args.padding_end
+                )
             else:
-                create_srt(response_data['words'], srt_file, args.chars_per_line, args.silentportions)
+                create_srt(
+                    response_data['words'], 
+                    srt_file, 
+                    args.chars_per_line, 
+                    args.silentportions, 
+                    args.fps, 
+                    args.fps_offset_start, 
+                    args.fps_offset_end,
+                    args.padding_start,
+                    args.padding_end,
+                    remove_fillers=args.remove_fillers,
+                    filler_words=FILLER_WORDS
+                )
             continue
 
         # Convert to appropriate format if needed
         converted_file = None
-        if not args.no_convert:
+        if args.use_input:
+            # Use the original file without conversion
+            logger.info("Using original input file without conversion")
+            file_path = file_path
+        elif not args.no_convert:
             if file_extension.lower() == '.wav':
                 # Check if WAV needs re-encoding
                 audio = AudioSegment.from_file(file_path)
@@ -174,7 +223,7 @@ def main():
                 # Convert other formats
                 converted_file = convert_to_pcm(file_path) if args.use_pcm else convert_to_flac(file_path)
                 file_path = converted_file
-
+        
         # Check file size and duration
         try:
             check_file_size(file_path)
@@ -186,8 +235,8 @@ def main():
                 audio_info = f"{len(probe_audio)/1000:.1f}s, {probe_audio.channels} channel(s), {probe_audio.frame_rate}Hz, {probe_audio.sample_width*8}bit"
                 logger.info(f"Audio verified: {audio_info}")
                 
-                # Warn about potential issues with stereo audio when not using --no-convert flag
-                if probe_audio.channels > 1 and not args.no_convert:
+                # Warn about potential issues with stereo audio when not using --use-input flag
+                if probe_audio.channels > 1 and not args.use_input and not args.no_convert:
                     logger.warning("Stereo audio detected. ElevenLabs works best with mono audio.")
                     if file_extension.lower() == '.flac':
                         logger.warning("Since this is a FLAC file and we're bypassing conversion, you may encounter issues.")
@@ -215,8 +264,24 @@ def main():
 
         try:
             with open(file_path, 'rb') as audio_file:
+                # Determine content type based on file extension and conversion options
+                content_type = 'audio/wav' if args.use_pcm else 'audio/flac'
+                if args.use_input:
+                    if file_extension.lower() in ['.mp3']:
+                        content_type = 'audio/mpeg'
+                    elif file_extension.lower() in ['.wav']:
+                        content_type = 'audio/wav'
+                    elif file_extension.lower() in ['.flac']:
+                        content_type = 'audio/flac'
+                    elif file_extension.lower() in ['.ogg', '.oga']:
+                        content_type = 'audio/ogg'
+                    elif file_extension.lower() in ['.m4a', '.aac']:
+                        content_type = 'audio/aac'
+                    else:
+                        content_type = 'audio/mpeg'  # Default fallback
+                
                 files = {
-                    'file': ('audio.wav' if args.use_pcm else 'audio.flac', audio_file, 'audio/wav' if args.use_pcm else 'audio/flac')
+                    'file': (os.path.basename(file_path), audio_file, content_type)
                 }
                 data = {
                     'model_id': 'scribe_v1',
@@ -236,8 +301,8 @@ def main():
                     logger.debug(f"API Request: POST https://api.elevenlabs.io/v1/speech-to-text")
                     logger.debug(f"Headers: {json.dumps({k: v for k, v in headers.items() if k != 'xi-api-key'})}")
                     logger.debug(f"Data: {json.dumps(data)}")
-                    logger.debug(f"File: {file_path} ({file_size_mb:.2f}MB, {'PCM WAV' if args.use_pcm else 'FLAC'})")
-                    logger.debug(f"Content-Type: {'audio/wav' if args.use_pcm else 'audio/flac'}")
+                    logger.debug(f"File: {file_path} ({file_size_mb:.2f}MB, {content_type})")
+                    logger.debug(f"Content-Type: {content_type}")
                 
                 start_time = time.time()
                 response = requests.post(
@@ -265,11 +330,44 @@ def main():
             # Create SRT file
             srt_file = os.path.join(file_dir, f"{file_name}.srt")
             if args.davinci_srt:
-                create_davinci_srt(response_data['words'], srt_file, args.silentportions, args.padding)
+                create_davinci_srt(
+                    response_data['words'], 
+                    srt_file, 
+                    args.silentportions,
+                    args.padding_start,
+                    args.padding_end, 
+                    args.fps, 
+                    args.fps_offset_start, 
+                    args.fps_offset_end,
+                    remove_fillers=args.remove_fillers,
+                    filler_words=FILLER_WORDS
+                )
             elif args.word_srt:
-                create_word_level_srt(response_data['words'], srt_file, remove_fillers=args.remove_fillers, filler_words=FILLER_WORDS)
+                create_word_level_srt(
+                    response_data['words'], 
+                    srt_file, 
+                    remove_fillers=args.remove_fillers, 
+                    filler_words=FILLER_WORDS, 
+                    fps=args.fps, 
+                    fps_offset_start=args.fps_offset_start, 
+                    fps_offset_end=args.fps_offset_end,
+                    padding_start=args.padding_start,
+                    padding_end=args.padding_end
+                )
             else:
-                create_srt(response_data['words'], srt_file, args.chars_per_line, args.silentportions)
+                create_srt(
+                    response_data['words'], 
+                    srt_file, 
+                    args.chars_per_line, 
+                    args.silentportions, 
+                    args.fps, 
+                    args.fps_offset_start, 
+                    args.fps_offset_end,
+                    args.padding_start,
+                    args.padding_end,
+                    remove_fillers=args.remove_fillers,
+                    filler_words=FILLER_WORDS
+                )
 
             logger.info(f"Transcription completed for {file_name}")
             if file_dir:
@@ -328,6 +426,24 @@ def main():
         except Exception as e:
             logger.error(f"Error during transcription: {e}")
             continue
+
+    # Handle deprecated padding parameter
+    if args.padding is not None:
+        if args.padding_end == 0:  # Only use deprecated value if new param not set
+            logger.warning("--padding is deprecated, use --padding-end instead")
+            args.padding_end = args.padding
+    
+    # Apply davinci-specific defaults if the mode is enabled
+    if args.davinci_srt:
+        # Only apply defaults if not explicitly specified by user
+        if args.silentportions == 0:
+            args.silentportions = 250
+        if args.chars_per_line == 80:  # If it's the default value
+            args.chars_per_line = 500
+        if args.padding_start == 0:
+            args.padding_start = -125
+        if not args.remove_fillers:  # If it wasn't explicitly set to True or False
+            args.remove_fillers = True
 
 if __name__ == '__main__':
     main() 
