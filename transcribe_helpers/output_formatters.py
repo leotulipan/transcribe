@@ -6,10 +6,22 @@ import re
 import json
 import requests
 import textwrap
-from datetime import timedelta
+from datetime import timedelta, datetime
 from pathlib import Path
 from typing import Union, List, Dict, Any, Optional
-from loguru import logger
+
+# Try to import loguru, fallback to our mock implementation
+try:
+    from loguru import logger
+except ImportError:
+    import sys
+    import os
+    
+    # Add the parent directory to sys.path
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    
+    # Import our mock logger
+    from loguru_patch import logger
 
 
 def format_time(seconds: float, fps: Optional[float] = None, frames_display: bool = False) -> str:
@@ -783,6 +795,81 @@ def export_subtitles(transcript_id: str, headers: Dict[str, str],
         return filename
     else:
         raise RuntimeError(f"Subtitle export failed: {response.text}")
+
+
+def custom_export_subtitles(transcript_id: str, headers: Dict[str, str], 
+                           file_name: str, show_pauses: bool = False, 
+                           silentportions: int = 0, chars_per_line: int = 80,
+                           padding_start: int = 0, padding_end: int = 0,
+                           fps: Optional[float] = None, fps_offset_start: int = -1, 
+                           fps_offset_end: int = 0, remove_fillers: bool = False,
+                           filler_words: Optional[List[str]] = None) -> str:
+    """
+    Export subtitles using AssemblyAI API with custom formatting and standardized word format.
+    
+    Args:
+        transcript_id: ID of the transcript
+        headers: Headers for API request, including Auth
+        file_name: Base name for output file (without extension)
+        show_pauses: Whether to show pause indicators
+        silentportions: Minimum ms threshold for pause indicators
+        chars_per_line: Maximum characters per line
+        padding_start: Milliseconds to offset word start times
+        padding_end: Milliseconds to offset word end times
+        fps: Frames per second for frame-based timing
+        fps_offset_start: Frames to offset from start time
+        fps_offset_end: Frames to offset from end time
+        remove_fillers: Whether to remove filler words
+        filler_words: List of filler words to remove
+        
+    Returns:
+        Filename of saved subtitle file
+    """
+    from .text_processing import standardize_word_format, process_filler_words
+    
+    # Get words from the transcript
+    words_url = f"https://api.assemblyai.com/v2/transcript/{transcript_id}/words"
+    words_response = requests.get(words_url, headers=headers)
+    
+    if words_response.status_code != 200:
+        # Fallback to direct API export if words endpoint fails
+        logger.warning(f"Failed to get word-level data, falling back to direct SRT export")
+        return export_subtitles(transcript_id, headers, "srt", file_name, fps, fps_offset_start, fps_offset_end)
+    
+    # Parse words data
+    words_data = words_response.json()
+    
+    # Use standardize_word_format to convert AssemblyAI format to our standard format
+    processed_words = standardize_word_format(
+        words_data.get('words', []),
+        'assemblyai',
+        show_pauses=show_pauses,
+        silence_threshold=silentportions
+    )
+    
+    # Process filler words if needed
+    if remove_fillers:
+        if filler_words is None:
+            filler_words = ["äh", "ähm", "uh", "um", "ah", "er", "hm", "hmm"]
+        processed_words = process_filler_words(processed_words, silentportions, filler_words)
+    
+    # Create SRT file
+    srt_file = f"{file_name}.srt"
+    create_srt(
+        processed_words,
+        srt_file,
+        chars_per_line=chars_per_line,
+        silentportions=silentportions,
+        fps=fps,
+        fps_offset_start=fps_offset_start,
+        fps_offset_end=fps_offset_end,
+        padding_start=padding_start,
+        padding_end=padding_end,
+        remove_fillers=False  # Already handled
+    )
+    
+    logger.info(f"Custom SRT export saved to {srt_file}")
+    return srt_file
 
 
 def retime_srt_file(input_file: Union[str, Path], output_file: Optional[Union[str, Path]] = None, 

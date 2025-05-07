@@ -32,6 +32,7 @@ from transcribe_helpers import (
     # output_formatters
     create_srt, create_davinci_srt, create_text_file, create_word_level_srt
 )
+from transcribe_helpers.text_processing import standardize_word_format, process_filler_words
 
 # Global variables
 args = None
@@ -150,6 +151,14 @@ def main():
             json_file = os.path.join(file_dir, f"{file_name}.json")
             with open(json_file, 'r', encoding='utf-8') as f:
                 response_data = json.load(f)
+            
+            # Standardize word format
+            response_data['words'] = standardize_word_format(
+                response_data['words'],
+                'elevenlabs',
+                show_pauses=args.silentportions > 0,
+                silence_threshold=args.silentportions or 0
+            )
             
             # Create text file
             text_file = os.path.join(file_dir, f"{file_name}.txt")
@@ -322,6 +331,14 @@ def main():
             with open(json_file, 'w', encoding='utf-8') as f:
                 json.dump(response_data, f, ensure_ascii=False, indent=2)
             logger.info(f"JSON response saved to {json_file}")
+
+            # Standardize word format
+            response_data['words'] = standardize_word_format(
+                response_data['words'],
+                'elevenlabs',
+                show_pauses=args.silentportions > 0,
+                silence_threshold=args.silentportions or 0
+            )
 
             # Create text file
             text_file = os.path.join(file_dir, f"{file_name}.txt")

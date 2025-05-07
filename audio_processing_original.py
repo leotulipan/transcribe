@@ -8,19 +8,7 @@ import base64
 from pathlib import Path
 from typing import Union, Optional
 from pydub import AudioSegment
-
-# Try to import loguru, fallback to our mock implementation
-try:
-    from loguru import logger
-except ImportError:
-    import sys
-    import os
-    
-    # Add the parent directory to sys.path
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    
-    # Import our mock logger
-    from loguru_patch import logger
+from loguru import logger
 
 
 def check_audio_length(file_path: Union[str, Path], max_length: int = 7200) -> bool:

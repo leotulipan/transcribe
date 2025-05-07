@@ -1,5 +1,5 @@
 ---
-description: 
+description: whenever the script needs to be run for testing
 globs: 
 alwaysApply: false
 ---
