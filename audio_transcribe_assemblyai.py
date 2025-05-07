@@ -60,8 +60,19 @@ def check_transcript_exists(file_path, file_name):
 
 def check_json_exists(file_path, file_name):
     """Check if a JSON transcript file exists for a given file name."""
+    # Check for API-specific JSON
+    json_path = os.path.join(file_path, f"{file_name}_assemblyai.json")
+    if os.path.exists(json_path):
+        logger.info(f"Found AssemblyAI JSON file: {json_path}")
+        return True, json_path
+    
+    # Check for generic JSON as fallback
     json_path = os.path.join(file_path, f"{file_name}.json")
-    return os.path.exists(json_path)
+    if os.path.exists(json_path):
+        logger.info(f"Found generic JSON file: {json_path}")
+        return True, json_path
+        
+    return False, ""
 
 def load_json_transcript(file_path, file_name):
     """Load transcript data from a saved JSON file."""
@@ -303,12 +314,14 @@ def main():
         transcript_id = None
         
         # Check for existing JSON (unless --force is used)
-        if not args.force and check_json_exists(file_dir, file_name):
+        json_exists, json_path = check_json_exists(file_dir, file_name)
+        if json_exists and not args.force:
             if in_debug_mode() or in_verbose_mode():
                 print(f"Loading existing transcript JSON for {file_name}")
             
             # Load existing JSON file
-            transcript_json = load_json_transcript(file_dir, file_name)
+            with open(json_path, 'r') as f:
+                transcript_json = json.load(f)
             if transcript_json:
                 transcript_id = transcript_json.get('id')
                 print(f"Using existing transcript ID: {transcript_id}")
@@ -318,6 +331,93 @@ def main():
                     def __init__(self, id):
                         self.id = id
                 transcript = Transcript(transcript_id)
+                
+                # Generate output files from existing JSON
+                if in_debug_mode() or in_verbose_mode():
+                    print("Getting Sentences...")    
+                
+                # Then get the sentences
+                sentences_url = f"https://api.assemblyai.com/v2/transcript/{transcript.id}/sentences"
+                sentences_response = requests.get(sentences_url, headers=headers)
+                    
+                # Get sentences and create text output
+                with open(os.path.join(file_dir, f"{file_name}.txt"), "w") as f:
+                    current_speaker = ""
+                    # Iterate over the "sentences" list
+                    for sentence in json.loads(sentences_response.text)['sentences']:
+                        # Extract the "text" field and the speaker
+                        text = sentence['text']
+                        if args.speaker_labels:
+                            speaker = sentence['speaker']
+                            if speaker != current_speaker:
+                                # Speaker change
+                                current_speaker = speaker
+                                f.write(f"Speaker {speaker}: {text}\n")
+                            else:
+                                # same speaker
+                                f.write(f"{text}\n")
+                        else:
+                            f.write(f"{text}\n")
+                
+                # Handle SRT generation using existing transcript ID
+                if args.word_srt or args.davinci_srt:
+                    # Get words from the transcript to create word-level SRT
+                    words_url = f"https://api.assemblyai.com/v2/transcript/{transcript.id}/words"
+                    words_response = requests.get(words_url, headers=headers)
+                    
+                    if words_response.status_code == 200:
+                        # Process with standardized word format
+                        words_data = json.loads(words_response.text)
+                        processed_words = standardize_word_format(
+                            words_data.get('words', []),
+                            'assemblyai',
+                            show_pauses=args.show_pauses,
+                            silence_threshold=args.silentportions or 250
+                        )
+                        
+                        # Process filler words if needed
+                        if args.remove_fillers and not args.no_remove_fillers:
+                            filler_words = ["äh", "ähm", "uh", "um", "ah", "er", "hm", "hmm"]
+                            processed_words = process_filler_words(processed_words, args.silentportions or 250, filler_words)
+                        
+                        # Create appropriate SRT based on mode
+                        srt_file = os.path.join(file_dir, f"{file_name}.srt")
+                        
+                        if args.davinci_srt:
+                            create_davinci_srt(
+                                processed_words,
+                                srt_file,
+                                silentportions=args.silentportions or 250,
+                                padding_start=args.padding_start,
+                                padding_end=args.padding_end,
+                                fps=args.fps,
+                                fps_offset_start=args.fps_offset_start,
+                                fps_offset_end=args.fps_offset_end,
+                                remove_fillers=False  # Already handled
+                            )
+                            print(f"Davinci Resolve optimized SRT saved to {file_name}.srt")
+                        else:
+                            create_word_level_srt(
+                                processed_words, 
+                                srt_file, 
+                                remove_fillers=False,  # Already handled
+                                fps=args.fps,
+                                fps_offset_start=args.fps_offset_start,
+                                fps_offset_end=args.fps_offset_end,
+                                padding_start=args.padding_start, 
+                                padding_end=args.padding_end
+                            )
+                            print(f"Word-level SRT saved to {file_name}.srt")
+                    else:
+                        # Fallback to standard SRT export if words endpoint fails
+                        print(f"Failed to get word-level data, using standard SRT export")
+                        export_subtitles(transcript.id, "srt", file_name)
+                else:
+                    # Standard SRT export
+                    export_subtitles(transcript.id, "srt", file_name)
+                
+                print(f"Regenerated files for {file_name} from existing JSON")
+                continue
             else:
                 print(f"Failed to load JSON file, will request new transcription")
         
@@ -382,7 +482,7 @@ def main():
                     # transcript.text
 
                     # Save the transcript object as a json file
-                    with open(os.path.join(file_dir, f"{file_name}.json"), "w") as f:
+                    with open(os.path.join(file_dir, f"{file_name}_assemblyai.json"), "w") as f:
                         f.write(json.dumps(transcript_json))
                 else:    
                     #aai.Transcript(args.id)
@@ -398,7 +498,7 @@ def main():
                     if transcript_response.status_code == 200:
                         transcript_json = json.loads(transcript_response.text)
                         # Save the transcript object as a json file
-                        with open(os.path.join(file_dir, f"{file_name}.json"), "w") as f:
+                        with open(os.path.join(file_dir, f"{file_name}_assemblyai.json"), "w") as f:
                             f.write(json.dumps(transcript_json))
             else:
                 transcript = Transcript(args.id)
@@ -409,7 +509,7 @@ def main():
                 if transcript_response.status_code == 200:
                     transcript_json = json.loads(transcript_response.text)
                     # Save the transcript object as a json file
-                    with open(os.path.join(file_dir, f"{file_name}.json"), "w") as f:
+                    with open(os.path.join(file_dir, f"{file_name}_assemblyai.json"), "w") as f:
                         f.write(json.dumps(transcript_json))
 
         if in_debug_mode() or in_verbose_mode():

@@ -375,18 +375,106 @@ def transcribe_audio_in_chunks(file_path: str) -> dict:
             except Exception as e:
                 logger.error(f"Error deleting temporary file: {e}")
 
+def check_json_exists(file_dir, file_name):
+    """
+    Check if a JSON transcript file already exists for the given file name.
+    
+    Args:
+        file_dir: Directory containing the file
+        file_name: Base name of the file without extension
+        
+    Returns:
+        (bool, str): (True, json_path) if JSON exists, (False, "") otherwise
+    """
+    # Check for Groq-specific JSON
+    json_path = os.path.join(file_dir, f"{file_name}_groq.json")
+    if os.path.exists(json_path):
+        logger.info(f"Found Groq JSON file: {json_path}")
+        return True, json_path
+    
+    # Check for generic JSON as fallback
+    json_path = os.path.join(file_dir, f"{file_name}.json")
+    if os.path.exists(json_path):
+        logger.info(f"Found generic JSON file: {json_path}")
+        return True, json_path
+        
+    return False, ""
+
+def save_results(result, file_path):
+    """
+    Save transcription results to files.
+    
+    Args:
+        result: Transcription result dict
+        file_path: Original audio file path
+    """
+    file_path = Path(file_path)
+    file_dir = file_path.parent
+    file_name = file_path.stem
+    
+    # Save JSON (with API name in filename)
+    json_file = file_dir / f"{file_name}_groq.json"
+    with open(json_file, 'w', encoding='utf-8') as f:
+        json.dump(result, f, ensure_ascii=False, indent=2)
+    logger.info(f"JSON saved to: {json_file}")
+    
+    # Create text file
+    text_file = file_dir / f"{file_name}.txt"
+    if 'text' in result:
+        with open(text_file, 'w', encoding='utf-8') as f:
+            f.write(result['text'])
+        logger.info(f"Text saved to: {text_file}")
+    
+    # Create SRT file using our helper functions
+    srt_file = file_dir / f"{file_name}.srt"
+    if 'words' in result and result['words']:
+        if args.davinci_srt:
+            create_davinci_srt(
+                result['words'],
+                srt_file,
+                silentportions=args.silentportions,
+                padding_start=0,
+                padding_end=args.padding,
+                fps=args.fps,
+                fps_offset_start=args.fps_offset_start,
+                fps_offset_end=args.fps_offset_end,
+                remove_fillers=args.remove_fillers
+            )
+        elif args.word_srt:
+            create_word_level_srt(
+                result['words'],
+                srt_file,
+                remove_fillers=args.remove_fillers,
+                fps=args.fps,
+                fps_offset_start=args.fps_offset_start,
+                fps_offset_end=args.fps_offset_end
+            )
+        else:
+            create_srt(
+                result['words'],
+                srt_file,
+                chars_per_line=args.chars_per_line,
+                silentportions=args.silentportions,
+                fps=args.fps,
+                fps_offset_start=args.fps_offset_start,
+                fps_offset_end=args.fps_offset_end,
+                padding_end=args.padding,
+                remove_fillers=args.remove_fillers
+            )
+        logger.info(f"SRT saved to: {srt_file}")
+
 def main():
     global args
     args = get_args()
-
-    # Setup logging
+    
+    # Setup logging using common helper
     setup_logger(args.debug, args.verbose)
     if args.debug:
         logger.info("Debug mode enabled")
-
+    
     # Initialize an empty dictionary to store the files
     files_dict = {}
-
+    
     # Check if args.audio_path is a directory
     if os.path.isdir(args.audio_path):
         logger.info("Directory found.")
@@ -407,91 +495,45 @@ def main():
     else:
         logger.error("Invalid input. Please provide a valid file, directory, or wildcard pattern.")
         return
-
+    
     for file_name, file_path in files_dict.items():
         logger.info(f"Processing file: {file_name}")
-
+        
         if not os.path.exists(file_path):
             logger.error(f"Audio File {file_name} does not exist!")
             continue
-
+        
         full_file_name = os.path.basename(file_path)
-        file_name_without_ext, file_extension = os.path.splitext(full_file_name)
+        file_name, file_extension = os.path.splitext(full_file_name)
         file_dir = os.path.dirname(file_path)
-
+        
         # Check if transcript exists
-        if check_transcript_exists(file_dir, file_name_without_ext) and not args.force:
-            logger.info(f"Transcript for {file_name_without_ext} exists! Using existing JSON to generate SRT and text files.")
-            json_file = os.path.join(file_dir, f"{file_name_without_ext}.json")
-            with open(json_file, 'r', encoding='utf-8') as f:
-                response_data = json.load(f)
-            
-            # Create text file
-            text_file = os.path.join(file_dir, f"{file_name_without_ext}.txt")
-            create_text_file(response_data['words'], text_file)
-
-            # Create SRT file
-            srt_file = os.path.join(file_dir, f"{file_name_without_ext}.srt")
-            if args.davinci_srt:
-                create_davinci_srt(response_data['words'], srt_file, args.silentportions, args.padding,
-                                   args.fps, args.fps_offset_start, args.fps_offset_end)
-            elif args.word_srt:
-                create_word_level_srt(response_data['words'], srt_file, remove_fillers=args.remove_fillers, 
-                                     filler_words=FILLER_WORDS, fps=args.fps, 
-                                     offset_frame_start=args.fps_offset_start, 
-                                     offset_frame_end=args.fps_offset_end)
-            else:
-                create_srt(response_data['words'], srt_file, args.chars_per_line, args.silentportions,
-                          args.fps, args.fps_offset_start, args.fps_offset_end)
+        if check_transcript_exists(file_dir, file_name) and not args.force:
+            logger.info(f"Transcript for {file_name} exists! Skipping.")
             continue
-
-        # Change to file directory
-        original_dir = os.getcwd()
-        if file_dir:
-            os.chdir(file_dir)
-            logger.info(f"Working directory changed to: {file_dir}")
-
-        # Transcribe using Groq API
-        try:
-            response_data = transcribe_audio_in_chunks(file_path)
-            if not response_data:
-                logger.error(f"Failed to transcribe {file_name}")
-                continue
+            
+        # Check if JSON exists and reuse it if available
+        json_exists, json_path = check_json_exists(file_dir, file_name)
+        if json_exists and not args.force:
+            logger.info(f"JSON file for {file_name} exists! Skipping audio processing and API call.")
+            
+            # Load the existing JSON
+            with open(json_path, 'r', encoding='utf-8') as f:
+                result = json.load(f)
                 
-            # Save JSON response
-            json_file = os.path.join(file_dir, f"{file_name_without_ext}.json")
-            with open(json_file, 'w', encoding='utf-8') as f:
-                json.dump(response_data, f, ensure_ascii=False, indent=2)
-            logger.info(f"JSON response saved to {json_file}")
-
-            # Create text file
-            text_file = os.path.join(file_dir, f"{file_name_without_ext}.txt")
-            create_text_file(response_data['words'], text_file)
-
-            # Create SRT file
-            srt_file = os.path.join(file_dir, f"{file_name_without_ext}.srt")
-            if args.davinci_srt:
-                create_davinci_srt(response_data['words'], srt_file, args.silentportions, args.padding,
-                                   args.fps, args.fps_offset_start, args.fps_offset_end)
-            elif args.word_srt:
-                create_word_level_srt(response_data['words'], srt_file, remove_fillers=args.remove_fillers, 
-                                     filler_words=FILLER_WORDS, fps=args.fps, 
-                                     offset_frame_start=args.fps_offset_start, 
-                                     offset_frame_end=args.fps_offset_end)
-            else:
-                create_srt(response_data['words'], srt_file, args.chars_per_line, args.silentportions,
-                          args.fps, args.fps_offset_start, args.fps_offset_end)
-
-            logger.info(f"Transcription completed for {file_name}")
+            # Regenerate output files (text, SRT)
+            save_results(result, file_path)
+            logger.info(f"Regenerated output files from existing JSON")
+            continue
+            
+        # Process the file
+        try:
+            result = transcribe_audio_in_chunks(file_path)
+            save_results(result, file_path)
             
         except Exception as e:
-            logger.error(f"Error during transcription: {e}")
+            logger.error(f"Error processing {file_name}: {e}")
             continue
-        
-        finally:
-            # Change back to original directory
-            if file_dir:
-                os.chdir(original_dir)
 
 if __name__ == '__main__':
     main() 

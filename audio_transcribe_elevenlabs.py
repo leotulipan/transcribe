@@ -91,6 +91,31 @@ def exit_with_message(message, exit_code=1):
     print(f"\n{message}")
     sys.exit(exit_code)
 
+def check_json_exists(file_dir, file_name):
+    """
+    Check if a JSON transcript file already exists for the given file name.
+    
+    Args:
+        file_dir: Directory containing the file
+        file_name: Base name of the file without extension
+        
+    Returns:
+        (bool, str): (True, json_path) if JSON exists, (False, "") otherwise
+    """
+    # Check for ElevenLabs-specific JSON
+    json_path = os.path.join(file_dir, f"{file_name}_elevenlabs.json")
+    if os.path.exists(json_path):
+        logger.info(f"Found ElevenLabs JSON file: {json_path}")
+        return True, json_path
+    
+    # Check for generic JSON as fallback
+    json_path = os.path.join(file_dir, f"{file_name}.json")
+    if os.path.exists(json_path):
+        logger.info(f"Found generic JSON file: {json_path}")
+        return True, json_path
+        
+    return False, ""
+
 def main():
     global args, headers
     args = get_args()
@@ -148,8 +173,14 @@ def main():
         # Check if transcript exists
         if check_transcript_exists(file_dir, file_name) and not args.force:
             logger.info(f"Transcript for {file_name} exists! Using existing JSON to generate SRT and text files.")
-            json_file = os.path.join(file_dir, f"{file_name}.json")
-            with open(json_file, 'r', encoding='utf-8') as f:
+            
+            # Check for existing JSON file
+            json_exists, json_path = check_json_exists(file_dir, file_name)
+            if not json_exists:
+                logger.warning(f"No JSON file found for {file_name}. Cannot regenerate outputs.")
+                continue
+                
+            with open(json_path, 'r', encoding='utf-8') as f:
                 response_data = json.load(f)
             
             # Standardize word format
@@ -205,6 +236,76 @@ def main():
                     remove_fillers=args.remove_fillers,
                     filler_words=FILLER_WORDS
                 )
+                
+            logger.info(f"Transcription completed for {file_name} (from existing JSON)")
+            if file_dir:
+                logger.info(f"Files saved in: {file_dir}")
+            continue
+
+        # Check if JSON already exists first to skip re-encoding
+        json_exists, json_path = check_json_exists(file_dir, file_name)
+        if json_exists and not args.force:
+            logger.info(f"JSON file for {file_name} exists! Skipping audio processing and API call.")
+            with open(json_path, 'r', encoding='utf-8') as f:
+                response_data = json.load(f)
+                
+            # Standardize word format
+            response_data['words'] = standardize_word_format(
+                response_data['words'],
+                'elevenlabs',
+                show_pauses=args.silentportions > 0,
+                silence_threshold=args.silentportions or 0
+            )
+            
+            # Create text file
+            text_file = os.path.join(file_dir, f"{file_name}.txt")
+            create_text_file(response_data['words'], text_file)
+
+            # Create SRT file
+            srt_file = os.path.join(file_dir, f"{file_name}.srt")
+            if args.davinci_srt:
+                create_davinci_srt(
+                    response_data['words'], 
+                    srt_file, 
+                    args.silentportions,
+                    args.padding_start,
+                    args.padding_end, 
+                    args.fps, 
+                    args.fps_offset_start, 
+                    args.fps_offset_end,
+                    remove_fillers=args.remove_fillers,
+                    filler_words=FILLER_WORDS
+                )
+            elif args.word_srt:
+                create_word_level_srt(
+                    response_data['words'], 
+                    srt_file, 
+                    remove_fillers=args.remove_fillers, 
+                    filler_words=FILLER_WORDS, 
+                    fps=args.fps, 
+                    fps_offset_start=args.fps_offset_start, 
+                    fps_offset_end=args.fps_offset_end,
+                    padding_start=args.padding_start,
+                    padding_end=args.padding_end
+                )
+            else:
+                create_srt(
+                    response_data['words'], 
+                    srt_file, 
+                    args.chars_per_line, 
+                    args.silentportions, 
+                    args.fps, 
+                    args.fps_offset_start, 
+                    args.fps_offset_end,
+                    args.padding_start,
+                    args.padding_end,
+                    remove_fillers=args.remove_fillers,
+                    filler_words=FILLER_WORDS
+                )
+                
+            logger.info(f"Transcription completed for {file_name} (from existing JSON)")
+            if file_dir:
+                logger.info(f"Files saved in: {file_dir}")
             continue
 
         # Convert to appropriate format if needed
@@ -327,7 +428,7 @@ def main():
             logger.info(f"Transcription completed in {api_time:.2f}s")
 
             # Save JSON response
-            json_file = os.path.join(file_dir, f"{file_name}.json")
+            json_file = os.path.join(file_dir, f"{file_name}_elevenlabs.json")
             with open(json_file, 'w', encoding='utf-8') as f:
                 json.dump(response_data, f, ensure_ascii=False, indent=2)
             logger.info(f"JSON response saved to {json_file}")

@@ -7,8 +7,6 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [x] AssemblyAI: Turn empty time frames between end of one word and start of next word into spacings
 - [x] Add an explicit option `--show-pauses` that adds "(...)" text when pauses occur (default for `--davinci-srt`)
 
-## In Progress Tasks
-
 - [x] Create standardized word format helper function
   - [x] Implement `standardize_word_format()` in text_processing.py
   - [x] Convert AssemblyAI format (ms timestamps) to unified format (seconds)
@@ -23,17 +21,19 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] Update export_subtitles wrapper to use custom function when silence indicators needed
   - [x] Ensure consistent SRT creation with pause markers for both APIs
 
-## Future Tasks
+- [x] Have ElevenLabs and Groq use loguru like in AssemblyAI
+- [x] Make sure all scripts skip re-encoding if a JSON is already present
+- [x] Add the API that was used to the end of the JSON filename
 
-- [ ] Have ElevenLabs and Groq use loguru like in AssemblyAI
-- [ ] Make sure all scripts skip re-encoding if a JSON is already present
-- [ ] Add the API that was used to the end of the JSON filename
+## In Progress Tasks
 
 - [ ] Refactor to a unified API class
   - [ ] Create base transcription class with common methods
   - [ ] Implement AssemblyAI-specific implementation (submit and wait)
   - [ ] Implement direct response APIs (Groq, ElevenLabs)
   - [ ] Add error handling and retry logic
+
+## Future Tasks
 
 - [ ] Implement standardized parsers for each JSON format
   - [ ] Create parser for AssemblyAI format
