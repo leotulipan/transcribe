@@ -2,7 +2,7 @@
 Standardized parsers for different transcription API formats.
 
 This module provides a unified way to parse JSON responses from different
-transcription APIs (AssemblyAI, ElevenLabs, Groq) into a consistent format.
+transcription APIs (AssemblyAI, ElevenLabs, Groq, OpenAI) into a consistent format.
 """
 from typing import Dict, Any, List, Optional, Union
 import json
@@ -180,6 +180,44 @@ def parse_groq_format(data: Dict[str, Any]) -> TranscriptionResult:
     )
 
 
+def parse_openai_format(data: Dict[str, Any]) -> TranscriptionResult:
+    """
+    Parse OpenAI Whisper transcription data into standardized format.
+    
+    Args:
+        data: OpenAI response JSON data
+        
+    Returns:
+        Standardized TranscriptionResult object
+    """
+    logger.debug("Parsing OpenAI format")
+    
+    # Extract text and basic metadata
+    text = data.get("text", "")
+    language = data.get("language", "")
+    
+    # Process words data if available (OpenAI Whisper might not provide word-level timestamps by default)
+    words = []
+    if "words" in data and data["words"]:
+        for word_data in data["words"]:
+            word = {
+                "text": word_data.get("text", ""),
+                "start": word_data.get("start", 0),  # OpenAI uses seconds
+                "end": word_data.get("end", 0),      # OpenAI uses seconds
+                "type": "word"
+            }
+            words.append(word)
+    
+    return TranscriptionResult(
+        text=text,
+        words=words,
+        language=language,
+        api_name="openai",
+        speaker_count=0,
+        speakers=[]
+    )
+
+
 def detect_and_parse_json(data: Dict[str, Any]) -> TranscriptionResult:
     """
     Auto-detect the JSON format and parse it into the standardized format.
@@ -201,12 +239,16 @@ def detect_and_parse_json(data: Dict[str, Any]) -> TranscriptionResult:
             return parse_elevenlabs_format(data)
         elif api_name == "groq":
             return parse_groq_format(data)
+        elif api_name == "openai":
+            return parse_openai_format(data)
     
     # Try to detect format based on data structure
     if "audio_url" in data or "status" in data and "words" in data:
         return parse_assemblyai_format(data)
     elif "words" in data and any(word.get("type") == "spacing" for word in data.get("words", [])):
         return parse_elevenlabs_format(data)
+    elif "model" in data and data.get("model", "").startswith("whisper-"):
+        return parse_openai_format(data)
     elif "text" in data and "words" in data:
         # This is a bit generic, but we'll assume Groq for now
         return parse_groq_format(data)

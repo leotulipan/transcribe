@@ -518,22 +518,137 @@ class GroqAPI(TranscriptionAPI):
         return result
 
 
+class OpenAIAPI(TranscriptionAPI):
+    """OpenAI Whisper API implementation."""
+    
+    def __init__(self, api_key: Optional[str] = None):
+        """
+        Initialize the OpenAI API.
+        
+        Args:
+            api_key: API key for OpenAI (if not provided, will try to load from environment)
+        """
+        super().__init__(api_key)
+        self.api_name = "openai"
+        
+        if not self.api_key:
+            self.api_key = self.load_from_env("OPENAI_API_KEY")
+            
+        # Import here to avoid circular imports
+        try:
+            from openai import OpenAI
+            self.client = OpenAI(api_key=self.api_key) if self.api_key else None
+        except ImportError:
+            logger.error("OpenAI package not found. Please install it: uv add openai")
+            self.client = None
+            
+    def check_api_key(self) -> bool:
+        """Check if OpenAI API key is valid."""
+        if not self.api_key:
+            logger.error("No OpenAI API key provided")
+            return False
+            
+        if not self.client:
+            logger.error("OpenAI client not initialized")
+            return False
+            
+        try:
+            # Simple check - try to list models
+            self.client.models.list()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to validate OpenAI API key: {str(e)}")
+            return False
+            
+    def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
+        """
+        Transcribe audio file using OpenAI Whisper.
+        
+        Args:
+            audio_path: Path to the audio file
+            **kwargs: Additional OpenAI-specific parameters:
+                - language: Language code
+                - model: Whisper model to use (default: whisper-1)
+                
+        Returns:
+            Standardized TranscriptionResult object
+        """
+        if not self.client:
+            raise ValueError("OpenAI client not initialized")
+            
+        # Prepare parameters
+        model = kwargs.get("model", "whisper-1")
+        language = kwargs.get("language")
+        response_format = kwargs.get("response_format", "verbose_json")
+        
+        logger.info(f"Transcribing {audio_path} with OpenAI Whisper")
+        audio_file = open(audio_path, "rb")
+        
+        def make_request():
+            params = {
+                "model": model,
+                "file": audio_file,
+                "response_format": response_format
+            }
+            
+            if language:
+                params["language"] = language
+                
+            return self.client.audio.transcriptions.create(**params)
+            
+        # Use retry logic
+        try:
+            transcription = self.with_retry(make_request)
+            logger.info("Transcription completed successfully")
+            
+            # Parse result
+            data = {
+                "text": transcription.text,
+                "language": language or transcription.language,
+                "model": model,
+                "api_name": self.api_name,
+            }
+            
+            # If we got words in verbose_json format
+            if hasattr(transcription, "words") and transcription.words:
+                data["words"] = transcription.words
+                
+            # Import here to avoid circular imports
+            from utils.parsers import parse_openai_format
+            result = parse_openai_format(data)
+            
+            # Save result
+            self.save_result(result, audio_path)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"OpenAI transcription failed: {str(e)}")
+            raise
+        finally:
+            audio_file.close()
+
+
 def get_api_instance(api_name: str, api_key: Optional[str] = None) -> TranscriptionAPI:
     """
-    Factory function to get the appropriate API instance.
+    Get an instance of the appropriate API class.
     
     Args:
         api_name: Name of the API to use
-        api_key: API key (optional, will try to load from environment if not provided)
+        api_key: API key to use (if None, will try to load from environment)
         
     Returns:
-        TranscriptionAPI instance
+        Instance of a TranscriptionAPI subclass
     """
+    api_name = api_name.lower()
+    
     if api_name == "assemblyai":
         return AssemblyAIAPI(api_key)
     elif api_name == "elevenlabs":
         return ElevenLabsAPI(api_key)
     elif api_name == "groq":
         return GroqAPI(api_key)
+    elif api_name == "openai":
+        return OpenAIAPI(api_key)
     else:
         raise ValueError(f"Unknown API: {api_name}") 

@@ -9,6 +9,7 @@
 #   "requests",
 #   "assemblyai",
 #   "groq",
+#   "openai",
 # ]
 # ///
 
@@ -16,7 +17,7 @@
 Unified Audio Transcription Tool
 
 This script provides a unified interface for transcribing audio files using
-different APIs (AssemblyAI, ElevenLabs, Groq) with options for different output formats.
+different APIs (AssemblyAI, ElevenLabs, Groq, OpenAI) with options for different output formats.
 """
 
 import os
@@ -255,7 +256,7 @@ def process_audio_path(audio_path: str, api_name: str, **kwargs) -> Tuple[int, i
 @click.argument("audio_path", type=click.Path(exists=True))
 @click.option(
     "--api", "-a", 
-    type=click.Choice(["assemblyai", "elevenlabs", "groq"], case_sensitive=False),
+    type=click.Choice(["assemblyai", "elevenlabs", "groq", "openai"], case_sensitive=False),
     default="groq",
     help="API to use for transcription (default: groq)"
 )
