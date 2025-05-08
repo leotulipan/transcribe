@@ -170,19 +170,10 @@ class AssemblyAIAPI(TranscriptionAPI):
             logger.error(f"Failed to validate AssemblyAI API key: {str(e)}")
             return False
             
-    def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
+    def transcribe(self, audio_path: Union[str, Path], **kwargs) -> Optional[Dict[str, Any]]:
         """
         Transcribe audio file using AssemblyAI.
-        
-        Args:
-            audio_path: Path to the audio file
-            **kwargs: Additional AssemblyAI-specific parameters:
-                - language: Language code
-                - speaker_labels: Enable speaker diarization
-                - dual_channel: Enable dual channel transcription
-                
-        Returns:
-            Standardized TranscriptionResult object
+        Returns the raw JSON response data as a dictionary, or None on failure.
         """
         if not self.client:
             raise ValueError("AssemblyAI client not initialized")
@@ -211,21 +202,17 @@ class AssemblyAIAPI(TranscriptionAPI):
                 
                 logger.info(f"Transcription completed: {transcript.id}")
                 
-                # Convert to standardized format
+                # Return the raw JSON response
                 result_dict = transcript.json_response
-                result_dict["api_name"] = self.api_name
                 
-                # Import here to avoid circular imports
-                from utils.parsers import parse_assemblyai_format
-                result = parse_assemblyai_format(result_dict)
+                # Optionally save the raw response (can be useful for debugging)
+                # self.save_raw_result(result_dict, audio_path)
                 
-                # Save result
-                self.save_result(result, audio_path)
-                
-                return result
+                return result_dict
         except Exception as e:
             logger.error(f"Failed to transcribe with AssemblyAI: {str(e)}")
-            raise
+            # raise # Optionally re-raise
+            return None
 
 
 class ElevenLabsAPI(TranscriptionAPI):

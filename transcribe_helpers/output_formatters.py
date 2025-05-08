@@ -24,32 +24,34 @@ except ImportError:
     from loguru_patch import logger
 
 
-def format_time(seconds: float, fps: Optional[float] = None, frames_display: bool = False) -> str:
-    """
-    Format time in seconds to SRT timestamp format.
+def format_time(seconds: float) -> str:
+    """Format time in seconds to HH:MM:SS,ms format."""
+    # Convert seconds to milliseconds integer for calculation
+    total_milliseconds = int(round(seconds * 1000))
     
-    Args:
-        seconds: Time in seconds
-        fps: Frames per second for frame-based timing
-        frames_display: Whether to display frames in output (only applies if fps is provided)
-        
-    Returns:
-        Formatted string in HH:MM:SS,mmm format or HH:MM:SS:FF format (if frames_display=True)
+    hours, total_milliseconds = divmod(total_milliseconds, 3600000)
+    minutes, total_milliseconds = divmod(total_milliseconds, 60000)
+    seconds_part, milliseconds = divmod(total_milliseconds, 1000)
     
-    From: elevenlabs - Format seconds for SRT timestamp
-    """
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    seconds_int = int(seconds % 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds_part:02d},{milliseconds:03d}"
+
+
+def format_time_ms(milliseconds: int) -> str:
+    """Format time in integer milliseconds to HH:MM:SS,ms format."""
+    if not isinstance(milliseconds, int):
+        logger.warning(f"format_time_ms received non-integer: {milliseconds}. Converting.")
+        milliseconds = int(round(milliseconds))
     
-    if fps is not None and frames_display:
-        # Calculate frames instead of milliseconds
-        frames = int((seconds % 1) * fps)
-        return f"{hours:02d}:{minutes:02d}:{seconds_int:02d}:{frames:02d}"
-    else:
-        # Standard SRT format with milliseconds
-        milliseconds = int((seconds % 1) * 1000)
-        return f"{hours:02d}:{minutes:02d}:{seconds_int:02d},{milliseconds:03d}"
+    # Sanity check for extremely large millisecond values that might indicate a scaling issue
+    if milliseconds > 100000000:  # 100,000 seconds = ~28 hours
+        logger.warning(f"Very large timestamp detected: {milliseconds}ms ({milliseconds/1000/60/60:.2f} hours). This may indicate a scaling problem.")
+    
+    # Process as normal
+    hours, milliseconds = divmod(milliseconds, 3600000)
+    minutes, milliseconds = divmod(milliseconds, 60000)
+    seconds_part, milliseconds = divmod(milliseconds, 1000)
+    
+    return f"{hours:02d}:{minutes:02d}:{seconds_part:02d},{milliseconds:03d}"
 
 
 def retime_subtitles_fps(words: List[Dict[str, Any]], fps: float, 
@@ -144,6 +146,90 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
     # Create a working copy of the words list
     words = [word.copy() if word else None for word in words]
     
+    # Print debugging info of the first few words
+    print(f"DEBUG create_srt - First 5 words:")
+    for i, word in enumerate(words[:5]):
+        print(f"Word {i}: {word}")
+    print(f"DEBUG create_srt - Silent portions threshold: {silentportions}ms")
+    
+    # Count spacing elements that would be shown
+    spacing_count = 0
+    for word in words:
+        if word and word.get('type') == 'spacing':
+            duration_ms = (word.get('end', 0) - word.get('start', 0))
+            if not isinstance(duration_ms, int):
+                duration_ms *= 1000
+            if duration_ms >= silentportions:
+                spacing_count += 1
+    print(f"DEBUG create_srt - Found {spacing_count} spacing elements >= {silentportions}ms threshold")
+    
+    # Check for spacing elements with pause text that might have been incorrectly set as words
+    for word in words:
+        if word and word.get('text', '').strip() == "(...)":
+            word['type'] = 'spacing'  # Ensure these are treated as spacing elements
+            print(f"DEBUG: Fixed type for pause element: {word}")
+    
+    # Log first few words for debugging
+    if words and len(words) > 0:
+        logger.debug(f"First word: {words[0]}")
+        if len(words) > 1:
+            logger.debug(f"Second word: {words[1]}")
+    
+    # Check for timestamp scaling issues by sampling values
+    max_timestamp = 0
+    min_timestamp = float('inf')
+    if words:
+        for word in words[:20]:  # Sample first 20 words
+            if word and 'start' in word:
+                max_timestamp = max(max_timestamp, word['start'])
+                if word['start'] > 0:  # Ignore zero values
+                    min_timestamp = min(min_timestamp, word['start'])
+            if word and 'end' in word:
+                max_timestamp = max(max_timestamp, word['end'])
+                if word['end'] > 0:
+                    min_timestamp = min(min_timestamp, word['end'])
+    
+    if min_timestamp == float('inf'):
+        min_timestamp = 0
+        
+    # Determine if this is a scaling issue (values too large to be seconds)
+    # This happens when timestamps might be in milliseconds but treated as seconds
+    scaling_issue = False
+    scale_factor = 1.0
+    
+    # Timestamps in integer milliseconds that need to be divided by 1000
+    if max_timestamp > 5000:  # Likely milliseconds, not seconds (longer than 5000 seconds = ~83 minutes)
+        logger.warning(f"Detected unusually large timestamps: {min_timestamp}-{max_timestamp}. Applying automatic scaling.")
+        scaling_issue = True
+        scale_factor = 1000.0  # Convert milliseconds to seconds
+        
+        # Apply scaling to all words
+        for word in words:
+            if word and 'start' in word:
+                word['start'] = word['start'] / scale_factor
+            if word and 'end' in word:
+                word['end'] = word['end'] / scale_factor
+        
+        # Re-check the timestamp range after scaling
+        scaled_max = max_timestamp / scale_factor
+        scaled_min = min_timestamp / scale_factor if min_timestamp > 0 else 0
+        logger.info(f"Scaled timestamps from {min_timestamp}-{max_timestamp} to {scaled_min:.2f}-{scaled_max:.2f} seconds")
+    else:
+        logger.info(f"Timestamp range appears normal: {min_timestamp}-{max_timestamp} seconds")
+    
+    # Check all values to see if we have scientific notation 
+    scientific_notation_count = 0
+    for word in words[:50]:  # Sample 50 words
+        if word and 'start' in word:
+            # Check for scientific notation by string representation
+            start_str = str(word['start'])
+            if 'e' in start_str.lower():
+                scientific_notation_count += 1
+                logger.warning(f"Found scientific notation in timestamp: {start_str}")
+    
+    if scientific_notation_count > 0:
+        logger.warning(f"Found {scientific_notation_count} timestamps with scientific notation issues")
+    
     # Apply FPS-based retiming if specified
     if fps is not None:
         words = retime_subtitles_fps(words, fps, fps_offset_start, fps_offset_end)
@@ -171,7 +257,36 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
     # Process filler words if requested
     if remove_fillers:
         words = process_filler_words(words, silentportions, filler_words)
-        
+    
+    # We now assume our input uses milliseconds in the words list
+    # but SRT format needs timestamps in seconds with 3 decimal places
+    # Ensure all times are in seconds for SRT formatting
+    print(f"DEBUG: Converting timestamps from milliseconds to seconds for SRT formatting")
+    debug_count = 0
+    for word in words:
+        if word and 'start' in word:
+            if not scaling_issue:  # Only convert if not already scaled
+                # Store the original value for debugging
+                original_start = word['start']
+                word['start'] = word['start'] / 1000.0
+                if debug_count < 5:  # Limit to first 5 items
+                    print(f"DEBUG: Converted start time {original_start}ms to {word['start']}s")
+                    debug_count += 1
+                
+        if word and 'end' in word:
+            if not scaling_issue:  # Only convert if not already scaled
+                # Store the original value for debugging
+                original_end = word['end']
+                word['end'] = word['end'] / 1000.0
+                if debug_count < 5:  # Limit to first 5 items
+                    print(f"DEBUG: Converted end time {original_end}ms to {word['end']}s")
+    
+    # Debug the first several words to check for spacing elements and their handling
+    if len(words) > 0:
+        logger.debug(f"First word in create_srt: {words[0]}")
+        if len(words) > 1:
+            logger.debug(f"Second word in create_srt: {words[1]}")
+    
     with open(output_file, 'w', encoding='utf-8') as f:
         counter = 1
         
@@ -188,8 +303,12 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                 start_time = word.get('start', 0)
                 end_time = word.get('end', start_time + 0.5)
                 
+                # Timestamps are now in seconds, convert to milliseconds for SRT format
+                start_ms = int(start_time * 1000)
+                end_ms = int(end_time * 1000)
+                
                 f.write(f"{counter}\n")
-                f.write(f"{format_time(start_time)} --> {format_time(end_time)}\n")
+                f.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
                 f.write(f"{word_text}\n\n")
                 counter += 1
         else:
@@ -198,13 +317,6 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
             block_start = None
             block_end = None
             block_text = ""
-            
-            # Handle initial silence
-            if words and words[0].get('type', 'word') == 'word' and words[0]['start'] > 0:
-                f.write(f"{counter}\n")
-                f.write(f"00:00:00,000 --> {format_time(words[0]['start'])}\n")
-                f.write("(...)\n\n")
-                counter += 1
             
             i = 0
             
@@ -220,7 +332,14 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                 
                 # If we find a spacing that exceeds our pause threshold
                 if word_type == 'spacing' and silentportions > 0:
+                    # Calculate duration in milliseconds (timestamps are now in seconds)
                     duration_ms = (word['end'] - word['start']) * 1000
+                    
+                    # Print detailed debug info for each spacing element
+                    print(f"DEBUG: Found spacing at start={word['start']}s, end={word['end']}s")
+                    print(f"DEBUG: Duration = {duration_ms}ms, threshold = {silentportions}ms")
+                    print(f"DEBUG: Will {duration_ms >= silentportions and 'SHOW' or 'SKIP'} this pause")
+                    
                     if duration_ms >= silentportions:
                         # Process the accumulated block of words
                         if block_words:
@@ -229,8 +348,12 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                             else:
                                 # Standard SRT formatting
                                 lines = textwrap.wrap(block_text, width=chars_per_line)
+                                
+                                start_ms = int(block_start * 1000)
+                                end_ms = int(block_end * 1000)
+                                
                                 f.write(f"{counter}\n")
-                                f.write(f"{format_time(block_start)} --> {format_time(block_end)}\n")
+                                f.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
                                 f.write("\n".join(lines) + "\n\n")
                             
                             counter += 1
@@ -240,80 +363,79 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                             block_text = ""
                         
                         # Write silent portion
+                        start_ms = int(word['start'] * 1000)
+                        end_ms = int(word['end'] * 1000)
+                        
+                        logger.debug(f"Writing spacing element: {word['start']}s to {word['end']}s (duration {duration_ms}ms)")
+                        
                         f.write(f"{counter}\n")
-                        f.write(f"{format_time(word['start'])} --> {format_time(word['end'])}\n")
+                        f.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
                         f.write("(...)\n\n")
                         counter += 1
+                    else:
+                        logger.debug(f"Skipping short spacing: {word['start']}s to {word['end']}s (duration {duration_ms}ms < threshold {silentportions}ms)")
                 
-                # Add word to current block
-                elif word_type == 'word' or word_type is None:
-                    if block_start is None:
-                        block_start = word['start']
-                    
-                    block_end = word['end']
-                    block_words.append(word)
-                    
-                    # Add word to block text (for standard SRT)
-                    if srt_mode != "davinci":
-                        word_text = word.get('word', word.get('text', ''))
-                        if block_text and not block_text.endswith(' '):
-                            block_text += ' '
-                        block_text += word_text
-                    
-                    # Check if we need to start a new block
-                    max_words_reached = max_words_per_block > 0 and len(block_words) >= max_words_per_block
-                    chars_limit_reached = srt_mode == "standard" and len(block_text) >= chars_per_line
-                    
-                    if max_words_reached or chars_limit_reached:
-                        if srt_mode == "davinci":
-                            process_davinci_block(f, counter, block_words, block_start, block_end)
+                # For regular word entries
+                elif word_type != 'spacing':
+                    # Add this word to the current block
+                    word_text = word.get('text', '')
+                    if word_text and word_text != " ":
+                        if not block_words:
+                            # Start a new subtitle block
+                            block_start = word['start']
+                            block_words.append(word)
+                            block_text += word_text
                         else:
-                            # Standard SRT formatting
-                            lines = textwrap.wrap(block_text, width=chars_per_line)
-                            f.write(f"{counter}\n")
-                            f.write(f"{format_time(block_start)} --> {format_time(block_end)}\n")
-                            f.write("\n".join(lines) + "\n\n")
+                            # Add to existing block
+                            block_words.append(word)
+                            # Add space before word if needed
+                            if not block_text.endswith(' ') and not word_text.startswith(' '):
+                                block_text += ' '
+                            block_text += word_text
                         
-                        counter += 1
-                        block_words = []
-                        block_start = None
-                        block_end = None
-                        block_text = ""
-                
-                # Handle audio events
-                elif word_type == 'audio_event':
-                    # Process the accumulated block of words
-                    if block_words:
-                        if srt_mode == "davinci":
-                            process_davinci_block(f, counter, block_words, block_start, block_end)
-                        else:
-                            lines = textwrap.wrap(block_text, width=chars_per_line)
-                            f.write(f"{counter}\n")
-                            f.write(f"{format_time(block_start)} --> {format_time(block_end)}\n")
-                            f.write("\n".join(lines) + "\n\n")
+                        # Update end time of the block to this word's end time
+                        block_end = word['end']
                         
-                        counter += 1
-                        block_words = []
-                        block_start = None
-                        block_end = None
-                        block_text = ""
-                    
-                    # Write audio event as its own subtitle
-                    f.write(f"{counter}\n")
-                    f.write(f"{format_time(word['start'])} --> {format_time(word['end'])}\n")
-                    f.write(f"({word['text']})\n\n")
-                    counter += 1
+                        # Check if we hit the maximum words per block
+                        if max_words_per_block > 0 and len(block_words) >= max_words_per_block:
+                            # Process block and start a new one
+                            if srt_mode == "davinci":
+                                process_davinci_block(f, counter, block_words, block_start, block_end)
+                            else:
+                                # Standard SRT formatting
+                                lines = textwrap.wrap(block_text, width=chars_per_line)
+                                
+                                start_ms = int(block_start * 1000)
+                                end_ms = int(block_end * 1000)
+                                
+                                f.write(f"{counter}\n")
+                                f.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+                                f.write("\n".join(lines) + "\n\n")
+                            
+                            counter += 1
+                            
+                            # Reset block
+                            block_words = []
+                            block_start = None
+                            block_end = None
+                            block_text = ""
                 
+                # Move to next word
                 i += 1
             
-            # Process any remaining words
+            # Process any remaining block of words
             if block_words:
                 if srt_mode == "davinci":
                     process_davinci_block(f, counter, block_words, block_start, block_end)
                 else:
+                    # Standard SRT formatting
                     lines = textwrap.wrap(block_text, width=chars_per_line)
+                    
+                    start_ms = int(block_start * 1000)
+                    end_ms = int(block_end * 1000)
+                    
                     f.write(f"{counter}\n")
-                    f.write(f"{format_time(block_start)} --> {format_time(block_end)}\n")
+                    f.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
                     f.write("\n".join(lines) + "\n\n")
     
     # Post-process the SRT file to merge consecutive pauses if in davinci mode
@@ -367,7 +489,7 @@ def apply_intelligent_padding(words: List[Dict[str, Any]], padding_start: int, p
                     if word['start'] < prev_word['end']:
                         prev_word['end'] = word['start']
                     
-                    logger.debug(f"Word {i}: Applied start padding {applied_padding*1000:.1f}ms (requested {padding_start}ms)")
+                    # logger.debug(f"Word {i}: Applied start padding {applied_padding*1000:.1f}ms (requested {padding_start}ms)")
                 
                 # For positive padding (move start time later)
                 elif padding_start > 0:
@@ -477,21 +599,30 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
             audio_events = [w for w in sentence if w.get('type') == 'audio_event']
             if audio_events:
                 # Write just the text first
+                start_ms = int(current_start * 1000)
+                end_ms = int(sentence_end * 1000)
+                
                 file_obj.write(f"{current_counter}\n")
-                file_obj.write(f"{format_time(current_start)} --> {format_time(sentence_end)}\n")
+                file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
                 file_obj.write(f"{sentence_text}\n\n")
                 current_counter += 1
                 
                 # Then write each audio event separately
                 for event in audio_events:
+                    start_ms = int(event['start'] * 1000)
+                    end_ms = int(event['end'] * 1000)
+                    
                     file_obj.write(f"{current_counter}\n")
-                    file_obj.write(f"{format_time(event['start'])} --> {format_time(event['end'])}\n")
+                    file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
                     file_obj.write(f"({event['text']})\n\n")
                     current_counter += 1
             else:
                 # No audio events, write text normally
+                start_ms = int(current_start * 1000)
+                end_ms = int(sentence_end * 1000)
+                
                 file_obj.write(f"{current_counter}\n")
-                file_obj.write(f"{format_time(current_start)} --> {format_time(sentence_end)}\n")
+                file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
                 file_obj.write(f"{sentence_text}\n\n")
             
             current_start = sentence_end
@@ -503,22 +634,32 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
         
         if regular_words:
             block_text = " ".join([w['text'] for w in regular_words])
+            
+            start_ms = int(start_time * 1000)
+            end_ms = int(end_time * 1000)
+            
             file_obj.write(f"{counter}\n")
-            file_obj.write(f"{format_time(start_time)} --> {format_time(end_time)}\n")
+            file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
             file_obj.write(f"{block_text}\n\n")
             counter_offset = 1
             
             # Write audio events separately if they exist
             for event in audio_events:
+                start_ms = int(event['start'] * 1000)
+                end_ms = int(event['end'] * 1000)
+                
                 file_obj.write(f"{counter + counter_offset}\n")
-                file_obj.write(f"{format_time(event['start'])} --> {format_time(event['end'])}\n")
+                file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
                 file_obj.write(f"({event['text']})\n\n")
                 counter_offset += 1
         elif audio_events:
             # Only audio events, no regular words
             for i, event in enumerate(audio_events):
+                start_ms = int(event['start'] * 1000)
+                end_ms = int(event['end'] * 1000)
+                
                 file_obj.write(f"{counter + i}\n")
-                file_obj.write(f"{format_time(event['start'])} --> {format_time(event['end'])}\n")
+                file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
                 file_obj.write(f"({event['text']})\n\n")
 
 
@@ -694,7 +835,7 @@ def convert_to_srt(result: Dict[str, Any], output_path: Union[str, Path],
         
         if len(chunks) == 1:
             srt_lines.append(f"{subtitle_index}")
-            srt_lines.append(f"{format_time(start_time)} --> {format_time(end_time)}")
+            srt_lines.append(f"{format_time_ms(int(start_time * 1000))} --> {format_time_ms(int(end_time * 1000))}")
             srt_lines.append(chunks[0])
             srt_lines.append("")  # Empty line
             subtitle_index += 1
@@ -705,7 +846,7 @@ def convert_to_srt(result: Dict[str, Any], output_path: Union[str, Path],
                 chunk_start = start_time + i * chunk_duration
                 chunk_end = chunk_start + chunk_duration
                 srt_lines.append(f"{subtitle_index}")
-                srt_lines.append(f"{format_time(chunk_start)} --> {format_time(chunk_end)}")
+                srt_lines.append(f"{format_time_ms(int(chunk_start * 1000))} --> {format_time_ms(int(chunk_end * 1000))}")
                 srt_lines.append(chunk)
                 srt_lines.append("")  # Empty line
                 subtitle_index += 1

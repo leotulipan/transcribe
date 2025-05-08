@@ -52,13 +52,16 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   
 - [x] Add back OpenAI official Whisper support based on audio_transcribe.py
 - [x] .env management for new users in user dir
+- [x] add a switch to save the cleaned and consistent pre-processed input json as file
+  - [x] the cleaned consistent json needs to have spacing elements added for some endpoints. we are only interested in the word list (start, end, text, optional: speaker)
+- [x] take a json file directly as input as well not just a sound file.
+  - [x] if it has a api name ie ...-assemblyai.json auto use that json format
+  - [x] if not the --api parameter must be present
 
 ## In Progress Tasks
 
 
 ## Future Tasks
-
-- [ ] take a json file directly as input as well
 
 - [ ] Add local-whisper/faster-whisper as local transcription option
 

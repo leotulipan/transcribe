@@ -30,18 +30,42 @@ from datetime import datetime
 import time
 from dotenv import load_dotenv
 import click
-from loguru import logger
-from pydub import AudioSegment
+
+# Setup logging
+# Try to import loguru, fallback to our mock implementation
+try:
+    from loguru import logger
+    # Configure Loguru
+    logger.add(sys.stderr, level="INFO") # Default level
+except ImportError:
+    # Add the parent directory to sys.path to find loguru_patch
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from loguru_patch import logger
 
 # Import helpers
 from transcribe_helpers.audio_processing import (
     check_audio_length, check_audio_format, convert_to_flac, convert_to_pcm
 )
 from transcribe_helpers.utils import setup_logger
-from utils.parsers import TranscriptionResult, load_and_parse_json
-from utils.transcription_api import get_api_instance
 from utils.formatters import create_output_files
+from utils.parsers import TranscriptionResult, load_json_data, detect_and_parse_json
+from utils.transcription_api import get_api_instance
+from transcribe_helpers.text_processing import standardize_word_format, process_filler_words
 
+# Assume helper functions like check_json_exists are defined later or imported
+# from utils.file_utils import check_json_exists # Example
+
+def check_json_exists(file_dir, file_name, api_name):
+    # Placeholder implementation
+    api_json_path = file_dir / f"{file_name}_{api_name}.json"
+    generic_json_path = file_dir / f"{file_name}.json"
+    if api_json_path.exists():
+        logger.info(f"Found API specific JSON: {api_json_path}")
+        return True, api_json_path
+    if generic_json_path.exists():
+        logger.info(f"Found generic JSON: {generic_json_path}")
+        return True, generic_json_path
+    return False, None
 
 def check_transcript_exists(file_path: Union[str, Path], file_name: str) -> bool:
     """
@@ -59,140 +83,200 @@ def check_transcript_exists(file_path: Union[str, Path], file_name: str) -> bool
     return os.path.exists(transcript_path) or os.path.exists(srt_path)
 
 
-def check_json_exists(file_path: Union[str, Path], file_name: str) -> Tuple[bool, str]:
+def process_file(file_path: Union[str, Path], api_name: str, **kwargs) -> List[str]:
     """
-    Check if a JSON transcript file exists for a given file name.
+    Process a single audio or JSON file.
+    Handles transcription (if needed), parsing, standardization, cleaning, 
+    and output file generation based on kwargs.
     
-    Args:
-        file_path: Directory containing the file
-        file_name: Base name of the file without extension
-        
     Returns:
-        Tuple of (exists, json_path)
+        List of paths to the created output files.
     """
-    # First check for a generic JSON file (no API suffix)
-    json_path = os.path.join(file_path, f"{file_name}.json")
-    if os.path.exists(json_path):
-        logger.info(f"Found generic JSON file: {json_path}")
-        return True, json_path
+    file_path = Path(file_path)
+    file_dir = file_path.parent
+    file_name = file_path.stem
     
-    # Then check for API-specific JSON files
-    for api_name in ["assemblyai", "elevenlabs", "groq", "openai"]:
-        json_path = os.path.join(file_path, f"{file_name}_{api_name}.json")
-        if os.path.exists(json_path):
-            logger.info(f"Found {api_name.capitalize()} JSON file: {json_path}")
-            return True, json_path
+    raw_json_data = None
+    detected_api = api_name # Use provided API name initially
+    processed_words = [] # This will hold our standardized intermediary format
+    created_output_files = []
     
-    return False, ""
-
-
-def process_file(file_path: Union[str, Path], api_name: str, **kwargs) -> bool:
-    """
-    Process a single audio file with the specified API.
+    # 1. Get Raw JSON Data (either from existing file or new transcription)
+    use_input_json = kwargs.get("use_input", False) and file_path.suffix.lower() == '.json'
     
-    Args:
-        file_path: Path to the audio file
-        api_name: Name of the API to use
-        **kwargs: Additional parameters for processing
+    if use_input_json:
+        logger.info(f"Using existing JSON file as input: {file_path}")
+        raw_json_data = load_json_data(file_path)
+        if not raw_json_data:
+             logger.error(f"Failed to load input JSON: {file_path}. Skipping file.")
+             return [] # Indicate failure for this file
+    else:
+        # Check if a pre-existing API-specific JSON exists
+        json_exists, existing_json_path = check_json_exists(file_dir, file_name, api_name)
         
-    Returns:
-        True if processing was successful, False otherwise
-    """
-    try:
-        file_path = Path(file_path)
-        file_dir = file_path.parent
-        file_name = file_path.stem
-        
-        # Always check for existing JSON first, regardless of other factors
-        json_exists, json_path = check_json_exists(file_dir, file_name)
         if json_exists and not kwargs.get("force", False):
-            logger.info(f"Using existing JSON file: {json_path}")
-            
-            # Parse the JSON file into our standardized format
-            result = load_and_parse_json(json_path)
-            
-            # Create output files based on the existing JSON
-            output_formats = kwargs.get("output_formats", ["text", "srt"])
-            if kwargs.get("word_srt", False) and "word_srt" not in output_formats:
-                output_formats.append("word_srt")
-            if kwargs.get("davinci_srt", False) and "davinci_srt" not in output_formats:
-                output_formats.append("davinci_srt")
-            
-            created_files = create_output_files(result, file_path, output_formats, **kwargs)
-            logger.info(f"Created output files: {list(created_files.values())}")
-            return True
-        
-        # Check if transcript already exists
-        if check_transcript_exists(file_dir, file_name) and not kwargs.get("force", False):
-            logger.info(f"Transcript for {file_name} already exists. Use --force to overwrite.")
-            return False
-        
-        # Prepare the audio file
-        use_input = kwargs.get("use_input", False)
-        use_pcm = kwargs.get("use_pcm", False)
-        
-        processed_file = file_path
-        if not use_input:
-            # Convert to appropriate format
-            if use_pcm:
-                logger.info(f"Converting {file_path} to PCM WAV format")
-                processed_file = convert_to_pcm(file_path)
-            else:
-                logger.info(f"Converting {file_path} to FLAC format")
-                processed_file = convert_to_flac(file_path)
-        
-        # Get the API instance
-        api_instance = get_api_instance(api_name)
-        
-        # Check API key
-        if not api_instance.check_api_key():
-            config_path = Path.home() / '.transcribe' / '.env'
-            logger.error(f"Invalid or missing API key for {api_name}")
-            logger.info(f"Please add your {api_name.upper()} API key to {config_path}")
-            return False
-        
-        # Prepare API-specific parameters
-        api_params = {}
-        
-        # Common parameters for all APIs
-        api_params["language"] = kwargs.get("language")
-        
-        # API-specific parameters
-        if api_name == "assemblyai":
-            api_params["speaker_labels"] = kwargs.get("speaker_labels", True)
-        elif api_name == "groq":
-            api_params["model"] = kwargs.get("model", "whisper-large-v3")
-            api_params["chunk_length"] = kwargs.get("chunk_length", 600)
-            api_params["overlap"] = kwargs.get("overlap", 10)
-        
-        # Transcribe the audio
-        result = api_instance.transcribe(processed_file, **api_params)
-        
-        # Clean up temporary files
-        if not use_input and not kwargs.get("keep_flac", False) and processed_file != file_path:
-            logger.info(f"Cleaning up temporary file: {processed_file}")
+            logger.info(f"Using existing API JSON file: {existing_json_path}")
+            raw_json_data = load_json_data(existing_json_path)
+            if not raw_json_data:
+                 logger.warning(f"Failed to load existing API JSON: {existing_json_path}. Will attempt transcription.")
+            # Try to get api_name from the loaded json if not provided
+            if not detected_api and raw_json_data and 'api_name' in raw_json_data:
+                 detected_api = raw_json_data['api_name']
+                 logger.info(f"Detected API '{detected_api}' from existing JSON.")
+
+        # If no suitable JSON found or loading failed, or if forced, transcribe
+        if not raw_json_data:
+            if use_input_json:
+                # This case should ideally not happen if load_json_data worked initially
+                logger.error("Input was JSON but failed to load previously. Cannot transcribe.")
+                return []
+                
+            logger.info(f"No suitable existing JSON found or --force used. Requesting new transcription for: {file_path}")
+            api_instance = get_api_instance(api_name, **kwargs)
+            if not api_instance:
+                 logger.error(f"Could not initialize API: {api_name}. Skipping file.")
+                 return []
+                 
+            transcription_start_time = time.time()
             try:
-                os.remove(processed_file)
+                 raw_json_data = api_instance.transcribe(file_path, **kwargs)
+                 transcription_time = time.time() - transcription_start_time
+                 logger.info(f"API transcription completed in {transcription_time:.2f} seconds.")
+                 
+                 if not raw_json_data:
+                      raise Exception("API returned no data")
+                      
+                 # Save raw API output if desired (optional)
+                 # raw_output_path = file_dir / f"{file_name}_{api_name}_raw.json"
+                 # with open(raw_output_path, 'w', encoding='utf-8') as f:
+                 #    json.dump(raw_json_data, f, indent=2, ensure_ascii=False)
+                 # logger.info(f"Saved raw API output to {raw_output_path}")
+                 
             except Exception as e:
-                logger.warning(f"Failed to remove temporary file: {e}")
-        
-        # Prepare output formats
-        output_formats = kwargs.get("output_formats", ["text", "srt"])
-        if kwargs.get("word_srt", False) and "word_srt" not in output_formats:
-            output_formats.append("word_srt")
-        if kwargs.get("davinci_srt", False) and "davinci_srt" not in output_formats:
-            output_formats.append("davinci_srt")
-        
-        # Create output files
-        created_files = create_output_files(result, file_path, output_formats, **kwargs)
-        logger.info(f"Created output files: {list(created_files.values())}")
-        
-        return True
-    
+                 logger.error(f"API transcription failed for {file_path}: {e}")
+                 return [] # Indicate failure
+
+    # --- At this point, raw_json_data should contain the data --- 
+    if not raw_json_data:
+         logger.error(f"Failed to obtain transcription data for {file_path}. Skipping.")
+         return []
+
+    # 2. Parse Raw Data into Basic Word List (structure + int ms times)
+    try:
+         # If API wasn't known before, try to detect it now from the raw data
+         if not detected_api or detected_api == 'unknown':
+              detected_api, basic_words = detect_and_parse_json(raw_json_data)
+              logger.info(f"Detected API as '{detected_api}' during parsing.")
+         else:
+              # Use the known API parser directly (implement this logic in detect_and_parse_json or here)
+              _, basic_words = detect_and_parse_json(raw_json_data) # Reuse detection logic for now
+              # Alternatively, have specific calls: 
+              # if detected_api == 'assemblyai': basic_words = parse_assemblyai_format(raw_json_data)
+              # etc.
+              
+         if not basic_words:
+             logger.warning(f"Parsing resulted in empty word list for {file_path}. Skipping file.")
+             return []
+             
     except Exception as e:
-        logger.error(f"Error processing file {file_path}: {str(e)}")
-        logger.exception(e)
-        return False
+         logger.error(f"Error parsing raw JSON data for {file_path}: {e}", exc_info=True)
+         return []
+
+    # 3. Standardize Format (Add Spacing, ensure ms format)
+    try:
+        standardize_silent_portions = kwargs.get("silent_portions", 0)
+        standardize_show_pauses = kwargs.get("show_pauses", False) or standardize_silent_portions > 0
+        
+        # Check if we received a TranscriptionResult object or a raw word list
+        if hasattr(basic_words, 'words'):
+            # We have a TranscriptionResult object
+            result_obj = basic_words
+            basic_words_list = result_obj.words
+            logger.debug(f"Received TranscriptionResult object with {len(basic_words_list)} words")
+        else:
+            # We have a raw word list
+            basic_words_list = basic_words
+            logger.debug(f"Received raw word list with {len(basic_words_list)} words")
+        
+        processed_words = standardize_word_format(
+            basic_words_list,
+            show_pauses=standardize_show_pauses,
+            silence_threshold=standardize_silent_portions
+        )
+        logger.debug(f"Standardization complete. Word count: {len(processed_words)}")
+    except Exception as e:
+        logger.error(f"Error standardizing word format for {file_path}: {e}", exc_info=True)
+        return []
+
+    # 4. Save Cleaned JSON (Intermediary Format) if requested
+    cleaned_json_path = None
+    if kwargs.get("save_cleaned_json", False):
+        # Determine output path for cleaned JSON
+        # If input was a JSON, create cleaned path based on that
+        if use_input_json:
+            cleaned_json_path = file_dir / f"{file_name}_cleaned.json"
+        else:
+            # If input was audio, base it on audio name
+             cleaned_json_path = file_dir / f"{file_path.stem}_cleaned.json"
+             
+        logger.info(f"Saving cleaned and standardized JSON to: {cleaned_json_path}")
+        try:
+            # Use a temporary TranscriptionResult object just for saving
+            # This leverages the existing save method with timestamp formatting
+            temp_result = TranscriptionResult(words=processed_words)
+            temp_result.save_words_only(cleaned_json_path)
+        except Exception as e:
+            logger.error(f"Failed to save cleaned JSON to {cleaned_json_path}: {e}")
+            # Continue processing even if saving cleaned JSON fails
+
+    # 5. Apply Post-Processing (Fillers, etc.) to the standardized list
+    words_for_output = processed_words # Start with the standardized list
+    if kwargs.get("remove_fillers", False):
+        try:
+            filler_pause_threshold = kwargs.get("silent_portions", 250) # Use silent_portions as threshold
+            logger.debug(f"Applying filler word removal. Current word count: {len(words_for_output)}")
+            words_for_output = process_filler_words(
+                words_for_output,
+                pause_threshold=filler_pause_threshold,
+                # filler_words=None will use defaults e.g. ["äh", "ähm"]
+            )
+            logger.debug(f"Word count after filler removal: {len(words_for_output)}")
+        except Exception as e:
+            logger.error(f"Error during filler word removal for {file_path}: {e}", exc_info=True)
+            # Decide if we should continue or return []
+            # Let's continue with the words we have so far
+
+    # --- Add other post-processing steps here if needed --- 
+
+    # 6. Generate Final Output Files (TXT, SRT, etc.)
+    output_formats = kwargs.get("output_formats", ["text", "srt"])
+    # Use a temporary result object containing the final processed words for formatters
+    final_result_obj = TranscriptionResult(words=words_for_output, api_name=detected_api)
+    
+    # Add explicit print debugging for first few words
+    print("DEBUG: First 5 words for SRT generation:")
+    for i, word in enumerate(words_for_output[:5]):
+        print(f"Word {i}: {word}")
+    if "spacing" in [w.get("type", "") for w in words_for_output[:10]]:
+        print("DEBUG: Spacing detected in first 10 words")
+    else:
+        print("DEBUG: No spacing detected in first 10 words")
+    
+    # Debug the silentportions parameter
+    silentportions = kwargs.get("silent_portions", 0)
+    print(f"DEBUG: silent_portions parameter value = {silentportions}")
+        
+    try:
+         # Use the original audio path (or input JSON path if used) to base output names
+         output_base_path = file_path if use_input_json else file_path 
+         created_output_files = create_output_files(final_result_obj, output_base_path, output_formats, **kwargs)
+         logger.info(f"Created output files: {list(created_output_files.values())}")
+    except Exception as e:
+         logger.error(f"Error creating output files for {file_path}: {e}", exc_info=True)
+         # Return empty list or partial list depending on desired behavior
+         return [] 
+         
+    return list(created_output_files.values())
 
 
 def process_audio_path(audio_path: str, api_name: str, **kwargs) -> Tuple[int, int]:
@@ -219,7 +303,10 @@ def process_audio_path(audio_path: str, api_name: str, **kwargs) -> Tuple[int, i
         logger.info(f"Processing directory: {audio_path}")
         for root, dirs, files in os.walk(audio_path):
             for file in files:
-                if file.lower().endswith(('.mp3', '.wav', '.ogg', '.mp4', '.flac', '.m4a', '.aac', '.wma')):
+                # Include JSON files if use_json_input is True
+                if kwargs.get("use_json_input", False) and file.lower().endswith(".json"):
+                    files_dict[file] = os.path.join(root, file)
+                elif file.lower().endswith(('.mp3', '.wav', '.ogg', '.mp4', '.flac', '.m4a', '.aac', '.wma')):
                     files_dict[file] = os.path.join(root, file)
     
     # Check if audio_path is a file
@@ -234,7 +321,11 @@ def process_audio_path(audio_path: str, api_name: str, **kwargs) -> Tuple[int, i
         for file_path in glob.glob(audio_path):
             if os.path.isfile(file_path):
                 file_name = os.path.basename(file_path)
-                files_dict[file_name] = file_path
+                # Include JSON files if use_json_input is True
+                if kwargs.get("use_json_input", False) and file_path.lower().endswith(".json"):
+                    files_dict[file_name] = file_path
+                elif file_path.lower().endswith(('.mp3', '.wav', '.ogg', '.mp4', '.flac', '.m4a', '.aac', '.wma')):
+                    files_dict[file_name] = file_path
     
     else:
         logger.error(f"Invalid audio path: {audio_path}")
@@ -376,6 +467,16 @@ def process_audio_path(audio_path: str, api_name: str, **kwargs) -> Tuple[int, i
     help="Force re-transcription even if transcript exists"
 )
 @click.option(
+    "--save-cleaned-json", "-J",
+    is_flag=True,
+    help="Save the cleaned and consistent pre-processed JSON file"
+)
+@click.option(
+    "--use-json-input", "-j",
+    is_flag=True,
+    help="Accept JSON files as input (instead of audio files)"
+)
+@click.option(
     "--debug", "-d",
     is_flag=True,
     help="Enable debug logging"
@@ -409,18 +510,24 @@ def main(
     chunk_length: int,
     overlap: int,
     force: bool,
+    save_cleaned_json: bool,
+    use_json_input: bool,
     debug: bool,
     verbose: bool
 ) -> None:
-    """Transcribe audio files using various APIs with configurable output formats."""
+    """
+    Transcribe audio files using various APIs with options for different output formats.
     
-    # --- .env management ---
+    AUDIO_PATH can be a file, directory, or wildcard pattern.
+    """
+    # Set up logging
+    setup_logger(debug=debug, verbose=verbose)
+    
+    # Load configuration
     load_config_from_multiple_locations()
     new_user = ensure_user_config_directory()
     if new_user:
         logger.info(f"Welcome! Please edit your config at {Path.home() / '.transcribe' / '.env'} to add API keys.")
-    # Setup logger
-    setup_logger(debug, verbose)
     
     # Process DaVinci mode defaults
     if davinci_srt:
@@ -435,23 +542,23 @@ def main(
         if not show_pauses:       # Only set if user didn't explicitly specify
             show_pauses = True
     
-    # Handle "all" output format
+    # Process output formats
     output_formats = list(output)
     if "all" in output_formats:
         output_formats = ["text", "srt", "word_srt", "davinci_srt", "json"]
     
-    # Process files
+    # Start time tracking
     start_time = time.time()
     logger.info(f"Starting transcription with {api.upper()} API")
     
-    # Prepare parameters for process_audio_path
-    params = {
+    # Process the audio file(s)
+    kwargs = {
         "language": language,
         "output_formats": output_formats,
         "chars_per_line": chars_per_line,
         "word_srt": word_srt,
         "davinci_srt": davinci_srt,
-        "silentportions": silent_portions,
+        "silent_portions": silent_portions,
         "padding_start": padding_start,
         "padding_end": padding_end,
         "show_pauses": show_pauses,
@@ -466,15 +573,17 @@ def main(
         "model": model,
         "chunk_length": chunk_length,
         "overlap": overlap,
-        "force": force
+        "force": force,
+        "save_cleaned_json": save_cleaned_json,
+        "use_json_input": use_json_input,
     }
     
-    successful, total = process_audio_path(audio_path, api, **params)
+    successful, total = process_audio_path(audio_path, api, **kwargs)
     
     # Log results
     elapsed_time = time.time() - start_time
     logger.info(f"Transcription completed in {elapsed_time:.2f} seconds")
-    logger.info(f"Successfully processed {successful}/{total} files")
+    logger.info(f"Processed {successful}/{total} files successfully")
     
     if successful != total:
         sys.exit(1)
