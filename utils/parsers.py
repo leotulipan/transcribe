@@ -98,12 +98,21 @@ def parse_assemblyai_format(data: Dict[str, Any]) -> TranscriptionResult:
     
     # Process speaker data
     speakers = []
-    if "speaker_labels" in data and data["speaker_labels"]:
-        speaker_data = data["speaker_labels"].get("speakers", [])
-        for i, speaker in enumerate(speaker_data):
+    if "speaker_labels" in data:
+        speaker_labels = data["speaker_labels"]
+        if isinstance(speaker_labels, dict) and "speakers" in speaker_labels:
+            # Old format where speaker_labels is a dictionary with speakers list
+            speaker_data = speaker_labels.get("speakers", [])
+            for i, speaker in enumerate(speaker_data):
+                speakers.append({
+                    "id": speaker,
+                    "name": f"Speaker {i+1}"
+                })
+        # If speaker_labels is True, but no speaker info, create a default speaker
+        elif speaker_labels is True:
             speakers.append({
-                "id": speaker,
-                "name": f"Speaker {i+1}"
+                "id": "A",
+                "name": "Speaker 1"
             })
     
     return TranscriptionResult(

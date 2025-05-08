@@ -51,24 +51,14 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] Added PyInstaller configuration and build script
   
 - [x] Add back OpenAI official Whisper support based on audio_transcribe.py
+- [x] .env management for new users in user dir
 
 ## In Progress Tasks
 
-- [ ] Add local-whisper/faster-whisper as local transcription option
-
-- [ ] Streamline output formatting options
-  - [ ] Implement standard SRT output format
-  - [ ] Implement word-level SRT output format
-  - [ ] Implement DaVinci SRT output format
-  - [ ] Implement plain text output format
-  - [ ] Refactor timing options (fps, padding) to be more intuitive
-  - [ ] Add format-specific configuration options
-
-- [ ] clean up. remove old unused scripts and util libaries
-
-- [ ] double check language codes work as expected in all apis and if necessary write a converter (ie some api need de for German some deu or de_DE)
 
 ## Future Tasks
+
+- [ ] take a json file directly as input as well
 
 - [ ] Add local-whisper/faster-whisper as local transcription option
 

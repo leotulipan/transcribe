@@ -70,19 +70,19 @@ def check_json_exists(file_path: Union[str, Path], file_name: str) -> Tuple[bool
     Returns:
         Tuple of (exists, json_path)
     """
-    # Check for API-specific JSON files
-    for api_name in ["assemblyai", "elevenlabs", "groq"]:
+    # First check for a generic JSON file (no API suffix)
+    json_path = os.path.join(file_path, f"{file_name}.json")
+    if os.path.exists(json_path):
+        logger.info(f"Found generic JSON file: {json_path}")
+        return True, json_path
+    
+    # Then check for API-specific JSON files
+    for api_name in ["assemblyai", "elevenlabs", "groq", "openai"]:
         json_path = os.path.join(file_path, f"{file_name}_{api_name}.json")
         if os.path.exists(json_path):
             logger.info(f"Found {api_name.capitalize()} JSON file: {json_path}")
             return True, json_path
     
-    # Check for generic JSON as fallback
-    json_path = os.path.join(file_path, f"{file_name}.json")
-    if os.path.exists(json_path):
-        logger.info(f"Found generic JSON file: {json_path}")
-        return True, json_path
-        
     return False, ""
 
 
@@ -103,31 +103,29 @@ def process_file(file_path: Union[str, Path], api_name: str, **kwargs) -> bool:
         file_dir = file_path.parent
         file_name = file_path.stem
         
+        # Always check for existing JSON first, regardless of other factors
+        json_exists, json_path = check_json_exists(file_dir, file_name)
+        if json_exists and not kwargs.get("force", False):
+            logger.info(f"Using existing JSON file: {json_path}")
+            
+            # Parse the JSON file into our standardized format
+            result = load_and_parse_json(json_path)
+            
+            # Create output files based on the existing JSON
+            output_formats = kwargs.get("output_formats", ["text", "srt"])
+            if kwargs.get("word_srt", False) and "word_srt" not in output_formats:
+                output_formats.append("word_srt")
+            if kwargs.get("davinci_srt", False) and "davinci_srt" not in output_formats:
+                output_formats.append("davinci_srt")
+            
+            created_files = create_output_files(result, file_path, output_formats, **kwargs)
+            logger.info(f"Created output files: {list(created_files.values())}")
+            return True
+        
         # Check if transcript already exists
         if check_transcript_exists(file_dir, file_name) and not kwargs.get("force", False):
             logger.info(f"Transcript for {file_name} already exists. Use --force to overwrite.")
-            
-            # Check for existing JSON file
-            json_exists, json_path = check_json_exists(file_dir, file_name)
-            if json_exists:
-                logger.info(f"Using existing JSON file to regenerate outputs.")
-                
-                # Parse the JSON file into our standardized format
-                result = load_and_parse_json(json_path)
-                
-                # Create output files based on the existing JSON
-                output_formats = kwargs.get("output_formats", ["text", "srt"])
-                if kwargs.get("word_srt", False) and "word_srt" not in output_formats:
-                    output_formats.append("word_srt")
-                if kwargs.get("davinci_srt", False) and "davinci_srt" not in output_formats:
-                    output_formats.append("davinci_srt")
-                
-                created_files = create_output_files(result, file_path, output_formats, **kwargs)
-                logger.info(f"Created output files: {list(created_files.values())}")
-                return True
-            else:
-                logger.warning(f"No JSON file found for {file_name}. Cannot regenerate outputs.")
-                return False
+            return False
         
         # Prepare the audio file
         use_input = kwargs.get("use_input", False)
@@ -148,7 +146,9 @@ def process_file(file_path: Union[str, Path], api_name: str, **kwargs) -> bool:
         
         # Check API key
         if not api_instance.check_api_key():
+            config_path = Path.home() / '.transcribe' / '.env'
             logger.error(f"Invalid or missing API key for {api_name}")
+            logger.info(f"Please add your {api_name.upper()} API key to {config_path}")
             return False
         
         # Prepare API-specific parameters
@@ -414,9 +414,11 @@ def main(
 ) -> None:
     """Transcribe audio files using various APIs with configurable output formats."""
     
-    # Load environment variables
-    load_dotenv()
-    
+    # --- .env management ---
+    load_config_from_multiple_locations()
+    new_user = ensure_user_config_directory()
+    if new_user:
+        logger.info(f"Welcome! Please edit your config at {Path.home() / '.transcribe' / '.env'} to add API keys.")
     # Setup logger
     setup_logger(debug, verbose)
     
@@ -476,6 +478,48 @@ def main(
     
     if successful != total:
         sys.exit(1)
+
+
+# --- .env management helpers ---
+def load_config_from_multiple_locations():
+    """
+    Load configuration from multiple locations in priority order:
+    1. Current working directory .env
+    2. User's ~/.transcribe/.env
+    3. User's ~/.env
+    4. Application directory .env
+    Loads only the first found .env file.
+    """
+    if getattr(sys, 'frozen', False):
+        app_dir = Path(sys._MEIPASS)
+    else:
+        app_dir = Path(__file__).parent.absolute()
+    config_locations = [
+        Path.cwd() / '.env',
+        Path.home() / '.transcribe' / '.env',
+        Path.home() / '.env',
+        app_dir / '.env',
+    ]
+    for config_path in config_locations:
+        if config_path.exists():
+            load_dotenv(dotenv_path=config_path, override=True)
+            logger.info(f"Loaded configuration from {config_path}")
+            return True
+    return False
+
+def ensure_user_config_directory():
+    user_config_dir = Path.home() / '.transcribe'
+    user_config_file = user_config_dir / '.env'
+    if not user_config_dir.exists():
+        user_config_dir.mkdir(parents=True)
+        logger.info(f"Created config directory: {user_config_dir}")
+    if not user_config_file.exists():
+        template = """# Transcribe API Configuration\n# Add your API keys below\n\n# AssemblyAI API Key\n# ASSEMBLYAI_API_KEY=your_api_key_here\n\n# ElevenLabs API Key\n# ELEVENLABS_API_KEY=your_api_key_here\n\n# Groq API Key\n# GROQ_API_KEY=your_api_key_here\n\n# OpenAI API Key\n# OPENAI_API_KEY=your_api_key_here\n"""
+        with open(user_config_file, 'w') as f:
+            f.write(template)
+        logger.info(f"Created template config file: {user_config_file}")
+        return True
+    return False
 
 
 if __name__ == "__main__":

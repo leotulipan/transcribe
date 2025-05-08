@@ -4,6 +4,7 @@ Unified transcription API classes for consistent access to various transcription
 import os
 import time
 import json
+import base64
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union, Tuple
@@ -129,13 +130,24 @@ class AssemblyAIAPI(TranscriptionAPI):
         self.api_name = "assemblyai"
         
         if not self.api_key:
+            # Try the new environment variable first
             self.api_key = self.load_from_env("ASSEMBLYAI_API_KEY")
+            
+            # If still not found, try the old environment variable for backward compatibility
+            if not self.api_key:
+                self.api_key = self.load_from_env("ASSEMBLY_AI_KEY")
             
         # Import here to avoid circular imports
         try:
             import assemblyai as aai
             self.aai = aai
-            self.client = aai.Client(api_key=self.api_key) if self.api_key else None
+            
+            # Set the API key in settings instead of creating client
+            if self.api_key:
+                self.aai.settings.api_key = self.api_key
+                self.client = True  # Just a flag to indicate we have a working setup
+            else:
+                self.client = None
         except ImportError:
             logger.error("AssemblyAI package not found. Please install it: uv add assemblyai")
             self.client = None
@@ -151,8 +163,8 @@ class AssemblyAIAPI(TranscriptionAPI):
             return False
             
         try:
-            # Simple check - try to get account info
-            self.client.account.get_information()
+            # Create a transcriber instance to verify API key
+            transcriber = self.aai.Transcriber()
             return True
         except Exception as e:
             logger.error(f"Failed to validate AssemblyAI API key: {str(e)}")
@@ -182,29 +194,38 @@ class AssemblyAIAPI(TranscriptionAPI):
             dual_channel=kwargs.get("dual_channel", False)
         )
         
+        # Convert Path to string if needed
+        if isinstance(audio_path, Path):
+            audio_path = str(audio_path)
+            
         logger.info(f"Transcribing {audio_path} with AssemblyAI")
         
-        # Submit and wait for completion
-        transcript = self.with_retry(
-            self.client.transcribe, 
-            audio_path, 
-            config=config
-        )
+        # Create transcriber
+        transcriber = self.aai.Transcriber()
         
-        logger.info(f"Transcription completed: {transcript.id}")
-        
-        # Convert to standardized format
-        result_dict = transcript.json_response
-        result_dict["api_name"] = self.api_name
-        
-        # Import here to avoid circular imports
-        from utils.parsers import parse_assemblyai_format
-        result = parse_assemblyai_format(result_dict)
-        
-        # Save result
-        self.save_result(result, audio_path)
-        
-        return result
+        # Instead of passing the path directly, manually handle file upload
+        try:
+            with open(audio_path, "rb") as audio_file:
+                # Submit and wait for completion using file content
+                transcript = transcriber.transcribe(audio_file, config=config)
+                
+                logger.info(f"Transcription completed: {transcript.id}")
+                
+                # Convert to standardized format
+                result_dict = transcript.json_response
+                result_dict["api_name"] = self.api_name
+                
+                # Import here to avoid circular imports
+                from utils.parsers import parse_assemblyai_format
+                result = parse_assemblyai_format(result_dict)
+                
+                # Save result
+                self.save_result(result, audio_path)
+                
+                return result
+        except Exception as e:
+            logger.error(f"Failed to transcribe with AssemblyAI: {str(e)}")
+            raise
 
 
 class ElevenLabsAPI(TranscriptionAPI):
@@ -267,6 +288,10 @@ class ElevenLabsAPI(TranscriptionAPI):
         """
         if not self.requests:
             raise ValueError("Requests package not initialized")
+        
+        # Convert Path to string if needed
+        if isinstance(audio_path, Path):
+            audio_path = str(audio_path)
             
         logger.info(f"Transcribing {audio_path} with ElevenLabs")
         
@@ -353,17 +378,24 @@ class GroqAPI(TranscriptionAPI):
                         chunk_start_ms: int = 0, model: str = "whisper-large-v3", 
                         language: Optional[str] = None) -> Tuple[Dict[str, Any], int]:
         """
-        Transcribe an audio chunk using Groq.
+        Transcribe a single audio chunk using Groq.
         
         Args:
-            audio_chunk_path: Path to the audio chunk
-            chunk_start_ms: Start time of the chunk in milliseconds
-            model: Model to use for transcription
+            audio_chunk_path: Path to the audio chunk file
+            chunk_start_ms: Start time of this chunk in milliseconds
+            model: Whisper model to use (default: whisper-large-v3)
             language: Language code (optional)
             
         Returns:
-            Tuple of (result_dict, chunk_start_ms)
+            Tuple of (chunk_result, chunk_start_ms)
         """
+        if not self.client:
+            raise ValueError("Groq client not initialized")
+            
+        # Convert Path to string if needed
+        if isinstance(audio_chunk_path, Path):
+            audio_chunk_path = str(audio_chunk_path)
+            
         logger.info(f"Transcribing chunk starting at {chunk_start_ms}ms with Groq")
         
         # Open the audio file
@@ -378,17 +410,17 @@ class GroqAPI(TranscriptionAPI):
                     ]
                 }
             ]
+        
+        def make_request():
+            completion = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=0.0  # Use 0 temperature for reliable transcription
+            )
+            return completion.choices[0].message.content
             
-            def make_request():
-                completion = self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=0.0  # Use 0 temperature for reliable transcription
-                )
-                return completion.choices[0].message.content
-                
-            response_text = self.with_retry(make_request)
-            
+        response_text = self.with_retry(make_request)
+        
         # Process the response - simple JSON extraction
         result = None
         try:
@@ -576,12 +608,17 @@ class OpenAIAPI(TranscriptionAPI):
         if not self.client:
             raise ValueError("OpenAI client not initialized")
             
+        # Convert Path to string if needed
+        if isinstance(audio_path, Path):
+            audio_path = str(audio_path)
+            
         # Prepare parameters
         model = kwargs.get("model", "whisper-1")
         language = kwargs.get("language")
         response_format = kwargs.get("response_format", "verbose_json")
         
         logger.info(f"Transcribing {audio_path} with OpenAI Whisper")
+        
         audio_file = open(audio_path, "rb")
         
         def make_request():
@@ -604,8 +641,8 @@ class OpenAIAPI(TranscriptionAPI):
             # Parse result
             data = {
                 "text": transcription.text,
-                "language": language or transcription.language,
-                "model": model,
+                "language": transcription.language,
+                "model": transcription.model,
                 "api_name": self.api_name,
             }
             
