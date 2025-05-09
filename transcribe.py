@@ -132,14 +132,39 @@ def process_file(file_path: Union[str, Path], api_name: str, **kwargs) -> List[s
                 return []
                 
             logger.info(f"No suitable existing JSON found or --force used. Requesting new transcription for: {file_path}")
-            api_instance = get_api_instance(api_name, **kwargs)
+            api_instance = get_api_instance(api_name, api_key=kwargs.get('api_key'))
             if not api_instance:
                  logger.error(f"Could not initialize API: {api_name}. Skipping file.")
                  return []
                  
             transcription_start_time = time.time()
             try:
-                 raw_json_data = api_instance.transcribe(file_path, **kwargs)
+                 # Prepare transcription parameters
+                 transcribe_params = {}
+                 
+                 # Add language parameter if provided
+                 if "language" in kwargs and kwargs["language"]:
+                     transcribe_params["language"] = kwargs["language"]
+                     
+                 # Add other API-specific parameters as needed
+                 if api_name == "assemblyai":
+                     if "speaker_labels" in kwargs:
+                         transcribe_params["speaker_labels"] = kwargs["speaker_labels"]
+                     if "dual_channel" in kwargs:
+                         transcribe_params["dual_channel"] = kwargs["dual_channel"]
+                 elif api_name == "groq":
+                     if "model" in kwargs:
+                         transcribe_params["model"] = kwargs["model"]
+                     if "chunk_length" in kwargs:
+                         transcribe_params["chunk_length"] = kwargs["chunk_length"]
+                     if "overlap" in kwargs:
+                         transcribe_params["overlap"] = kwargs["overlap"]
+                 elif api_name == "openai":
+                     if "model" in kwargs:
+                         transcribe_params["model"] = kwargs["model"]
+                 
+                 # Call transcribe with filtered parameters
+                 raw_json_data = api_instance.transcribe(file_path, **transcribe_params)
                  transcription_time = time.time() - transcription_start_time
                  logger.info(f"API transcription completed in {transcription_time:.2f} seconds.")
                  

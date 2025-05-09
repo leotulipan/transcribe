@@ -1,0 +1,11 @@
+---
+description: whenever you want to execute a command on the command line
+globs: 
+alwaysApply: false
+---
+We are on windows with powershell so auto-replace commands you might want to use such as:
+
+`head -20`  => `Get-Content 'FILENAME' -TotalCount 20"`
+`python` => use `uv run` instead
+
+

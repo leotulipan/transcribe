@@ -57,11 +57,19 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [x] take a json file directly as input as well not just a sound file.
   - [x] if it has a api name ie ...-assemblyai.json auto use that json format
   - [x] if not the --api parameter must be present
+- [X] assemblyai error: TypeError: get_api_instance() got an unexpected keyword argument 'language'
 
 ## In Progress Tasks
 
+- [ ] all api, but specifically assemblyai: make sure the resutling _apiname json gets saved at the same path as the source audio/video file
+- [ ] make sure the default is conversion to flac for smaller file sizes and for each API check that we are then below the size limit before sending to api (this of course for all different formats we send. Size limit in TASKS.md)
+- [ ] fix groq json format reading to not generate empty srt e.g. from "G:\Geteilte Ablagen\Podcast\latest_export\CON-41_groq.json" note the special json format that differs from both elevenlabs and assemblyai
 
 ## Future Tasks
+
+- come up with a robust i8n plan for on screen text and error messages
+- all text in an easy definition (external file?) with english as default so we can translate and add an interface language button in the settings
+- a ? icon top right next to settings. a modal with a text loaded from a partial (also ready for translations). modal always shown on first load when nothing is yet in localstorage. explain steps to get started
 
 - [ ] Add local-whisper/faster-whisper as local transcription option
 
@@ -113,3 +121,21 @@ uv run .\transcribe.py --api groq --davinci-srt "path/to/audio.wav"
 ```
 
 All APIs support the same command-line options, with sensible defaults for each API. The tool automatically detects existing transcripts and can regenerate different output formats from existing JSON files.
+
+### API File Size limits
+
+Google Gemini
+Maximum File Size: 50 MB per file when using Gemini 1.5 Flash or other supported versions.
+
+Maximum Audio Duration: 9.5 hours combined across all files in a single request.
+
+OpenAI (Whisper and GPT-4 Audio)
+Whisper: 25 MB per file.
+
+GPT-4 Audio: No specific size limit mentioned in the provided results.
+
+Groq
+Maximum File Size: 25 MB per file (~30 minutes of audio).
+
+AssemblyAI
+File Uploads: Up to 200 MB per file for direct uploads.
