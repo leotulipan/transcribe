@@ -173,6 +173,9 @@ def main():
     # Legacy/compatibility options
     parser.add_argument("-i", "--id", help=argparse.SUPPRESS)  # Hidden option for ID compatibility
     
+    # Add model parameter to argument parser
+    parser.add_argument("-m", "--model", help="Model to use for transcription (default: best). Options: best, default, nano, small, medium, large, auto", default="best")
+
     args = parser.parse_args()
 
     # Handle davinci-srt defaults
@@ -445,9 +448,10 @@ def main():
                 config = aai.TranscriptionConfig(
                     speaker_labels=args.speaker_labels, 
                     format_text=True, 
-                    language_code=args.language,
-                    language_detection=args.language_detection,
-                    speech_model="best"
+                    language_code=args.language if args.language != "en_us" else None,
+                    language_detection=True if args.language == "en_us" or args.language_detection else False,
+                    speech_model=args.model,
+                    disfluencies=True  # Always enable disfluencies
                 )
                 # https://www.assemblyai.com/docs/api-reference/transcripts/submit
                 # speakers_expected

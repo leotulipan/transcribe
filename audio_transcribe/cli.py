@@ -144,10 +144,41 @@ def process_file(file_path: Union[str, Path], api_name: str, **kwargs) -> bool:
         # API-specific parameters
         if api_name == "assemblyai":
             api_params["speaker_labels"] = kwargs.get("speaker_labels", True)
+            
+            # Validate AssemblyAI model
+            valid_assemblyai_models = ["best", "default", "nano", "small", "medium", "large", "auto"]
+            model = kwargs.get("model", "best")
+            if model not in valid_assemblyai_models:
+                logger.warning(f"Invalid AssemblyAI model: {model}, falling back to 'best'")
+                model = "best"
+            api_params["model"] = model
+            
+            # Language detection is true by default, only use specific language if provided
+            if "language" in kwargs and kwargs["language"]:
+                api_params["language"] = kwargs["language"]
+                api_params["language_detection"] = False
+            else:
+                api_params["language_detection"] = True
+            # Always enable disfluencies for AssemblyAI
         elif api_name == "groq":
-            api_params["model"] = kwargs.get("model", "whisper-large-v3")
+            # Validate Groq model
+            valid_groq_models = ["whisper-large-v3", "whisper-medium", "whisper-small"]
+            model = kwargs.get("model", "whisper-large-v3")
+            if model not in valid_groq_models:
+                logger.warning(f"Invalid Groq model: {model}, falling back to 'whisper-large-v3'")
+                model = "whisper-large-v3"
+            api_params["model"] = model
+            
             api_params["chunk_length"] = kwargs.get("chunk_length", 600)
             api_params["overlap"] = kwargs.get("overlap", 10)
+        elif api_name == "openai":
+            # Validate OpenAI model
+            valid_openai_models = ["whisper-1"]
+            model = kwargs.get("model", "whisper-1")
+            if model not in valid_openai_models:
+                logger.warning(f"Invalid OpenAI model: {model}, falling back to 'whisper-1'")
+                model = "whisper-1"
+            api_params["model"] = model
         
         # Transcribe the audio
         result = api_instance.transcribe(processed_file, **api_params)
@@ -339,7 +370,7 @@ def process_audio_path(audio_path: str, api_name: str, **kwargs) -> Tuple[int, i
 )
 @click.option(
     "--model", "-m",
-    help="Model to use for transcription (Groq only)",
+    help="Model to use for transcription. API-specific options: groq=[whisper-large-v3, whisper-medium, whisper-small], assemblyai=[best, default, nano, small, medium, large, auto]",
     default="whisper-large-v3"
 )
 @click.option(

@@ -197,6 +197,18 @@ class AssemblyAIAPI(TranscriptionAPI):
         result_dict = transcript.json_response
         result_dict["api_name"] = self.api_name
         
+        # Save raw JSON response for debugging and reference
+        file_path = Path(audio_path)
+        file_dir = file_path.parent
+        file_name = file_path.stem
+        raw_json_path = file_dir / f"{file_name}.json"
+        try:
+            with open(raw_json_path, 'w', encoding='utf-8') as f:
+                json.dump(result_dict, f, indent=2, ensure_ascii=False)
+            logger.info(f"Saved raw AssemblyAI response to {raw_json_path}")
+        except Exception as save_err:
+            logger.error(f"Failed to save raw AssemblyAI response: {save_err}")
+        
         # Import here to avoid circular imports
         from audio_transcribe.utils.parsers import parse_assemblyai_format
         result = parse_assemblyai_format(result_dict)
@@ -322,6 +334,9 @@ class GroqAPI(TranscriptionAPI):
         # Import here to avoid circular imports
         try:
             from groq import Groq
+            from groq.types.audio import AudioInput
+            self.groq = Groq
+            self.AudioInput = AudioInput
             self.client = Groq(api_key=self.api_key) if self.api_key else None
         except ImportError:
             logger.error("Groq package not found. Please install it: uv add groq")
@@ -338,7 +353,7 @@ class GroqAPI(TranscriptionAPI):
             return False
             
         try:
-            # Simple check - try to list models
+            # Simple test request
             self.client.chat.completions.create(
                 model="llama3-8b-8192",
                 messages=[{"role": "user", "content": "Hello"}],
@@ -349,69 +364,6 @@ class GroqAPI(TranscriptionAPI):
             logger.error(f"Failed to validate Groq API key: {str(e)}")
             return False
             
-    def transcribe_chunk(self, audio_chunk_path: Union[str, Path], 
-                        chunk_start_ms: int = 0, model: str = "whisper-large-v3", 
-                        language: Optional[str] = None) -> Tuple[Dict[str, Any], int]:
-        """
-        Transcribe an audio chunk using Groq.
-        
-        Args:
-            audio_chunk_path: Path to the audio chunk
-            chunk_start_ms: Start time of the chunk in milliseconds
-            model: Model to use for transcription
-            language: Language code (optional)
-            
-        Returns:
-            Tuple of (result_dict, chunk_start_ms)
-        """
-        logger.info(f"Transcribing chunk starting at {chunk_start_ms}ms with Groq")
-        
-        # Open the audio file
-        with open(audio_chunk_path, "rb") as audio_file:
-            # Create a chat completion with the audio file
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": f"Transcribe this audio{' in ' + language if language else ''} with timestamps for every word."},
-                        {"type": "audio", "audio": audio_file}
-                    ]
-                }
-            ]
-            
-            def make_request():
-                completion = self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=0.0  # Use 0 temperature for reliable transcription
-                )
-                return completion.choices[0].message.content
-                
-            response_text = self.with_retry(make_request)
-            
-        # Process the response - simple JSON extraction
-        result = None
-        try:
-            # Find JSON in the response (usually the model returns JSON)
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}')
-            
-            if json_start >= 0 and json_end > json_start:
-                json_str = response_text[json_start:json_end+1]
-                result = json.loads(json_str)
-            else:
-                # If no JSON found, create a basic structure with just the text
-                logger.warning("No JSON found in Groq response, creating basic structure")
-                result = {"text": response_text, "words": []}
-        except Exception as e:
-            logger.error(f"Error parsing Groq response: {str(e)}")
-            result = {"text": response_text, "words": []}
-            
-        # Add API name to the result
-        result["api_name"] = self.api_name
-        
-        return result, chunk_start_ms
-            
     def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
         """
         Transcribe audio file using Groq.
@@ -421,8 +373,6 @@ class GroqAPI(TranscriptionAPI):
             **kwargs: Additional Groq-specific parameters:
                 - language: Language code
                 - model: Model to use (default: whisper-large-v3)
-                - chunk_length: Length of each chunk in seconds (default: 600)
-                - overlap: Overlap between chunks in seconds (default: 10)
                 
         Returns:
             Standardized TranscriptionResult object
@@ -433,89 +383,69 @@ class GroqAPI(TranscriptionAPI):
         # Extract parameters
         language = kwargs.get("language")
         model = kwargs.get("model", "whisper-large-v3")
-        chunk_length = kwargs.get("chunk_length", 600)  # seconds
-        overlap = kwargs.get("overlap", 10)  # seconds
         
         logger.info(f"Transcribing {audio_path} with Groq (model: {model})")
         
-        # Check if we need to chunk the audio
-        from audio_transcribe.transcribe_helpers.audio_processing import check_audio_length
-        audio_duration = check_audio_length(audio_path)
-        
-        if audio_duration <= chunk_length:
-            # Single chunk transcription
-            result_dict, _ = self.transcribe_chunk(audio_path, 0, model, language)
-        else:
-            # Multi-chunk transcription
-            logger.info(f"Audio is {audio_duration}s long, splitting into chunks of {chunk_length}s with {overlap}s overlap")
+        # Open the audio file
+        with open(audio_path, "rb") as audio_file:
+            # Prepare the messages
+            messages = [
+                {
+                    "role": "user", 
+                    "content": [
+                        {"type": "text", "text": f"Transcribe this audio{' in ' + language if language else ''}."},
+                        {"type": "audio", "audio": audio_file}
+                    ]
+                }
+            ]
             
-            # Import chunking functions
-            from audio_transcribe.transcribe_helpers.chunking import split_audio_file
-            from audio_transcribe.transcribe_helpers.text_processing import find_longest_common_sequence
-            
-            # Split audio into chunks
-            chunk_files = split_audio_file(
-                audio_path, 
-                chunk_length=chunk_length, 
-                overlap=overlap
+            # Submit the transcription request
+            response = self.with_retry(
+                self.client.chat.completions.create,
+                model=model,
+                messages=messages,
+                temperature=0
             )
             
-            # Transcribe each chunk
-            results = []
-            for i, (chunk_file, chunk_start_ms) in enumerate(chunk_files):
-                logger.info(f"Transcribing chunk {i+1}/{len(chunk_files)}")
-                chunk_result, _ = self.transcribe_chunk(chunk_file, chunk_start_ms, model, language)
-                results.append((chunk_result, chunk_start_ms))
-                
-            # Merge results
-            def merge_transcripts(results: List[Tuple[Dict[str, Any], int]]) -> Dict[str, Any]:
-                """Merge transcription chunks."""
-                has_words = False
-                words = []
-                
-                for chunk, chunk_start_ms in results:
-                    # Process word timestamps if available
-                    if "words" in chunk and chunk["words"]:
-                        has_words = True
-                        chunk_words = chunk["words"]
-                        for word in chunk_words:
-                            # Adjust word timestamps based on chunk start time
-                            word["start"] = word["start"] + (chunk_start_ms / 1000)
-                            word["end"] = word["end"] + (chunk_start_ms / 1000)
-                        words.extend(chunk_words)
-                
-                # If no words, handle other response formats
-                if not has_words:
-                    texts = []
-                    for chunk, _ in results:
-                        text = chunk.get("text", "")
-                        texts.append(text)
-                    
-                    merged_text = find_longest_common_sequence(texts)
-                    return {"text": merged_text, "api_name": "groq"}
-                
-                # Sort words by start time
-                words.sort(key=lambda x: x["start"])
-                
-                # Create merged text from words
-                text = " ".join(word.get("text", "") for word in words if word.get("type", "") != "spacing")
-                
-                return {
-                    "text": text,
-                    "words": words,
-                    "api_name": "groq"
-                }
-                
-            result_dict = merge_transcripts(results)
-        
-        # Import here to avoid circular imports
-        from audio_transcribe.utils.parsers import parse_groq_format
-        result = parse_groq_format(result_dict)
-        
-        # Save result
-        self.save_result(result, audio_path)
-        
-        return result
+            # Extract the transcription from the response
+            transcription = response.choices[0].message.content
+            
+            # Basic parsing of the response (might be JSON or plain text)
+            try:
+                if transcription.startswith("{") and transcription.endswith("}"):
+                    # Try to parse as JSON
+                    import json
+                    result_dict = json.loads(transcription)
+                else:
+                    # Create a basic structure with just the text
+                    result_dict = {"text": transcription, "words": []}
+            except Exception as e:
+                logger.error(f"Error parsing Groq response: {str(e)}")
+                result_dict = {"text": transcription, "words": []}
+            
+            # Add API name to the response
+            result_dict["api_name"] = self.api_name
+            
+            # Save raw JSON response for debugging and reference
+            file_path = Path(audio_path)
+            file_dir = file_path.parent
+            file_name = file_path.stem
+            raw_json_path = file_dir / f"{file_name}.json"
+            try:
+                with open(raw_json_path, 'w', encoding='utf-8') as f:
+                    json.dump(result_dict, f, indent=2, ensure_ascii=False)
+                logger.info(f"Saved raw Groq response to {raw_json_path}")
+            except Exception as save_err:
+                logger.error(f"Failed to save raw Groq response: {save_err}")
+            
+            # Import here to avoid circular imports
+            from audio_transcribe.utils.parsers import parse_groq_format
+            result = parse_groq_format(result_dict)
+            
+            # Save result
+            self.save_result(result, audio_path)
+            
+            return result
 
 
 def get_api_instance(api_name: str, api_key: Optional[str] = None) -> TranscriptionAPI:

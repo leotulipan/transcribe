@@ -85,19 +85,24 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] if folder given find all audio and video files
   - [x] check the basename (no extension) and keep unique (ie keep the mp4 when also an mp3 exists) always keep the most high quality source
   - [x] loop through all files
+- [x] model selection where apis support different models via cli switch with the current as default
+  - [x] groq (3 whisper models)
+  - [x] assemblyai (nano, ... , best)
+  - [x] groq: whisper-large-v3, whisper-medium, whisper-small
+  - [x] openai: whisper-1
+  - [x] assemblyai: default, nano, small, medium, large, auto
+- [x] assemblyai add api param disfluencies - Transcribe Filler Words, like "umm", in your media file; set to true (Now always enabled by default)
+- [x] assemblyai use language_detection=True as default and only use a specific language if one is specified
+- [x] check for all api's but specifically groq and assemblyai that the source json gets saved use ./test/audio-test.mkv
+- [x] Invalid AssemblyAI model: whisper-large-v3, falling back to 'best': should always default to best for assemblyai and the other models according to each api default
+- [x] check openai and elevenlabs API class to save the raw json
 
 ## In Progress Tasks
 
 
 ## Future Tasks
 
-- [ ] model selection where apis support different models via cli switch with the current as default
-  - [ ] groq (3 whisper models)
-  - [ ] assemblyai (nano, ... , best)
-  - groq: whisper-large-v3, whisper-medium, whisper-small
-- openai: whisper-1
-- assemblyai: default, nano, small, medium, large, auto
-  - [ ] gpt-4o-mini-transcribe and gpt-4o-transcribe as per https://platform.openai.com/docs/guides/speech-to-text but they have a different json format that only includes text and no timings so we cannot save srt (see https://platform.openai.com/docs/api-reference/audio/json-object or ask Context7) transcriptions
+- [ ] gpt-4o-mini-transcribe and gpt-4o-transcribe as per https://platform.openai.com/docs/guides/speech-to-text but they have a different json format that only includes text and no timings so we cannot save srt (see https://platform.openai.com/docs/api-reference/audio/json-object or ask Context7) transcriptions
 - [ ] come up with a robust i8n plan for all messages
 
 
@@ -162,98 +167,4 @@ Output options have been streamlined with sensible defaults while maintaining fl
   - `format_transcript_with_speakers` — Add speaker labels to transcript.
   - `export_subtitles` — Export subtitles via API.
   - `custom_export_subtitles` — Export with custom formatting.
-  - `retime_srt_file` — Retime SRT file for FPS.
-
-- **text_processing.py**
-  - `standardize_word_format` — Normalize word timing/spacing.
-  - `process_filler_words` — Remove/replace filler words.
-  - `merge_consecutive_pauses` — Merge adjacent pauses in SRT.
-  - `find_longest_common_sequence` — Find LCS in sequences.
-  - `segments_to_words` — Convert segments to word list.
-
-- **chunking.py**
-  - `split_audio` — Split audio into chunks with overlap.
-  - `merge_transcripts` — Merge chunked transcript results.
-  - `transcribe_with_chunks` — Transcribe audio in chunks.
-
-- **utils.py**
-  - `setup_logger` — Configure logging.
-  - `in_debug_mode` — Check debug flag.
-  - `check_transcript_exists` — Check if transcript files exist.
-  - `min_timestamp` — Return min of two timestamps.
-  - `max_timestamp` — Return max of two timestamps.
-  - `save_results` — Save results to disk.
-
-
-#### utils/ (core utilities for parsing, formatting, API, etc.)
-
-- **formatters.py**
-  - `create_text_file` — Write plain text transcript from result.
-  - `create_srt_file` — Write SRT file (standard/word/davinci) from result.
-  - `create_output_files` — Generate all requested output files from result.
-
-- **parsers.py**
-  - `TranscriptionResult` (class) — Unified transcript data model.
-    - `to_dict` — Convert to dict.
-    - `to_words_json` — Words as JSON.
-    - `to_json` — Full result as JSON.
-    - `save` — Save as JSON file.
-    - `save_words_only` — Save only words as JSON.
-    - `from_dict`/`from_json`/`from_file` — Load from dict/JSON/file.
-  - `parse_assemblyai_format` — Parse AssemblyAI JSON to result.
-  - `parse_elevenlabs_format` — Parse ElevenLabs JSON to result.
-  - `parse_groq_format` — Parse Groq JSON to result.
-  - `parse_openai_format` — Parse OpenAI JSON to result.
-  - `generate_words_from_text` — Split plain text into word objects.
-  - `detect_and_parse_json` — Auto-detect API and parse JSON.
-  - `load_json_data` — Load JSON from file.
-
-- **transcription_api.py**
-  - `get_api_instance` — Return API handler for given name.
-  - `TranscriptionAPI` (base class) — Unified API interface.
-    - `transcribe` — Transcribe audio file.
-    - `check_api_key` — Validate API key.
-    - `save_result` — Save result to disk.
-    - `with_retry` — Retry wrapper for API calls.
-  - (Subclasses for each API: AssemblyAI, ElevenLabs, Groq, OpenAI)
-    - Each implements `transcribe`, `check_api_key`, etc.
-  - `load_from_env` — Load API key from environment.
-
-
-### How to Use the Unified Tool
-
-The unified tool supports a consistent interface for all APIs:
-
-```bash
-# Basic usage
-uv run .\transcribe.py --api assemblyai "path/to/audio.wav"
-
-# With language selection
-uv run .\transcribe.py --api groq --language de "path/to/audio.wav"
-
-# With custom output formats
-uv run .\transcribe.py --api elevenlabs --output text --output srt --output davinci_srt "path/to/audio.wav"
-
-# With DaVinci Resolve optimized output
-uv run .\transcribe.py --api groq --davinci-srt "path/to/audio.wav"
-```
-
-All APIs support the same command-line options, with sensible defaults for each API. The tool automatically detects existing transcripts and can regenerate different output formats from existing JSON files.
-
-### API File Size limits
-
-Google Gemini
-Maximum File Size: 50 MB per file when using Gemini 1.5 Flash or other supported versions.
-
-Maximum Audio Duration: 9.5 hours combined across all files in a single request.
-
-OpenAI (Whisper and GPT-4 Audio)
-Whisper: 25 MB per file.
-
-GPT-4 Audio: No specific size limit mentioned in the provided results.
-
-Groq
-Maximum File Size: 25 MB per file (~30 minutes of audio).
-
-AssemblyAI
-File Uploads: Up to 200 MB per file for direct uploads.
+  - `

@@ -227,11 +227,11 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                          transcribe_params["speaker_labels"] = kwargs["speaker_labels"]
                      if "dual_channel" in kwargs:
                          transcribe_params["dual_channel"] = kwargs["dual_channel"]
+                     if "model" in kwargs:
+                         transcribe_params["model"] = kwargs["model"]
                  elif api_name == "groq":
                      if "model" in kwargs:
                          transcribe_params["model"] = kwargs["model"]
-                     if "keep_flac" in kwargs:
-                         transcribe_params["keep_flac"] = kwargs["keep_flac"]
                  elif api_name == "openai":
                      if "model" in kwargs:
                          transcribe_params["model"] = kwargs["model"]
@@ -640,7 +640,7 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
 )
 @click.option(
     "--model", "-m",
-    help="Model to use for transcription. API-specific options: groq=[whisper-large-v3, whisper-medium, whisper-small], openai=[whisper-1], assemblyai=[default, nano, small, medium, large, auto]",
+    help="Model to use for transcription. API-specific options: groq=[*whisper-large-v3, whisper-medium, whisper-small], openai=[*whisper-1], assemblyai=[*best, default, nano, small, medium, large, auto]. Use nano for faster processing of short/simple audio.",
     default="whisper-large-v3"
 )
 @click.option(

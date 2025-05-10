@@ -174,15 +174,44 @@ class AssemblyAIAPI(TranscriptionAPI):
         """
         Transcribe audio file using AssemblyAI.
         Returns the raw JSON response data as a dictionary, or None on failure.
+        
+        Args:
+            audio_path: Path to the audio file
+            **kwargs: Additional AssemblyAI-specific parameters:
+                - language: Language code
+                - speaker_labels: Enable speaker diarization
+                - dual_channel: Enable dual channel transcription
+                - model: Speech model to use (default, nano, small, medium, large, auto, best)
+                
+        Returns:
+            Raw JSON response as dictionary, or None on failure
         """
         if not self.client:
             raise ValueError("AssemblyAI client not initialized")
+        
+        # Get the speech model from kwargs, default to "best"
+        speech_model = kwargs.get("model", "best")
+        
+        # Validate the model
+        valid_models = ["default", "nano", "small", "medium", "large", "auto", "best"]
+        if speech_model not in valid_models:
+            logger.warning(f"Invalid AssemblyAI model: {speech_model}, falling back to 'best'")
+            speech_model = "best"
             
+        logger.info(f"Using AssemblyAI model: {speech_model}")
+        
+        # Check if a language is specified
+        language_code = kwargs.get("language")
+        language_detection = True if language_code is None else False
+        
         # Prepare transcription config
         config = self.aai.TranscriptionConfig(
-            language_code=kwargs.get("language", "en"),
+            language_code=language_code,
+            language_detection=language_detection,
             speaker_labels=kwargs.get("speaker_labels", True),
-            dual_channel=kwargs.get("dual_channel", False)
+            dual_channel=kwargs.get("dual_channel", False),
+            speech_model=speech_model,
+            disfluencies=True  # Always enable disfluencies
         )
         
         # Convert Path to string if needed
@@ -205,8 +234,16 @@ class AssemblyAIAPI(TranscriptionAPI):
                 # Return the raw JSON response
                 result_dict = transcript.json_response
                 
-                # Optionally save the raw response (can be useful for debugging)
-                # self.save_raw_result(result_dict, audio_path)
+                # Save the raw response for debugging and reference
+                file_dir = os.path.dirname(audio_path) if isinstance(audio_path, str) else audio_path.parent
+                file_name = os.path.splitext(os.path.basename(audio_path))[0] if isinstance(audio_path, str) else audio_path.stem
+                raw_json_path = os.path.join(file_dir, f"{file_name}.json") 
+                try:
+                    with open(raw_json_path, 'w', encoding='utf-8') as f:
+                        json.dump(result_dict, f, indent=2, ensure_ascii=False)
+                    logger.info(f"Saved raw AssemblyAI response to {raw_json_path}")
+                except Exception as save_err:
+                    logger.error(f"Failed to save raw AssemblyAI response: {save_err}")
                 
                 return result_dict
         except Exception as e:
@@ -509,11 +546,16 @@ class GroqAPI(TranscriptionAPI):
             # Add API name to the response
             result_dict["api_name"] = self.api_name
             
-            # Save raw result (can be useful for debugging)
-            # file_dir = os.path.dirname(audio_path)
-            # file_name = os.path.splitext(os.path.basename(audio_path))[0]
-            # with open(f"{file_dir}/{file_name}_groq_raw.json", 'w') as f:
-            #     json.dump(result_dict, f, indent=2)
+            # Save raw result for debugging and reference
+            file_dir = os.path.dirname(audio_path) if isinstance(audio_path, str) else audio_path.parent
+            file_name = os.path.splitext(os.path.basename(audio_path))[0] if isinstance(audio_path, str) else audio_path.stem
+            raw_json_path = os.path.join(file_dir, f"{file_name}.json")
+            try:
+                with open(raw_json_path, 'w', encoding='utf-8') as f:
+                    json.dump(result_dict, f, indent=2, ensure_ascii=False)
+                logger.info(f"Saved raw Groq response to {raw_json_path}")
+            except Exception as save_err:
+                logger.error(f"Failed to save raw Groq response: {save_err}")
             
             # Import here to avoid circular imports
             from utils.parsers import parse_groq_format

@@ -19,6 +19,7 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - Silent portion detection
   - Timing adjustments (paddings and FPS-based)
   - Filler word removal
+  - Multiple model options per API (from fast/lightweight to accurate/comprehensive)
 - File and directory processing:
   - Process single files or entire directories
   - Intelligent file selection when multiple formats exist
@@ -92,6 +93,28 @@ transcribe --file path/to/audio.wav --api elevenlabs --output text --output srt 
 transcribe --file path/to/audio.wav --api groq --davinci-srt
 ```
 
+### Using Different AssemblyAI Models
+
+AssemblyAI offers several models with different speed/accuracy tradeoffs:
+
+```bash
+# Fast transcription with lightweight model (good for short, clear audio)
+transcribe --file path/to/short_meeting.mp3 --api assemblyai --model nano
+
+# Default model for high-quality transcription (recommended for most uses)
+transcribe --file path/to/important_interview.mp3 --api assemblyai --model best
+
+# Medium-sized model (balanced speed and accuracy)
+transcribe --file path/to/conference_call.mp3 --api assemblyai --model medium
+```
+
+Model options:
+- `best` (default): Highest quality transcription, recommended for most use cases
+- `nano`: Fastest processing, good for short/simple audio with minimal background noise
+- `small`, `medium`, `large`: Different size models with increasing accuracy but longer processing time
+- `auto`: Automatic model selection based on audio characteristics
+- `default`: Original AssemblyAI model (not recommended for new projects)
+
 ### All Options
 
 ```
@@ -141,10 +164,11 @@ Options:
   --keep-flac                     Keep the generated FLAC file after
                                   processing
   -m, --model TEXT                Model to use for transcription. API-specific
-                                  options: groq=[whisper-large-v3, whisper-
-                                  medium, whisper-small], openai=[whisper-1],
-                                  assemblyai=[default, nano, small, medium,
-                                  large, auto]
+                                  options: groq=[*whisper-large-v3, whisper-
+                                  medium, whisper-small], openai=[*whisper-1],
+                                  assemblyai=[*best, default, nano, small, medium,
+                                  large, auto]. Use nano for faster processing
+                                  of short/simple audio.
   --chunk-length INTEGER          Length of each chunk in seconds for long
                                   audio (default: 600 seconds / 10 minutes)
   --overlap INTEGER               Overlap between chunks in seconds (default:
@@ -170,6 +194,12 @@ ELEVENLABS_API_KEY=your_elevenlabs_key
 GROQ_API_KEY=your_groq_key
 OPENAI_API_KEY=your_openai_key
 ```
+
+### AssemblyAI Specific Features
+
+- **Filler words (disfluencies)** like "um", "uh", etc. are always transcribed
+- **Language detection** is enabled by default unless a specific language is provided
+- **Speaker diarization** can be enabled/disabled with the `--speaker-labels/--no-speaker-labels` option
 
 ## License
 
