@@ -57,15 +57,29 @@ from transcribe_helpers.chunking import split_audio, transcribe_with_chunks
 # from utils.file_utils import check_json_exists # Example
 
 def check_json_exists(file_dir, file_name, api_name):
-    # Placeholder implementation
+    """
+    Check if JSON transcript files already exist for a given file.
+    
+    Args:
+        file_dir: Directory containing the file
+        file_name: Base name of the file without extension
+        api_name: API name to check for specific JSON format
+        
+    Returns:
+        Tuple of (exists, path) where exists is a boolean and path is the path to the JSON file
+    """
+    file_dir = Path(file_dir)
     api_json_path = file_dir / f"{file_name}_{api_name}.json"
     generic_json_path = file_dir / f"{file_name}.json"
+    
     if api_json_path.exists():
         logger.info(f"Found API specific JSON: {api_json_path}")
         return True, api_json_path
+    
     if generic_json_path.exists():
         logger.info(f"Found generic JSON: {generic_json_path}")
         return True, generic_json_path
+    
     return False, None
 
 def check_transcript_exists(file_path: Union[str, Path], file_name: str) -> bool:
@@ -228,7 +242,17 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                      if "dual_channel" in kwargs:
                          transcribe_params["dual_channel"] = kwargs["dual_channel"]
                      if "model" in kwargs:
-                         transcribe_params["model"] = kwargs["model"]
+                         model_value = kwargs["model"]
+                         # AssemblyAI models: best, default, nano, small, medium, large, auto
+                         valid_models = ["best", "default", "nano", "small", "medium", "large", "auto"]
+                         if model_value not in valid_models:
+                             logger.warning(f"Invalid AssemblyAI model: {model_value}, falling back to 'best'")
+                             transcribe_params["model"] = "best"
+                         else:
+                             transcribe_params["model"] = model_value
+                     else:
+                         # Default to 'best' for AssemblyAI
+                         transcribe_params["model"] = "best"
                  elif api_name == "groq":
                      if "model" in kwargs:
                          transcribe_params["model"] = kwargs["model"]
@@ -239,6 +263,9 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                          transcribe_params["keep_flac"] = kwargs["keep_flac"]
                      # Pass original file path for saving output to correct location
                      transcribe_params["original_path"] = original_file_path
+                 elif api_name == "elevenlabs":
+                     if "model" in kwargs:
+                         transcribe_params["model"] = kwargs["model"]
                  
                  # If chunking is needed, use the appropriate method
                  if needs_chunking:
@@ -266,6 +293,7 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                      # This is already a TranscriptionResult object - use it directly
                      result_obj = api_result
                      basic_words = result_obj.words
+                     raw_json_data = result_obj.to_dict()  # Convert to dict for saving
                      logger.debug(f"Received TranscriptionResult object from API")
                  else:
                      # It's a raw dictionary - needs to be parsed
@@ -273,6 +301,20 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                      if not raw_json_data:
                          raise Exception("API returned no data")
                  
+                 # Save the raw API response as JSON
+                 if raw_json_data:
+                     api_specific_json_path = file_dir / f"{file_name}_{api_name}.json"
+                     try:
+                         # Ensure raw_json_data includes the API name for future reference
+                         if isinstance(raw_json_data, dict) and 'api_name' not in raw_json_data:
+                             raw_json_data['api_name'] = api_name
+                         
+                         with open(api_specific_json_path, 'w') as f:
+                             json.dump(raw_json_data, f, indent=2)
+                         logger.info(f"Saved raw API response to {api_specific_json_path}")
+                         created_output_files.append(str(api_specific_json_path))
+                     except Exception as e:
+                         logger.error(f"Failed to save raw API response: {e}")
             except Exception as e:
                  logger.error(f"API transcription failed for {file_path}: {e}")
                  # Clean up converted file if we created one
@@ -400,7 +442,7 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
          logger.error(f"Error creating output files for {file_path}: {e}", exc_info=True)
          # Return empty list or partial list depending on desired behavior
          return [] 
-         
+
     return created_output_files
 
 def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
@@ -640,8 +682,8 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
 )
 @click.option(
     "--model", "-m",
-    help="Model to use for transcription. API-specific options: groq=[*whisper-large-v3, whisper-medium, whisper-small], openai=[*whisper-1], assemblyai=[*best, default, nano, small, medium, large, auto]. Use nano for faster processing of short/simple audio.",
-    default="whisper-large-v3"
+    help="Model to use for transcription. API-specific defaults: groq=whisper-large-v3, openai=whisper-1, assemblyai=best. Valid options: groq=[whisper-large-v3, whisper-medium, whisper-small], openai=[whisper-1], assemblyai=[best, default, nano, small, medium, large, auto].",
+    default=None  # Default will be handled per-API
 )
 @click.option(
     "--chunk-length",
