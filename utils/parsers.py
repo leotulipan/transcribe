@@ -59,7 +59,7 @@ class TranscriptionResult:
     
     def __init__(self, text: str = "", confidence: float = 0.0, language: str = "en",
                 words: List[Dict[str, Any]] = None, speakers: List[Dict[str, Any]] = None,
-                api_name: str = "unknown"):
+                segments: List[Dict[str, Any]] = None, api_name: str = "unknown"):
         """
         Initialize a TranscriptionResult.
         
@@ -69,6 +69,7 @@ class TranscriptionResult:
             language: Language code (ISO-639-1 or ISO-639-3)
             words: List of word dictionaries with timing info
             speakers: List of speaker dictionaries with identification info
+            segments: List of segment dictionaries with timing info
             api_name: Name of the API used for transcription
         """
         self.text = text
@@ -76,6 +77,7 @@ class TranscriptionResult:
         self.language = language
         self.words = words or []
         self.speakers = speakers or []
+        self.segments = segments or []
         self.api_name = api_name
         
     def to_dict(self) -> Dict[str, Any]:
@@ -86,7 +88,8 @@ class TranscriptionResult:
             "language": self.language,
             "api_name": self.api_name,
             "words": self.words,
-            "speakers": self.speakers
+            "speakers": self.speakers,
+            "segments": self.segments
         }
     
     def to_words_json(self, indent: int = 2) -> str:
@@ -139,6 +142,7 @@ class TranscriptionResult:
             "language": self.language,
             "words": self.words,
             "speakers": self.speakers,
+            "segments": self.segments,
             "api_name": self.api_name
         }
         
@@ -179,8 +183,9 @@ class TranscriptionResult:
                             word_items = list(word_copy.items())
                             for j, (k, v) in enumerate(word_items):
                                 if k in ["start", "end"] and isinstance(v, (int, float)):
-                                    # Format floating point numbers with fixed precision
-                                    yield f'      "{k}": {v}'
+                                    # Format floating point numbers with fixed precision (3 decimal places)
+                                    # This preserves millisecond precision in timestamps
+                                    yield f'      "{k}": {format(v, ".3f")}'
                                 else:
                                     # Use standard JSON encoding for other fields
                                     yield f'      "{k}": '
@@ -207,7 +212,7 @@ class TranscriptionResult:
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
                 # Use our custom encoder
-                logger.debug(f"Saving transcription result with custom JSON encoder to prevent scientific notation")
+                logger.debug(f"Saving transcription result with custom JSON encoder to preserve decimal precision")
                 for chunk in CustomJSONEncoder(ensure_ascii=False, indent=2).iterencode(data):
                     f.write(chunk)
         except Exception as e:
@@ -229,7 +234,7 @@ class TranscriptionResult:
                 def iterencode(self, obj, **kwargs):
                     if isinstance(obj, list) and obj == self.words:
                         # Start the words array
-                        yield "[\n"
+                        yield "{\n  \"value\": [\n"
                         
                         for i, word in enumerate(obj):
                             word_copy = word.copy()
@@ -238,16 +243,17 @@ class TranscriptionResult:
                             if "speaker_id" in word_copy and (word_copy["speaker_id"] is None or word_copy["speaker_id"] == "Unknown"):
                                 word_copy["speaker_id"] = ""
                             
-                            yield "  {\n"
+                            yield "    {\n"
                             
                             word_items = list(word_copy.items())
                             for j, (k, v) in enumerate(word_items):
                                 if k in ["start", "end"] and isinstance(v, (int, float)):
                                     # Format floating point numbers with fixed precision to avoid scientific notation
-                                    yield f'    "{k}": {v}'
+                                    # Keep decimal places for all timestamps to preserve precision
+                                    yield f'      "{k}": {format(v, ".3f")}'
                                 else:
                                     # Use standard JSON encoding for other fields
-                                    yield f'    "{k}": '
+                                    yield f'      "{k}": '
                                     yield from super().iterencode(v)
                                 
                                 if j < len(word_items) - 1:
@@ -256,12 +262,12 @@ class TranscriptionResult:
                                     yield "\n"
                             
                             if i < len(obj) - 1:
-                                yield "  },\n"
+                                yield "    },\n"
                             else:
-                                yield "  }\n"
+                                yield "    }\n"
                         
                         # Close the array
-                        yield "]"
+                        yield "  ],\n  \"Count\": " + str(len(obj)) + "\n}"
                     else:
                         # For non-words lists, use standard encoding
                         yield from super().iterencode(obj)
@@ -287,6 +293,7 @@ class TranscriptionResult:
             language=data.get("language", "en"),
             words=data.get("words", []),
             speakers=data.get("speakers", []),
+            segments=data.get("segments", []),
             api_name=data.get("api_name", "unknown")
         )
     
@@ -384,6 +391,7 @@ def parse_assemblyai_format(data: Dict[str, Any]) -> TranscriptionResult:
         language=language,
         words=words,
         speakers=[],
+        segments=[],
         api_name='assemblyai'
     )
 
@@ -449,51 +457,125 @@ def parse_elevenlabs_format(data: Dict[str, Any]) -> TranscriptionResult:
 def parse_groq_format(data: Dict[str, Any]) -> TranscriptionResult:
     """
     Parse Groq transcription data into standardized format.
+    If 'words' is empty but 'text' is present, generate word-level timings.
     
-    Args:
-        data: Groq response JSON data
-        
-    Returns:
-        Standardized TranscriptionResult object
+    Handles Groq's specific format with S.ms timestamps (e.g., 0.0, 0.5 seconds).
     """
     logger.debug("Parsing Groq format")
-    
-    # Extract text and basic metadata
     text = data.get("text", "")
     language = data.get("language", "")
+    raw_words = data.get("words", [])
+
+    # Fallback: generate word timings if missing
+    if (not raw_words or len(raw_words) == 0) and text:
+        logger.info("Generating words from text content since words array is empty")
+        tokens = text.split()
+        fake_duration = 0.5  # seconds per word
+        raw_words = []
+        for i, token in enumerate(tokens):
+            start_time = i * fake_duration
+            end_time = start_time + fake_duration
+            raw_words.append({
+                "text": token,
+                "start": start_time,
+                "end": end_time,
+                "confidence": 0.9  # Fake confidence score
+            })
+
+    # Process word list to handle Groq's unique S.ms format
+    words_with_spacing = []
     
-    # Process words data - Groq times are in seconds
-    words = []
-    if "words" in data and data["words"]:
-        # Ensure we're getting a proper list of word objects
-        for word_data in data["words"]:
-            # Make sure each word has the necessary fields
-            if isinstance(word_data, dict) and "text" in word_data:
-                words.append({
-                    "text": word_data.get("text", ""),
-                    "start": word_data.get("start", 0),
-                    "end": word_data.get("end", 0),
-                    "type": word_data.get("type", "word")
-                })
-    else:
-        # If no words data but text is available, generate simple word objects
-        if text:
-            logger.info("Generating words from text content since words array is empty")
-            words = generate_words_from_text(text)
-        else:
-            logger.warning("No words data found in Groq format and no text available")
+    # Sort words by start time to ensure correct order
+    raw_words = sorted(raw_words, key=lambda w: float(w.get('start', 0)))
     
-    # Groq currently doesn't provide speaker data
-    speakers = []
+    # Debugging info
+    logger.debug(f"Processing {len(raw_words)} words from Groq format")
+    if raw_words and len(raw_words) > 0:
+        logger.debug(f"First word: {raw_words[0]}")
     
-    return TranscriptionResult(
+    # Process words to add spacing elements and preserve decimal precision
+    prev_end = None
+    for i, word in enumerate(raw_words):
+        word_text = word.get('text', '')
+        
+        # Handle Groq's S.ms format (seconds) 
+        # Ensure we keep the decimal precision by using float
+        start = float(word.get('start', 0))
+        end = float(word.get('end', 0))
+        
+        # Add initial spacing if needed (for first word)
+        if i == 0 and start > 0.01:  # More than 10ms from start
+            spacing_text = " (...) " if start > 0.5 else " "
+            spacing = {
+                "text": spacing_text,
+                "start": 0.0,  # Explicitly use 0.0 to keep decimal
+                "end": start,   # Preserve original decimal precision
+                "type": "spacing"
+            }
+            words_with_spacing.append(spacing)
+            logger.debug(f"Added initial spacing: 0.0s to {start:.3f}s")
+        
+        # Add spacing between words if needed
+        elif prev_end is not None and start > prev_end + 0.01:  # Gap larger than 10ms
+            spacing_duration = start - prev_end
+            spacing_text = " (...) " if spacing_duration > 0.5 else " "
+            
+            spacing = {
+                "text": spacing_text,
+                "start": prev_end,  # Preserve decimal precision
+                "end": start,       # Preserve decimal precision 
+                "type": "spacing"
+            }
+            words_with_spacing.append(spacing)
+            logger.debug(f"Added spacing between words: {prev_end:.3f}s to {start:.3f}s ({spacing_duration:.3f}s)")
+        
+        # Convert the word and add it to the result with preserved decimal precision
+        word_obj = {
+            "text": word_text,
+            "start": start,  # Keep original float value with decimal precision
+            "end": end,      # Keep original float value with decimal precision
+            "confidence": float(word.get("confidence", 0.9)),
+            "type": "word"
+        }
+        words_with_spacing.append(word_obj)
+        prev_end = end
+    
+    # Check if we added spacing elements
+    word_count = sum(1 for w in words_with_spacing if w.get('type') == 'word')
+    spacing_count = sum(1 for w in words_with_spacing if w.get('type') == 'spacing')
+    logger.debug(f"Final result: {word_count} words and {spacing_count} spacing elements")
+    
+    # Create segments from words if needed
+    segments = data.get("segments", [])
+    if not segments and words_with_spacing:
+        # Only use word elements (not spacing) for segment creation
+        word_items = [w for w in words_with_spacing if w.get('type') == 'word']
+        word_groups = [word_items[i:i + 10] for i in range(0, len(word_items), 10)]
+        segments = []
+        
+        for i, group in enumerate(word_groups):
+            if not group:
+                continue
+                
+            segment_text = " ".join(word.get("text", "") for word in group)
+            segment = {
+                "id": i,
+                "start": group[0].get("start", 0),
+                "end": group[-1].get("end", 0),
+                "text": segment_text
+            }
+            segments.append(segment)
+    
+    # Create result
+    result = TranscriptionResult(
         text=text,
-        words=words,
         language=language,
-        api_name="groq",
-        speaker_count=0,
-        speakers=speakers
+        words=words_with_spacing,
+        segments=segments,
+        api_name=data.get("api_name", "groq")
     )
+    
+    return result
 
 
 def parse_openai_format(data: Dict[str, Any]) -> TranscriptionResult:
@@ -615,13 +697,12 @@ def detect_and_parse_json(data: Dict[str, Any]) -> Tuple[str, Union[List[Dict[st
         detected_api = api_name
         if api_name == "assemblyai":
             result = parse_assemblyai_format(data)
-        # ... Add elif blocks for other APIs calling their respective parsers ...
-        # elif api_name == "elevenlabs":
-        #     result = parse_elevenlabs_format(data) 
-        # elif api_name == "groq":
-        #     result = parse_groq_format(data)
-        # elif api_name == "openai":
-        #     result = parse_openai_format(data)
+        elif api_name == "elevenlabs":
+            result = parse_elevenlabs_format(data) 
+        elif api_name == "groq":
+            result = parse_groq_format(data)
+        elif api_name == "openai":
+            result = parse_openai_format(data)
         else:
              logger.warning(f"API name '{api_name}' found but no specific parser implemented.")
              # Fallback to generic detection or text generation if possible
@@ -647,17 +728,20 @@ def detect_and_parse_json(data: Dict[str, Any]) -> Tuple[str, Union[List[Dict[st
         if "audio_url" in data or "status" in data and "words" in data:
             detected_api = "assemblyai"
             result = parse_assemblyai_format(data)
-        # ... Add elif blocks for other APIs ...
-        # elif "words" in data and any(word.get("type") == "spacing" for word in data.get("words", [])):
-        #     detected_api = "elevenlabs"
-        #     result = parse_elevenlabs_format(data) 
-        # elif "model" in data and data.get("model", "").startswith("whisper-"):
-        #     detected_api = "openai"
-        #     result = parse_openai_format(data)
-        # elif "text" in data and "words" in data:
-        #     # This is a bit generic, assume Groq or handle later
-        #     detected_api = "groq" 
-        #     result = parse_groq_format(data)
+        elif "words" in data and any(word.get("type") == "spacing" for word in data.get("words", [])):
+            detected_api = "elevenlabs"
+            result = parse_elevenlabs_format(data) 
+        elif "model" in data and data.get("model", "").startswith("whisper-"):
+            detected_api = "openai"
+            result = parse_openai_format(data)
+        elif "segments" in data and any("no_speech_prob" in segment for segment in data.get("segments", [])):
+            # Groq uses segments with no_speech_prob from Whisper
+            detected_api = "groq" 
+            result = parse_groq_format(data)
+        elif "text" in data and "words" in data and all(isinstance(w.get("confidence", 0), (int, float)) for w in data.get("words", [])[:5]):
+            # This matches Groq's simple word format with 0.5s intervals
+            detected_api = "groq" 
+            result = parse_groq_format(data)
         else:
             # Fallback if detection fails
             text = data.get("text", "")

@@ -44,7 +44,7 @@ except ImportError:
 
 # Import helpers
 from transcribe_helpers.audio_processing import (
-    check_audio_length, check_audio_format, convert_to_flac, convert_to_pcm
+    check_audio_length, check_audio_format, convert_to_flac, convert_to_pcm, get_api_file_size_limit, check_file_size
 )
 from transcribe_helpers.utils import setup_logger
 from utils.formatters import create_output_files
@@ -130,7 +130,16 @@ def process_file(file_path: Union[str, Path], api_name: str, **kwargs) -> List[s
                 # This case should ideally not happen if load_json_data worked initially
                 logger.error("Input was JSON but failed to load previously. Cannot transcribe.")
                 return []
-                
+
+            # --- File size check before upload ---
+            size_limit_mb = get_api_file_size_limit(api_name)
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+            if file_size_mb > size_limit_mb:
+                logger.error(f"File size ({file_size_mb:.2f}MB) exceeds {size_limit_mb}MB limit for {api_name} API. Aborting.")
+                return []
+            if file_size_mb > 0.9 * size_limit_mb:
+                logger.warning(f"File size ({file_size_mb:.2f}MB) is close to the {size_limit_mb}MB limit for {api_name} API.")
+
             logger.info(f"No suitable existing JSON found or --force used. Requesting new transcription for: {file_path}")
             api_instance = get_api_instance(api_name, api_key=kwargs.get('api_key'))
             if not api_instance:

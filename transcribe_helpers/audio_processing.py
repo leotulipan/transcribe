@@ -6,8 +6,9 @@ import tempfile
 import subprocess
 import base64
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union, Optional, List, Dict, Any, Tuple
 from pydub import AudioSegment
+from loguru import logger
 
 # Try to import loguru, fallback to our mock implementation
 try:
@@ -65,33 +66,59 @@ def check_audio_format(audio: AudioSegment, file_extension: str = None) -> bool:
             audio.sample_width == 2)
 
 
-def convert_to_flac(input_file: Union[str, Path]) -> Path:
+def convert_to_flac(input_path: Union[str, Path], sample_rate: int = 16000) -> Optional[str]:
     """
-    Convert audio/video file to FLAC format (mono, 16-bit, 16kHz).
+    Convert audio file to 16kHz mono FLAC format for API processing.
     
     Args:
-        input_file: Path to input audio/video file
+        input_path: Path to input audio/video file
+        sample_rate: Target sample rate (16kHz for most speech APIs)
         
     Returns:
-        Path to converted FLAC file
-    
-    From: elevenlabs - Convert audio to mono FLAC
+        Path to converted FLAC file or None if conversion failed
     """
-    logger.info(f"Converting {input_file} to FLAC format...")
-    audio = AudioSegment.from_file(input_file)
-    # Convert to mono
-    audio = audio.set_channels(1)
-    # Set sample rate to 16kHz
-    audio = audio.set_frame_rate(16000)
-    # Set sample width to 2 bytes (16-bit)
-    audio = audio.set_sample_width(2)
+    if isinstance(input_path, str):
+        input_path = Path(input_path)
+        
+    # If already a FLAC file, just return the path
+    if input_path.suffix.lower() == '.flac':
+        logger.info(f"File is already in FLAC format: {input_path}")
+        return str(input_path)
+        
+    # Create a temporary file with .flac extension
+    with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
+        output_path = temp_file.name
+        
+    logger.info(f"Converting {input_path} to 16kHz mono FLAC...")
     
-    # Create output filename
-    output_file = os.path.splitext(input_file)[0] + "_converted.flac"
-    # Export as FLAC
-    audio.export(output_file, format="flac")
-    logger.info(f"FLAC conversion completed: {output_file}")
-    return Path(output_file)
+    try:
+        # Use FFmpeg for conversion
+        subprocess.run([
+            'ffmpeg',
+            '-hide_banner',
+            '-loglevel', 'error',
+            '-i', str(input_path),
+            '-ar', str(sample_rate),  # 16kHz sample rate
+            '-ac', '1',               # Mono channel
+            '-c:a', 'flac',           # FLAC codec
+            '-y',                     # Overwrite if exists
+            output_path
+        ], check=True, capture_output=True)
+        
+        logger.info(f"Converted to FLAC: {output_path}")
+        return output_path
+        
+    except subprocess.CalledProcessError as e:
+        logger.error(f"FFmpeg conversion failed: {e.stderr}")
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error converting to FLAC: {str(e)}")
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+        return None
 
 
 def convert_to_pcm(input_file: Union[str, Path]) -> Path:
@@ -230,3 +257,19 @@ def audio_to_base64(file_path: Union[str, Path]) -> str:
             return base64.b64encode(audio_file.read()).decode('utf-8')
     except Exception as e:
         raise RuntimeError(f"Failed to convert audio to base64: {e}")
+
+
+def get_api_file_size_limit(api_name: str) -> int:
+    """
+    Return the max file size in MB for the given API.
+    """
+    api_name = api_name.lower()
+    if api_name == "assemblyai":
+        return 200
+    if api_name == "groq":
+        return 25
+    if api_name == "openai":
+        return 25
+    if api_name == "elevenlabs":
+        return 100
+    return 1000  # fallback

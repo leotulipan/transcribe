@@ -58,12 +58,24 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] if it has a api name ie ...-assemblyai.json auto use that json format
   - [x] if not the --api parameter must be present
 - [X] assemblyai error: TypeError: get_api_instance() got an unexpected keyword argument 'language'
+- [x] all api, but specifically assemblyai: make sure the resutling _apiname json gets saved at the same path as the source audio/video file
+- [x] make sure the default is conversion to flac for smaller file sizes and for each API check that we are then below the size limit before sending to api (this of course for all different formats we send. Size limit in TASKS.md)
+- [x] fix groq json format reading to not generate empty srt e.g. from test\audio-test.mkv - note the special json format that differs from both elevenlabs and assemblyai
+- [x] Re-implement proper Groq API usage for transcription
+  - [x] Add chunking and FLAC conversion from groq_audio_chunking_adapted.py
+  - [x] Use audio.transcriptions API endpoint rather than chat completions
+  - [x] Handle long audio files by splitting into chunks
+  - [x] Merge transcription chunks properly with timestamp adjustment
+  - [x] run the file test\audio-test.mkv with groq and check the resulting json and srt for completeness
+- [x] Add all APIs: file size limits to check before uploading, with logger.error message (assemblyai: 200MB, groq: 25MB, elevenlabs: 100MB, ...)
+- [x] Properly handle Groq's decimal seconds format (S.ms) in timestamp processing for SRT generation
 
 ## In Progress Tasks
 
-- [ ] all api, but specifically assemblyai: make sure the resutling _apiname json gets saved at the same path as the source audio/video file
-- [ ] make sure the default is conversion to flac for smaller file sizes and for each API check that we are then below the size limit before sending to api (this of course for all different formats we send. Size limit in TASKS.md)
-- [ ] fix groq json format reading to not generate empty srt e.g. from "G:\Geteilte Ablagen\Podcast\latest_export\CON-41_groq.json" note the special json format that differs from both elevenlabs and assemblyai
+- [x] run `uv run .\transcribe.py --api groq -d -v --use-input ".\test\audio-test.mkv" --save-cleaned-json --word-srt`
+  - [x] check that the resulting srt is word based and not just one subtitle
+    - [x] Word-level SRT generation is implemented in create_srt() with srt_mode="word" but should output a srt as if normal subtitle (not .word.srt)
+  - [x] check that the resulting txt file is not empty, but includes the full words "Wir testen nun das Audio Transkript und ob die Textdatei korrekt angelegt wird"
 
 ## Future Tasks
 

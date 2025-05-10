@@ -22,17 +22,17 @@ except ImportError:
 def standardize_word_format(basic_words: List[Dict[str, Any]], 
                             show_pauses: bool = False, silence_threshold: int = 250) -> List[Dict[str, Any]]:
     """
-    Takes a basic list of word dicts (with integer ms times) and adds 
+    Takes a basic list of word dicts (with integer ms times or float second times) and adds 
     spacing elements between words and at the start if necessary.
     Also identifies words that are just spaces.
     
     Args:
-        basic_words: List of word dictionaries from a basic parser (int ms times).
+        basic_words: List of word dictionaries from a basic parser (int ms or float second times).
         show_pauses: Whether to add "(...)" text for significant pauses.
         silence_threshold: Minimum ms duration for a gap to be marked as a pause.
         
     Returns:
-        Standardized list including word and spacing elements (int ms times).
+        Standardized list including word and spacing elements with preserved timestamps.
     """
     standardized = []
     
@@ -41,12 +41,33 @@ def standardize_word_format(basic_words: List[Dict[str, Any]],
         
     logger.debug(f"Standardizing {len(basic_words)} basic words into intermediary format.")
 
-    # Ensure input times are integers
+    # Check if we're dealing with decimal seconds (Groq format) or ms integers
+    is_decimal_format = False
+    if basic_words and len(basic_words) > 0:
+        # Check first few words to see if they use decimal seconds format
+        for w in basic_words[:3]:
+            start_val = w.get('start', 0)
+            end_val = w.get('end', 0)
+            # If values are floats with decimal parts, likely using seconds format
+            if (isinstance(start_val, float) and start_val != int(start_val)) or \
+               (isinstance(end_val, float) and end_val != int(end_val)):
+                is_decimal_format = True
+                break
+
+    # Process words based on format
     words = []
     for w in basic_words:
         w_copy = w.copy()
-        w_copy['start'] = int(round(w_copy.get('start', 0)))
-        w_copy['end'] = int(round(w_copy.get('end', 0)))
+        
+        if is_decimal_format:
+            # For decimal seconds format (Groq), preserve exact float values
+            w_copy['start'] = float(w_copy.get('start', 0))
+            w_copy['end'] = float(w_copy.get('end', 0))
+        else:
+            # For integer ms format (AssemblyAI, ElevenLabs), round to integers
+            w_copy['start'] = int(round(w_copy.get('start', 0)))
+            w_copy['end'] = int(round(w_copy.get('end', 0)))
+            
         # Mark words that are actually spaces
         if w_copy.get('text', "").strip() == "":
             w_copy['type'] = "spacing"
@@ -55,14 +76,17 @@ def standardize_word_format(basic_words: List[Dict[str, Any]],
         words.append(w_copy)
         
     # Add initial spacing if the first element isn't spacing and doesn't start at 0
-    if words[0]['type'] != 'spacing' and words[0]['start'] > 0:
+    start_threshold = 0.01 if is_decimal_format else 1  # 10ms for decimal seconds, 1ms for integers
+    silence_threshold_adj = silence_threshold / 1000 if is_decimal_format else silence_threshold  # Convert to seconds if needed
+    
+    if words[0]['type'] != 'spacing' and words[0]['start'] > start_threshold:
         pause_text = " "
-        if show_pauses and words[0]['start'] > silence_threshold:
+        if show_pauses and words[0]['start'] > silence_threshold_adj:
             pause_text = " (...) "
             
         standardized.append({
             'text': pause_text,
-            'start': 0,
+            'start': 0.0 if is_decimal_format else 0,
             'end': words[0]['start'],
             'type': 'spacing',
             'speaker_id': words[0].get('speaker_id', '')
@@ -77,9 +101,9 @@ def standardize_word_format(basic_words: List[Dict[str, Any]],
             next_word = words[i+1]
             gap = next_word['start'] - word['end']
             
-            if gap > 0:
+            if gap > start_threshold:
                 pause_text = " "
-                if show_pauses and gap > silence_threshold:
+                if show_pauses and gap > silence_threshold_adj:
                     pause_text = " (...) "
                 
                 standardized.append({
@@ -90,7 +114,7 @@ def standardize_word_format(basic_words: List[Dict[str, Any]],
                     # Inherit speaker from the preceding word for the gap
                     'speaker_id': word.get('speaker_id', '') 
                 })
-            elif gap < 0:
+            elif gap < -start_threshold:
                  logger.warning(f"Overlap detected between word {i} ({word.get('text')}) and word {i+1} ({next_word.get('text')}). Start/End: {word['end']} / {next_word['start']}")
 
     logger.debug(f"Standardized to {len(standardized)} elements (words and spaces)")

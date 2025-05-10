@@ -25,6 +25,27 @@ def create_text_file(result: TranscriptionResult, output_file: Union[str, Path])
     # Extract words and build text
     text = result.text
     
+    # If text is empty but we have words, build the text from the words array
+    if not text.strip() and result.words:
+        text = ""
+        for word in result.words:
+            if word.get('type') == 'spacing':
+                # Add space or pause indicator
+                if "(...)" in word.get('text', ''):
+                    text += " (...) "
+                else:
+                    text += " "
+            else:
+                # Add word text
+                word_text = word.get('word', word.get('text', ''))
+                if word_text:
+                    # Avoid double spaces
+                    if text and not text.endswith(" ") and not text.endswith("(...) "):
+                        text += " "
+                    text += word_text
+        # Trim any extra spaces
+        text = text.strip()
+    
     # Write to file
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(text)
@@ -145,6 +166,9 @@ def create_output_files(result: TranscriptionResult, audio_path: Union[str, Path
     
     created_files = {}
     
+    # Check if the CLI flag --word-srt was used (stored as a boolean in kwargs)
+    word_srt_flag = kwargs.get("word_srt", False)
+    
     for format_type in format_types:
         if format_type == "text":
             output_file = file_dir / f"{file_name}.txt"
@@ -153,10 +177,14 @@ def create_output_files(result: TranscriptionResult, audio_path: Union[str, Path
         
         elif format_type == "srt":
             output_file = file_dir / f"{file_name}.srt"
-            # Pass both parameter names for backward compatibility
-            create_srt_file(result, output_file, "standard", 
-                           silentportions=silent_portions, 
-                           **kwargs)
+            # If word_srt flag is True, create word-level SRT but save as normal .srt
+            if word_srt_flag:
+                create_srt_file(result, output_file, "word", **kwargs)
+            else:
+                # Pass both parameter names for backward compatibility
+                create_srt_file(result, output_file, "standard", 
+                               silentportions=silent_portions, 
+                               **kwargs)
             created_files["srt"] = str(output_file)
         
         elif format_type == "word_srt":

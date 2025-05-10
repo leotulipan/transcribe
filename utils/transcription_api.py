@@ -365,7 +365,7 @@ class GroqAPI(TranscriptionAPI):
                         chunk_start_ms: int = 0, model: str = "whisper-large-v3", 
                         language: Optional[str] = None) -> Tuple[Dict[str, Any], int]:
         """
-        Transcribe a single audio chunk using Groq.
+        Transcribe a single audio chunk using Groq's audio transcriptions API.
         
         Args:
             audio_chunk_path: Path to the audio chunk file
@@ -385,55 +385,43 @@ class GroqAPI(TranscriptionAPI):
             
         logger.info(f"Transcribing chunk starting at {chunk_start_ms}ms with Groq")
         
-        # Open the audio file
+        # Open the file in binary mode
         with open(audio_chunk_path, "rb") as audio_file:
-            # Create a chat completion with the audio file
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": f"Transcribe this audio{' in ' + language if language else ''} with timestamps for every word."},
-                        {"type": "audio", "audio": audio_file}
-                    ]
-                }
-            ]
-        
-        def make_request():
-            completion = self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=0.0  # Use 0 temperature for reliable transcription
-            )
-            return completion.choices[0].message.content
+            try:
+                # Use the audio.transcriptions.create endpoint
+                # Pass the file directly as a tuple (filename, fileobj, content_type)
+                start_time = time.time()
+                result = self.client.audio.transcriptions.create(
+                    file=("chunk.flac", audio_file, "audio/flac"),
+                    model=model,
+                    language=language,
+                    response_format="verbose_json",
+                    temperature=0,  # For best transcription quality
+                    timestamp_granularities=["segment"]  # Get segment-level timestamps
+                )
+                transcription_time = time.time() - start_time
+                logger.info(f"Chunk processed in {transcription_time:.2f}s")
+                
+                # Extract data from the result
+                if hasattr(result, 'model_dump'):
+                    # Handle Pydantic model response (newer Groq SDK)
+                    data = result.model_dump()
+                else:
+                    # Handle dict-like response
+                    data = dict(result)
+                
+                # Add API name to the result dict
+                data["api_name"] = self.api_name
+                
+                return data, chunk_start_ms
+                
+            except Exception as e:
+                logger.error(f"Error transcribing chunk with Groq: {str(e)}")
+                raise
             
-        response_text = self.with_retry(make_request)
-        
-        # Process the response - simple JSON extraction
-        result = None
-        try:
-            # Find JSON in the response (usually the model returns JSON)
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}')
-            
-            if json_start >= 0 and json_end > json_start:
-                json_str = response_text[json_start:json_end+1]
-                result = json.loads(json_str)
-            else:
-                # If no JSON found, create a basic structure with just the text
-                logger.warning("No JSON found in Groq response, creating basic structure")
-                result = {"text": response_text, "words": []}
-        except Exception as e:
-            logger.error(f"Error parsing Groq response: {str(e)}")
-            result = {"text": response_text, "words": []}
-            
-        # Add API name to the result
-        result["api_name"] = self.api_name
-        
-        return result, chunk_start_ms
-            
-    def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
+    def transcribe(self, audio_path: Union[str, Path], **kwargs) -> Optional[Dict[str, Any]]:
         """
-        Transcribe audio file using Groq.
+        Transcribe audio file using Groq with proper chunking for long files.
         
         Args:
             audio_path: Path to the audio file
@@ -444,7 +432,7 @@ class GroqAPI(TranscriptionAPI):
                 - overlap: Overlap between chunks in seconds (default: 10)
                 
         Returns:
-            Standardized TranscriptionResult object
+            Dictionary with transcription results
         """
         if not self.client:
             raise ValueError("Groq client not initialized")
@@ -455,86 +443,169 @@ class GroqAPI(TranscriptionAPI):
         chunk_length = kwargs.get("chunk_length", 600)  # seconds
         overlap = kwargs.get("overlap", 10)  # seconds
         
+        # Convert Path to string if needed
+        if isinstance(audio_path, Path):
+            audio_path = str(audio_path)
+        
         logger.info(f"Transcribing {audio_path} with Groq (model: {model})")
         
-        # Check if we need to chunk the audio
-        from transcribe_helpers.audio_processing import check_audio_length
-        audio_duration = check_audio_length(audio_path)
-        
-        if audio_duration <= chunk_length:
-            # Single chunk transcription
-            result_dict, _ = self.transcribe_chunk(audio_path, 0, model, language)
-        else:
-            # Multi-chunk transcription
-            logger.info(f"Audio is {audio_duration}s long, splitting into chunks of {chunk_length}s with {overlap}s overlap")
+        # Step 1: Convert to FLAC (always needed for Groq)
+        from transcribe_helpers.audio_processing import convert_to_flac
+        flac_path = convert_to_flac(audio_path)
+        if not flac_path or not os.path.exists(flac_path):
+            logger.error(f"Failed to convert audio to FLAC: {audio_path}")
+            return None
             
-            # Import chunking functions
-            from transcribe_helpers.chunking import split_audio_file
-            from transcribe_helpers.text_processing import find_longest_common_sequence
+        try:
+            # Step 2: Check if we need to chunk the audio
+            from pydub import AudioSegment
+            audio = AudioSegment.from_file(flac_path)
+            duration = len(audio)  # Duration in milliseconds
+            logger.info(f"Audio duration: {duration/1000:.2f} seconds")
             
-            # Split audio into chunks
-            chunk_files = split_audio_file(
-                audio_path, 
-                chunk_length=chunk_length, 
-                overlap=overlap
-            )
-            
-            # Transcribe each chunk
-            results = []
-            for i, (chunk_file, chunk_start_ms) in enumerate(chunk_files):
-                logger.info(f"Transcribing chunk {i+1}/{len(chunk_files)}")
-                chunk_result, _ = self.transcribe_chunk(chunk_file, chunk_start_ms, model, language)
-                results.append((chunk_result, chunk_start_ms))
+            # If audio is short enough, transcribe in a single request
+            if duration <= chunk_length * 1000:
+                logger.info("Audio is short enough for single transcription request")
+                result_dict, _ = self.transcribe_chunk(flac_path, 0, model, language)
                 
-            # Merge results
-            def merge_transcripts(results: List[Tuple[Dict[str, Any], int]]) -> Dict[str, Any]:
-                """Merge transcription chunks."""
-                has_words = False
-                words = []
+            else:
+                # Step 3: Split audio into chunks and transcribe each
+                logger.info(f"Audio is {duration/1000:.2f}s long, splitting into chunks of {chunk_length}s with {overlap}s overlap")
                 
-                for chunk, chunk_start_ms in results:
-                    # Process word timestamps if available
-                    if "words" in chunk and chunk["words"]:
-                        has_words = True
-                        chunk_words = chunk["words"]
-                        for word in chunk_words:
-                            # Adjust word timestamps based on chunk start time
-                            word["start"] = word["start"] + (chunk_start_ms / 1000)
-                            word["end"] = word["end"] + (chunk_start_ms / 1000)
-                        words.extend(chunk_words)
+                chunk_ms = chunk_length * 1000
+                overlap_ms = overlap * 1000
+                total_chunks = (duration // (chunk_ms - overlap_ms)) + 1
                 
-                # If no words, handle other response formats
-                if not has_words:
-                    texts = []
-                    for chunk, _ in results:
-                        text = chunk.get("text", "")
-                        texts.append(text)
+                results = []
+                
+                for i in range(total_chunks):
+                    start = i * (chunk_ms - overlap_ms)
+                    end = min(start + chunk_ms, duration)
                     
-                    merged_text = find_longest_common_sequence(texts)
-                    return {"text": merged_text, "api_name": "groq"}
+                    logger.info(f"Processing chunk {i+1}/{total_chunks} ({start/1000:.1f}s - {end/1000:.1f}s)")
+                    
+                    # Extract chunk
+                    chunk = audio[start:end]
+                    
+                    # Save chunk to temporary file
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
+                        chunk_path = temp_file.name
+                        
+                    chunk.export(chunk_path, format='flac')
+                    
+                    # Transcribe chunk
+                    try:
+                        result, _ = self.transcribe_chunk(chunk_path, start, model, language)
+                        results.append((result, start))
+                    finally:
+                        # Clean up temp file
+                        if os.path.exists(chunk_path):
+                            os.unlink(chunk_path)
                 
-                # Sort words by start time
-                words.sort(key=lambda x: x["start"])
+                # Step 4: Merge chunks
+                result_dict = self._merge_transcripts(results, overlap)
                 
-                # Create merged text from words
-                text = " ".join(word.get("text", "") for word in words if word.get("type", "") != "spacing")
-                
-                return {
-                    "text": text,
-                    "words": words,
-                    "api_name": "groq"
-                }
-                
-            result_dict = merge_transcripts(results)
+            # Add API name to the response
+            result_dict["api_name"] = self.api_name
+            
+            # Save raw result (can be useful for debugging)
+            # file_dir = os.path.dirname(audio_path)
+            # file_name = os.path.splitext(os.path.basename(audio_path))[0]
+            # with open(f"{file_dir}/{file_name}_groq_raw.json", 'w') as f:
+            #     json.dump(result_dict, f, indent=2)
+            
+            # Import here to avoid circular imports
+            from utils.parsers import parse_groq_format
+            result = parse_groq_format(result_dict)
+            
+            # Save result
+            result_path = self.save_result(result, audio_path)
+            logger.info(f"Saved Groq transcription to {result_path}")
+            
+            return result_dict
+            
+        except Exception as e:
+            logger.error(f"Error transcribing with Groq: {str(e)}")
+            return None
+        finally:
+            # Clean up temporary FLAC file
+            keep_flac = kwargs.get("keep_flac", False)
+            if not keep_flac and flac_path and os.path.exists(flac_path) and os.path.basename(flac_path) != os.path.basename(audio_path):
+                try:
+                    os.unlink(flac_path)
+                except:
+                    pass
+    
+    def _merge_transcripts(self, results: List[Tuple[Dict[str, Any], int]], overlap: int = 10) -> Dict[str, Any]:
+        """
+        Merge transcription chunks, handling word-level timestamps.
         
-        # Import here to avoid circular imports
-        from utils.parsers import parse_groq_format
-        result = parse_groq_format(result_dict)
+        Args:
+            results: List of (result, start_time_ms) tuples
+            overlap: Overlap between chunks in seconds
+            
+        Returns:
+            Merged transcription result
+        """
+        logger.info("Merging transcription chunks")
         
-        # Save result
-        self.save_result(result, audio_path)
+        # Initialize merged result
+        merged_segments = []
+        all_words = []
         
-        return result
+        # Process each chunk's segments and adjust timestamps
+        overlap_sec = overlap  # Convert overlap to seconds
+        
+        for i, (chunk, chunk_start_ms) in enumerate(results):
+            # Extract segments and words if available
+            segments = chunk.get('segments', [])
+            words = chunk.get('words', [])
+            
+            # Convert chunk_start_ms to seconds for timestamp adjustment
+            chunk_start_sec = chunk_start_ms / 1000.0
+            
+            # Adjust segment timestamps
+            for segment in segments:
+                adjusted_segment = segment.copy()
+                # For chunks after the first one, adjust by considering overlap
+                if i > 0:
+                    adjusted_segment['start'] = segment.get('start', 0) + chunk_start_sec - (i * overlap_sec)
+                    adjusted_segment['end'] = segment.get('end', 0) + chunk_start_sec - (i * overlap_sec)
+                else:
+                    adjusted_segment['start'] = segment.get('start', 0) + chunk_start_sec
+                    adjusted_segment['end'] = segment.get('end', 0) + chunk_start_sec
+                merged_segments.append(adjusted_segment)
+            
+            # Adjust word timestamps
+            adjusted_words = []
+            for word in words:
+                adjusted_word = word.copy()
+                # For chunks after the first one, adjust by considering overlap
+                if i > 0:
+                    adjusted_word['start'] = word.get('start', 0) + chunk_start_sec - (i * overlap_sec)
+                    adjusted_word['end'] = word.get('end', 0) + chunk_start_sec - (i * overlap_sec)
+                else:
+                    adjusted_word['start'] = word.get('start', 0) + chunk_start_sec
+                    adjusted_word['end'] = word.get('end', 0) + chunk_start_sec
+                adjusted_words.append(adjusted_word)
+            
+            all_words.extend(adjusted_words)
+        
+        # Sort words and segments by start time
+        all_words.sort(key=lambda x: x.get('start', 0))
+        merged_segments.sort(key=lambda x: x.get('start', 0))
+        
+        # Create final text from words (ensures proper ordering)
+        full_text = " ".join(word.get('text', '') for word in all_words 
+                           if word.get('type', '') != 'spacing')
+        
+        return {
+            "text": full_text,
+            "segments": merged_segments,
+            "words": all_words,
+            "api_name": "groq"
+        }
 
 
 class OpenAIAPI(TranscriptionAPI):

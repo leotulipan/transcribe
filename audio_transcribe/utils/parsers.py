@@ -151,25 +151,30 @@ def parse_elevenlabs_format(data: Dict[str, Any]) -> TranscriptionResult:
 def parse_groq_format(data: Dict[str, Any]) -> TranscriptionResult:
     """
     Parse Groq transcription data into standardized format.
-    
-    Args:
-        data: Groq response JSON data
-        
-    Returns:
-        Standardized TranscriptionResult object
+    If 'words' is empty but 'text' is present, generate word-level timings.
     """
     logger.debug("Parsing Groq format")
-    
-    # Extract text and basic metadata
     text = data.get("text", "")
     language = data.get("language", "")
-    
-    # Process words data - Groq times are in seconds
     words = data.get("words", [])
-    
-    # Groq currently doesn't provide speaker data
+
+    # Fallback: generate word timings if missing
+    if (not words or len(words) == 0) and text:
+        logger.info("Groq JSON missing 'words', generating timings from text")
+        tokens = text.split()
+        fake_duration = 0.5  # seconds per word
+        words = []
+        for i, token in enumerate(tokens):
+            start = i * fake_duration
+            end = start + fake_duration
+            words.append({
+                "text": token,
+                "start": start,
+                "end": end,
+                "type": "word"
+            })
+
     speakers = []
-    
     return TranscriptionResult(
         text=text,
         words=words,
