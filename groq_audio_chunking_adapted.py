@@ -439,13 +439,14 @@ def save_results(result: dict, audio_path: Path) -> Path:
         IOError: If saving results fails
     """
     try:
+        # Save to transcriptions folder
         output_dir = Path("transcriptions")
         output_dir.mkdir(exist_ok=True)
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         base_path = output_dir / f"{Path(audio_path).stem}_{timestamp}"
         
-        # Save results in different formats
+        # Save results in different formats in transcriptions folder
         with open(f"{base_path}.{args.language}.txt", 'w', encoding='utf-8') as f:
             f.write(result["text"])
         
@@ -455,14 +456,29 @@ def save_results(result: dict, audio_path: Path) -> Path:
         with open(f"{base_path}_segments.{args.language}.json", 'w', encoding='utf-8') as f:
             json.dump(result["segments"], f, indent=2, ensure_ascii=False)
         
-        # Convert to SRT format
+        # Convert to SRT format in transcriptions folder
         convert_to_srt(result, base_path)
+        
+        # Also save TXT and SRT files in source directory
+        source_dir = audio_path.parent
+        source_base = source_dir / audio_path.stem
+        
+        # Save results in source directory
+        with open(f"{source_base}.{args.language}.txt", 'w', encoding='utf-8') as f:
+            f.write(result["text"])
+            
+        # Convert to SRT format in source directory
+        convert_to_srt(result, source_base)
         
         print(f"\nResults saved to transcriptions folder:")
         print(f"- {base_path}.{args.language}.txt")
         print(f"- {base_path}_full.{args.language}.json")
         print(f"- {base_path}_segments.{args.language}.json")
         print(f"- {base_path}.{args.language}.srt")
+        
+        print(f"\nResults also saved in source directory:")
+        print(f"- {source_base}.{args.language}.txt")
+        print(f"- {source_base}.{args.language}.srt")
         
         return base_path
     
@@ -551,6 +567,7 @@ def convert_segments_to_srt(segments_path: Path, language: str = "en") -> None:
         language: Language code for the output filename
     """
     try:
+        original_path = segments_path
         # If the input path is not a segments file, try to find it
         if not str(segments_path).endswith(f"_segments.{language}.json"):
             # Try to find the segments file in the transcriptions directory
@@ -594,6 +611,20 @@ def convert_segments_to_srt(segments_path: Path, language: str = "en") -> None:
         # Use the same directory as the segments file
         output_path = segments_path.parent / segments_path.stem.replace("_segments", "")
         convert_to_srt(result, output_path)
+        
+        # Also save to source directory if different from segments directory
+        source_dir = original_path.parent
+        source_base = source_dir / original_path.stem
+        
+        # Only save to source directory if it's different from where the segments file is
+        if str(source_dir) != str(segments_path.parent):
+            convert_to_srt(result, source_base)
+            print(f"SRT file also saved to: {source_base}.srt")
+            
+            # Save text file too
+            with open(f"{source_base}.{language}.txt", 'w', encoding='utf-8') as f:
+                f.write(result["text"])
+            print(f"Text file also saved to: {source_base}.{language}.txt")
         
     except Exception as e:
         print(f"Error converting segments to SRT: {str(e)}")

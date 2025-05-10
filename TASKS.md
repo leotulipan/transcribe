@@ -69,19 +69,40 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] run the file test\audio-test.mkv with groq and check the resulting json and srt for completeness
 - [x] Add all APIs: file size limits to check before uploading, with logger.error message (assemblyai: 200MB, groq: 25MB, elevenlabs: 100MB, ...)
 - [x] Properly handle Groq's decimal seconds format (S.ms) in timestamp processing for SRT generation
-
-## In Progress Tasks
-
 - [x] run `uv run .\transcribe.py --api groq -d -v --use-input ".\test\audio-test.mkv" --save-cleaned-json --word-srt`
   - [x] check that the resulting srt is word based and not just one subtitle
     - [x] Word-level SRT generation is implemented in create_srt() with srt_mode="word" but should output a srt as if normal subtitle (not .word.srt)
   - [x] check that the resulting txt file is not empty, but includes the full words "Wir testen nun das Audio Transkript und ob die Textdatei korrekt angelegt wird"
+- [x] make OPENAI implementation for whisper work and saving of cleaned json and proper std name (not test\audio-test_openai_raw.json)
+- [x] GROQ forgot/doesnt do FLAC conversion and chunking in default call: Fix: "File size (346.55MB) exceeds 25MB limit for groq API. Aborting"
+- [x] implement proper chunking for each api with file sizes < 300mb; The proper sequence should be:
+      Load the audio file
+      Convert to FLAC (which usually results in smaller file size)
+      Check if the FLAC file size is over the limit
+      If still too large, use chunking
+- [x] change file parameter cli to not be positional but e.g -f --filename
+- [x] support a folder as parameter instead of just one file -F --folder
+  - [x] if folder given find all audio and video files
+  - [x] check the basename (no extension) and keep unique (ie keep the mp4 when also an mp3 exists) always keep the most high quality source
+  - [x] loop through all files
+
+## In Progress Tasks
+
 
 ## Future Tasks
 
-- come up with a robust i8n plan for on screen text and error messages
-- all text in an easy definition (external file?) with english as default so we can translate and add an interface language button in the settings
-- a ? icon top right next to settings. a modal with a text loaded from a partial (also ready for translations). modal always shown on first load when nothing is yet in localstorage. explain steps to get started
+- [ ] model selection where apis support different models via cli switch with the current as default
+  - [ ] groq (3 whisper models)
+  - [ ] assemblyai (nano, ... , best)
+  - groq: whisper-large-v3, whisper-medium, whisper-small
+- openai: whisper-1
+- assemblyai: default, nano, small, medium, large, auto
+  - [ ] gpt-4o-mini-transcribe and gpt-4o-transcribe as per https://platform.openai.com/docs/guides/speech-to-text but they have a different json format that only includes text and no timings so we cannot save srt (see https://platform.openai.com/docs/api-reference/audio/json-object or ask Context7) transcriptions
+- [ ] come up with a robust i8n plan for all messages
+
+
+- [ ] all text in an easy definition (external file?) with english as default so we can translate and add an interface language button in the settings
+
 
 - [ ] Add local-whisper/faster-whisper as local transcription option
 
@@ -105,14 +126,99 @@ Output options have been streamlined with sensible defaults while maintaining fl
 
 ### Relevant Files
 
-- ✅ `transcribe.py` - Main entry point (implemented)
-- ✅ `assemblyai_transcribe.py` - AssemblyAI implementation (existing)
-- ✅ `elevenlabs_transcribe.py` - ElevenLabs implementation (existing)
-- ✅ `groq_transcribe.py` - Groq implementation (existing)
-- ✅ `utils/parsers.py` - JSON parsing utilities (implemented)
-- ✅ `utils/formatters.py` - Output formatting utilities (implemented)
-- ✅ `utils/transcription_api.py` - Unified API classes (implemented)
-- ✅ `utils/__init__.py` - Utils package initialization (implemented)
+- `transcribe.py` - Main entry point (new central script)
+- `audio_transcribe_assemblyai.py` - AssemblyAI previous implementation (existing)
+- `audio_transcribe_elevenlabs.py` - ElevenLabs implementation (existing)
+- `audio_transcribe_groq.py` - Groq implementation (existing)
+- `audio_transcribe.py` - OpenAI Whisper implementation (existing)
+
+#### transcribe_helpers/ (package: all helpers auto-imported)
+
+- **audio_processing.py**
+  - `check_audio_length` — Check if audio duration is within max length.
+  - `check_audio_format` — Validate audio file format.
+  - `convert_to_flac` — Convert audio to FLAC.
+  - `convert_to_pcm` — Convert audio to PCM WAV.
+  - `check_file_size` — Check if file size is under API limit.
+  - `preprocess_audio` — Preprocess audio for transcription.
+  - `preprocess_audio_with_ffmpeg` — Preprocess audio using ffmpeg.
+  - `audio_to_base64` — Encode audio file as base64.
+  - `get_api_file_size_limit` — Return max file size for given API.
+
+- **output_formatters.py**
+  - `format_time` — Format seconds to SRT time.
+  - `format_time_ms` — Format ms to SRT time.
+  - `retime_subtitles_fps` — Adjust timings for frame-based SRT.
+  - `format_timedelta` — Format timedelta for SRT.
+  - `create_srt` — Main SRT creation (standard/word/davinci).
+  - `apply_intelligent_padding` — Add padding to word timings.
+  - `process_davinci_block` — Write DaVinci SRT block.
+  - `create_standard_srt` — Write standard SRT.
+  - `create_word_level_srt` — Write word-per-line SRT.
+  - `create_davinci_srt` — Write DaVinci-optimized SRT.
+  - `create_text_file` — Write plain text transcript.
+  - `convert_to_srt` — Convert Groq JSON to SRT.
+  - `split_text_into_chunks` — Split text for SRT lines.
+  - `format_transcript_with_speakers` — Add speaker labels to transcript.
+  - `export_subtitles` — Export subtitles via API.
+  - `custom_export_subtitles` — Export with custom formatting.
+  - `retime_srt_file` — Retime SRT file for FPS.
+
+- **text_processing.py**
+  - `standardize_word_format` — Normalize word timing/spacing.
+  - `process_filler_words` — Remove/replace filler words.
+  - `merge_consecutive_pauses` — Merge adjacent pauses in SRT.
+  - `find_longest_common_sequence` — Find LCS in sequences.
+  - `segments_to_words` — Convert segments to word list.
+
+- **chunking.py**
+  - `split_audio` — Split audio into chunks with overlap.
+  - `merge_transcripts` — Merge chunked transcript results.
+  - `transcribe_with_chunks` — Transcribe audio in chunks.
+
+- **utils.py**
+  - `setup_logger` — Configure logging.
+  - `in_debug_mode` — Check debug flag.
+  - `check_transcript_exists` — Check if transcript files exist.
+  - `min_timestamp` — Return min of two timestamps.
+  - `max_timestamp` — Return max of two timestamps.
+  - `save_results` — Save results to disk.
+
+
+#### utils/ (core utilities for parsing, formatting, API, etc.)
+
+- **formatters.py**
+  - `create_text_file` — Write plain text transcript from result.
+  - `create_srt_file` — Write SRT file (standard/word/davinci) from result.
+  - `create_output_files` — Generate all requested output files from result.
+
+- **parsers.py**
+  - `TranscriptionResult` (class) — Unified transcript data model.
+    - `to_dict` — Convert to dict.
+    - `to_words_json` — Words as JSON.
+    - `to_json` — Full result as JSON.
+    - `save` — Save as JSON file.
+    - `save_words_only` — Save only words as JSON.
+    - `from_dict`/`from_json`/`from_file` — Load from dict/JSON/file.
+  - `parse_assemblyai_format` — Parse AssemblyAI JSON to result.
+  - `parse_elevenlabs_format` — Parse ElevenLabs JSON to result.
+  - `parse_groq_format` — Parse Groq JSON to result.
+  - `parse_openai_format` — Parse OpenAI JSON to result.
+  - `generate_words_from_text` — Split plain text into word objects.
+  - `detect_and_parse_json` — Auto-detect API and parse JSON.
+  - `load_json_data` — Load JSON from file.
+
+- **transcription_api.py**
+  - `get_api_instance` — Return API handler for given name.
+  - `TranscriptionAPI` (base class) — Unified API interface.
+    - `transcribe` — Transcribe audio file.
+    - `check_api_key` — Validate API key.
+    - `save_result` — Save result to disk.
+    - `with_retry` — Retry wrapper for API calls.
+  - (Subclasses for each API: AssemblyAI, ElevenLabs, Groq, OpenAI)
+    - Each implements `transcribe`, `check_api_key`, etc.
+  - `load_from_env` — Load API key from environment.
+
 
 ### How to Use the Unified Tool
 

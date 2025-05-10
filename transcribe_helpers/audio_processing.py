@@ -92,30 +92,18 @@ def convert_to_flac(input_path: Union[str, Path], sample_rate: int = 16000) -> O
     logger.info(f"Converting {input_path} to 16kHz mono FLAC...")
     
     try:
-        # Use FFmpeg for conversion
-        subprocess.run([
-            'ffmpeg',
-            '-hide_banner',
-            '-loglevel', 'error',
-            '-i', str(input_path),
-            '-ar', str(sample_rate),  # 16kHz sample rate
-            '-ac', '1',               # Mono channel
-            '-c:a', 'flac',           # FLAC codec
-            '-y',                     # Overwrite if exists
-            output_path
-        ], check=True, capture_output=True)
+        # Use pydub for conversion instead of FFmpeg
+        audio = AudioSegment.from_file(str(input_path))
+        # Set frame rate to specified sample rate and channels to mono
+        audio = audio.set_frame_rate(sample_rate).set_channels(1)
+        # Export as FLAC
+        audio.export(output_path, format="flac")
         
         logger.info(f"Converted to FLAC: {output_path}")
         return output_path
         
-    except subprocess.CalledProcessError as e:
-        logger.error(f"FFmpeg conversion failed: {e.stderr}")
-        if os.path.exists(output_path):
-            os.unlink(output_path)
-        return None
-        
     except Exception as e:
-        logger.error(f"Error converting to FLAC: {str(e)}")
+        logger.error(f"Audio conversion failed: {str(e)}")
         if os.path.exists(output_path):
             os.unlink(output_path)
         return None
@@ -188,23 +176,27 @@ def preprocess_audio(input_path: Union[str, Path]) -> Path:
     with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
         output_path = Path(temp_file.name)
         
-    logger.info("Converting audio to 16kHz mono FLAC...")
+    logger.info(f"Converting {input_path} to 16kHz mono FLAC using pydub...")
     try:
         # Load audio file
-        audio = AudioSegment.from_file(input_path)
+        audio = AudioSegment.from_file(str(input_path))
         # Set frame rate to 16kHz and channels to mono
         audio = audio.set_frame_rate(16000).set_channels(1)
         # Export as FLAC
-        audio.export(output_path, format="flac")
+        audio.export(str(output_path), format="flac")
+        logger.info(f"Converted successfully to: {output_path}")
         return output_path
     except Exception as e:
-        output_path.unlink(missing_ok=True)
+        if output_path.exists():
+            output_path.unlink(missing_ok=True)
+        logger.error(f"Audio conversion failed: {e}")
         raise RuntimeError(f"Audio conversion failed: {e}")
 
 
 def preprocess_audio_with_ffmpeg(input_path: Union[str, Path]) -> Path:
     """
-    Preprocess audio file to 16kHz mono FLAC using ffmpeg.
+    Preprocess audio file to 16kHz mono FLAC using pydub.
+    This function is kept for backward compatibility but now uses the pydub implementation.
     
     Args:
         input_path: Path to input audio file
@@ -212,32 +204,10 @@ def preprocess_audio_with_ffmpeg(input_path: Union[str, Path]) -> Path:
     Returns:
         Path to preprocessed audio file
     
-    From: groq - Preprocess audio with ffmpeg
+    From: groq - Preprocess audio with ffmpeg (now using pydub)
     """
-    input_path = Path(input_path)
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
-    
-    with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
-        output_path = Path(temp_file.name)
-        
-    logger.info("Converting audio to 16kHz mono FLAC using ffmpeg...")
-    try:
-        subprocess.run([
-            'ffmpeg',
-            '-hide_banner',
-            '-loglevel', 'error',
-            '-i', str(input_path),
-            '-ar', '16000',
-            '-ac', '1',
-            '-c:a', 'flac',
-            '-y',
-            str(output_path)
-        ], check=True) 
-        return output_path
-    except subprocess.CalledProcessError as e:
-        output_path.unlink(missing_ok=True)
-        raise RuntimeError(f"FFmpeg conversion failed: {e.stderr}")
+    logger.info("Using pydub-based audio preprocessing (FFmpeg no longer used directly)...")
+    return preprocess_audio(input_path)
 
 
 def audio_to_base64(file_path: Union[str, Path]) -> str:

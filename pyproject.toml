@@ -19,6 +19,7 @@ dependencies = [
     "requests",
     "assemblyai",
     "groq",
+    "openai>=1.78.0",
 ]
 readme = "README.md"
 

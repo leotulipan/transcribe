@@ -1,6 +1,6 @@
 # Audio Transcribe
 
-A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs, Groq) with options for different output formats.
+A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs, Groq, OpenAI) with options for different output formats.
 
 ## Features
 
@@ -8,6 +8,7 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - AssemblyAI (with speaker diarization)
   - ElevenLabs 
   - Groq (AI model-based)
+  - OpenAI (Whisper)
 - Various output formats:
   - Standard text output
   - SRT subtitles
@@ -18,6 +19,10 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - Silent portion detection
   - Timing adjustments (paddings and FPS-based)
   - Filler word removal
+- File and directory processing:
+  - Process single files or entire directories
+  - Intelligent file selection when multiple formats exist
+  - Automatic chunking for large files
 
 ## Installation
 
@@ -54,42 +59,51 @@ The executable will be placed in the `./dist` directory. The build script:
 ### Basic Usage
 
 ```bash
-transcribe path/to/audio.wav --api assemblyai
+transcribe --file path/to/audio.wav --api assemblyai
 ```
 
 Or using the standalone executable:
 
 ```bash
-dist/transcribe.exe path/to/audio.wav --api assemblyai
+dist/transcribe.exe --file path/to/audio.wav --api assemblyai
+```
+
+### Process an Entire Directory
+
+```bash
+transcribe --folder path/to/audio_files --api groq
 ```
 
 ### With Language Selection
 
 ```bash
-transcribe path/to/audio.wav --api groq --language de
+transcribe --file path/to/audio.wav --api groq --language de
 ```
 
 ### With Custom Output Formats
 
 ```bash
-transcribe path/to/audio.wav --api elevenlabs --output text --output srt --output davinci_srt
+transcribe --file path/to/audio.wav --api elevenlabs --output text --output srt --output davinci_srt
 ```
 
 ### DaVinci Resolve Optimized Output
 
 ```bash
-transcribe path/to/audio.wav --api groq --davinci-srt
+transcribe --file path/to/audio.wav --api groq --davinci-srt
 ```
 
 ### All Options
 
 ```
-Usage: transcribe.exe [OPTIONS] AUDIO_PATH
+Usage: transcribe.py [OPTIONS]
 
-  Transcribe audio files using various APIs with configurable output formats.
+  Transcribe audio/video files using various APIs.
 
 Options:
-  -a, --api [assemblyai|elevenlabs|groq]
+  -f, --file PATH                 Audio/video file to transcribe
+  -F, --folder DIRECTORY          Folder containing audio/video files to
+                                  transcribe
+  -a, --api [assemblyai|elevenlabs|groq|openai]
                                   API to use for transcription (default: groq)
   -l, --language TEXT             Language code (ISO-639-1 or ISO-639-3)
   -o, --output [text|srt|word_srt|davinci_srt|json|all]
@@ -126,13 +140,21 @@ Options:
                                   (larger file size)
   --keep-flac                     Keep the generated FLAC file after
                                   processing
-  -m, --model TEXT                Model to use for transcription (Groq only)
+  -m, --model TEXT                Model to use for transcription. API-specific
+                                  options: groq=[whisper-large-v3, whisper-
+                                  medium, whisper-small], openai=[whisper-1],
+                                  assemblyai=[default, nano, small, medium,
+                                  large, auto]
   --chunk-length INTEGER          Length of each chunk in seconds for long
-                                  audio (Groq only)
-  --overlap INTEGER               Overlap between chunks in seconds (Groq
-                                  only)
-  -f, --force                     Force re-transcription even if transcript
+                                  audio (default: 600 seconds / 10 minutes)
+  --overlap INTEGER               Overlap between chunks in seconds (default:
+                                  10 seconds)
+  -r, --force                     Force re-transcription even if transcript
                                   exists
+  -J, --save-cleaned-json         Save the cleaned and consistent pre-
+                                  processed JSON file
+  -j, --use-json-input            Accept JSON files as input (instead of audio
+                                  files)
   -d, --debug                     Enable debug logging
   -v, --verbose                   Show all log messages in console
   --help                          Show this message and exit.
@@ -146,6 +168,7 @@ You need to set up API keys for the transcription services you intend to use. Cr
 ASSEMBLYAI_API_KEY=your_assemblyai_key
 ELEVENLABS_API_KEY=your_elevenlabs_key
 GROQ_API_KEY=your_groq_key
+OPENAI_API_KEY=your_openai_key
 ```
 
 ## License

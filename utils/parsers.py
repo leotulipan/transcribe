@@ -449,7 +449,6 @@ def parse_elevenlabs_format(data: Dict[str, Any]) -> TranscriptionResult:
         words=words,
         language=language,
         api_name="elevenlabs",
-        speaker_count=0,
         speakers=speakers
     )
 
@@ -596,16 +595,84 @@ def parse_openai_format(data: Dict[str, Any]) -> TranscriptionResult:
     
     # Process words data if available (OpenAI Whisper might not provide word-level timestamps by default)
     words = []
-    if "words" in data and data["words"]:
+    
+    # Check for words in verbose_json format
+    if data.get("words") and isinstance(data["words"], list):
+        logger.debug(f"Processing {len(data['words'])} words from OpenAI Whisper verbose JSON")
+        
         for word_data in data["words"]:
-            if isinstance(word_data, dict) and "text" in word_data:
+            if isinstance(word_data, dict):
+                # Handle OpenAI's word format which uses "word" instead of "text"
+                word_text = word_data.get("word", word_data.get("text", ""))
+                start = word_data.get("start", 0)  # OpenAI uses seconds
+                end = word_data.get("end", 0)      # OpenAI uses seconds
+                
+                # If no end time is provided, estimate based on word length
+                if end == 0 and start != 0:
+                    # Rough estimate: 0.15s per character
+                    word_length = len(word_text)
+                    end = start + max(0.3, word_length * 0.15)
+                
                 word = {
-                    "text": word_data.get("text", ""),
-                    "start": word_data.get("start", 0),  # OpenAI uses seconds
-                    "end": word_data.get("end", 0),      # OpenAI uses seconds
+                    "text": word_text,
+                    "start": start,
+                    "end": end,
                     "type": "word"
                 }
                 words.append(word)
+    # If words is null in response but was requested, log warning
+    elif data.get("words") is None and data.get("timestamp_granularities") == ["word"]:
+        logger.warning("OpenAI API returned words: null despite requesting word timestamps. Check API version support.")
+    elif "segments" in data and data["segments"]:
+        # Extract words from segments if available or split segment text into words
+        logger.debug("Words are null, extracting from segments or generating from text")
+        
+        for segment in data["segments"]:
+            if isinstance(segment, dict) and "text" in segment:
+                segment_text = segment.get("text", "").strip()
+                segment_start = segment.get("start", 0.0)
+                segment_end = segment.get("end", 0.0)
+                
+                if not segment_text:
+                    continue
+                
+                # Split segment text into words and assign estimated timestamps
+                segment_words = segment_text.split()
+                if not segment_words:
+                    continue
+                
+                # Calculate word durations proportionally within segment
+                segment_duration = segment_end - segment_start
+                total_chars = sum(len(word) for word in segment_words)
+                
+                current_time = segment_start
+                for word_text in segment_words:
+                    if not word_text:
+                        continue
+                    
+                    # Calculate word duration proportionally by character count
+                    word_duration = (len(word_text) / total_chars) * segment_duration if total_chars > 0 else 0.3
+                    word_duration = max(0.1, word_duration)  # Minimum word duration
+                    
+                    word = {
+                        "text": word_text,
+                        "start": current_time,
+                        "end": current_time + word_duration,
+                        "type": "word"
+                    }
+                    words.append(word)
+                    
+                    # Add spacing after word
+                    spacing_duration = 0.05  # 50ms spacing between words
+                    space = {
+                        "text": " ",
+                        "start": current_time + word_duration,
+                        "end": current_time + word_duration + spacing_duration,
+                        "type": "spacing"
+                    }
+                    words.append(space)
+                    
+                    current_time += word_duration + spacing_duration
     else:
         # If no words data but text is available, generate simple word objects
         if text:
@@ -614,14 +681,44 @@ def parse_openai_format(data: Dict[str, Any]) -> TranscriptionResult:
         else:
             logger.warning("No words data found in OpenAI format and no text available")
     
-    return TranscriptionResult(
+    # Add spacing elements between words if they don't exist and weren't already added above
+    words_with_spacing = []
+    has_spacing = any(word.get("type") == "spacing" for word in words)
+    
+    if has_spacing:
+        # Already has spacing elements, just use the words list
+        words_with_spacing = words
+    else:
+        # Need to add spacing between words
+        for i, word in enumerate(words):
+            if word.get("type") == "spacing":
+                # Skip if it's already a spacing element
+                continue
+                
+            words_with_spacing.append(word)
+            
+            # Add spacing after word (except for the last word)
+            if i < len(words) - 1:
+                next_word = words[i + 1]
+                if next_word.get("type") != "spacing":
+                    space = {
+                        "text": " ",
+                        "start": word["end"],
+                        "end": next_word["start"] if next_word["start"] > word["end"] else word["end"] + 0.1,
+                        "type": "spacing"
+                    }
+                    words_with_spacing.append(space)
+    
+    # Create the standardized result
+    result = TranscriptionResult(
         text=text,
-        words=words,
+        words=words_with_spacing,
         language=language,
         api_name="openai",
-        speaker_count=0,
         speakers=[]
     )
+    
+    return result
 
 
 def generate_words_from_text(text: str) -> List[Dict[str, Any]]:
@@ -676,16 +773,15 @@ def generate_words_from_text(text: str) -> List[Dict[str, Any]]:
     return words
 
 
-def detect_and_parse_json(data: Dict[str, Any]) -> Tuple[str, Union[List[Dict[str, Any]], TranscriptionResult]]:
+def detect_and_parse_json(data: Dict[str, Any]) -> Tuple[str, TranscriptionResult]:
     """
-    Auto-detect the JSON format and parse it into a TranscriptionResult or basic word list.
+    Auto-detect the JSON format and parse it into a TranscriptionResult object.
     
     Args:
         data: JSON data from any supported API
         
     Returns:
-        Tuple containing detected api_name (str) and either a TranscriptionResult object 
-        or a List of word dicts.
+        Tuple containing detected api_name (str) and a TranscriptionResult object
     """
     detected_api = "unknown"
     result = None
@@ -764,8 +860,17 @@ def detect_and_parse_json(data: Dict[str, Any]) -> Tuple[str, Union[List[Dict[st
                     api_name=detected_api
                 )
 
-    if result is None or (hasattr(result, 'words') and not result.words):
-         logger.warning(f"Parsing resulted in an empty word list for detected API: {detected_api}")
+    if result is None:
+        # Create an empty result if all else fails
+        logger.warning(f"Parsing failed to produce a valid result for detected API: {detected_api}")
+        result = TranscriptionResult(
+            text=data.get("text", ""),
+            words=[],
+            language=data.get("language", ""),
+            api_name=detected_api
+        )
+    elif not result.words:
+        logger.warning(f"Parsing resulted in an empty word list for detected API: {detected_api}")
 
     return detected_api, result
 

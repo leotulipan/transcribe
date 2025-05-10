@@ -26,6 +26,8 @@ import argparse
 from dotenv import load_dotenv
 import sys
 from loguru import logger
+import base64
+from typing import Union
 
 # Import transcribe_helpers package
 from transcribe_helpers import (
@@ -214,166 +216,293 @@ def merge_transcripts(results: list[tuple[dict, int]], overlap: int = 10) -> dic
         "words": words
     }
 
-def transcribe_single_chunk(client: Groq, chunk: AudioSegment, chunk_num: int, total_chunks: int) -> tuple[dict, float]:
+def transcribe_single_chunk(client: Groq, chunk: Union[AudioSegment, str, Path], chunk_num: int, total_chunks: int) -> tuple[dict, float]:
     """
-    Transcribe a single audio chunk with Groq API.
+    Transcribe a single audio chunk using Groq API.
     
     Args:
-        client: Groq client instance
-        chunk: Audio segment to transcribe
+        client: Groq client
+        chunk: AudioSegment chunk or path to audio file
         chunk_num: Current chunk number
         total_chunks: Total number of chunks
         
     Returns:
-        Tuple of (transcription result, processing time)
+        tuple: (Result dict, time taken)
     """
-    total_api_time = 0
-    temp_file_path = None
+    global args
+    model = args.model
+    logger.info(f"Using Groq model: {model}")
+    
+    temp_file = None
+    if isinstance(chunk, (str, Path)):
+        # This is already a file path, use it directly
+        chunk_path = chunk
+    else:
+        # This is an AudioSegment, export it to temp file
+        temp_file = tempfile.NamedTemporaryFile(suffix=".flac", delete=False)
+        chunk_path = temp_file.name
+        temp_file.close()
+        
+        try:
+            chunk.export(chunk_path, format="flac")
+        except Exception as e:
+            logger.error(f"Failed to export audio chunk: {e}")
+            if os.path.exists(chunk_path):
+                os.unlink(chunk_path)
+            raise
     
     try:
-        with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
-            temp_file_path = temp_file.name
-            chunk.export(temp_file_path, format='flac')
+        # Encode audio file to base64
+        with open(chunk_path, "rb") as audio_file:
+            audio_base64 = base64.b64encode(audio_file.read()).decode("utf-8")
+            
+        # Prepare system prompt
+        system_prompt = f"""
+You are a professional audio transcription service. Your task is to convert the given audio to text with high accuracy.
+Include proper spacing, punctuation, and line breaks. The transcription should respect sentence boundaries.
+Only transcribe the actual speech content, without adding any additional commentary.
+Output must be a valid JSON object with the following structure:
+{{
+    "text": "The full transcript text goes here.",
+    "words": [
+        {{
+            "text": "word",
+            "start": start time in seconds,
+            "end": end time in seconds
+        }},
+    ]
+}}
+"""
         
-        while True:
-            start_time = time.time()
+        user_prompt = f"""
+Please transcribe this audio file to text.
+Audio timestamp format: seconds
+Output format: JSON as specified
+Language: {args.language}
+"""
+        
+        # Prepare the transcription request
+        transcription_start_time = time.time()
+        
+        # Number of retries
+        max_retries = 3
+        retry_count = 0
+        retry_delay = 5  # seconds
+        
+        while retry_count < max_retries:
             try:
-                with open(temp_file_path, "rb") as audio_file:
-                    result = client.audio.transcriptions.create(
-                        file=(os.path.basename(temp_file_path), audio_file, "audio/flac"),
-                        model=args.model,
-                        language=args.language,
-                        response_format="verbose_json",
-                        temperature=0,
-                        timestamp_granularities=["word"]  # Get word-level timestamps
-                    )
-                api_time = time.time() - start_time
-                total_api_time += api_time
+                chat_completion = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": [
+                            {"type": "text", "text": user_prompt},
+                            {"type": "audio", "audio_data": audio_base64}
+                        ]}
+                    ],
+                    max_tokens=4000
+                )
                 
-                logger.info(f"Chunk {chunk_num}/{total_chunks} processed in {api_time:.2f}s")
-                return result, total_api_time
+                transcription_time = time.time() - transcription_start_time
+                logger.info(f"Groq API call completed in {transcription_time:.2f}s (chunk {chunk_num}/{total_chunks})")
+                
+                # Extract and parse response content
+                response_content = chat_completion.choices[0].message.content
+                
+                # Parse the JSON response
+                try:
+                    import re
+                    # Extract JSON using regex in case of extra text
+                    json_match = re.search(r'```json\s*(.*?)\s*```', response_content, re.DOTALL)
+                    if json_match:
+                        result = json.loads(json_match.group(1))
+                    else:
+                        # Try to extract JSON using normal pattern
+                        json_start = response_content.find('{')
+                        json_end = response_content.rfind('}') + 1
+                        if json_start >= 0 and json_end > json_start:
+                            json_str = response_content[json_start:json_end]
+                            result = json.loads(json_str)
+                        else:
+                            logger.warning("Could not find JSON structure in response, using whole response")
+                            result = {"text": response_content, "words": []}
+                except Exception as e:
+                    logger.error(f"Failed to parse JSON response: {e}")
+                    logger.debug(f"Response content: {response_content}")
+                    # Return a basic dictionary with the raw text
+                    result = {"text": response_content, "words": []}
+                
+                return result, transcription_time
                 
             except RateLimitError as e:
-                logger.warning(f"Rate limit hit for chunk {chunk_num} - retrying in 60 seconds...")
-                time.sleep(60)  # default wait time
-                continue
-                
+                retry_count += 1
+                if retry_count >= max_retries:
+                    logger.error(f"Rate limit error after {max_retries} retries. Giving up.")
+                    raise
+                else:
+                    logger.warning(f"Rate limit error. Retrying in {retry_delay} seconds... ({retry_count}/{max_retries})")
+                    time.sleep(retry_delay)
+                    # Increase delay for next retry
+                    retry_delay *= 2
             except Exception as e:
-                logger.error(f"Error transcribing chunk {chunk_num}: {str(e)}")
+                logger.error(f"Transcription error: {str(e)}")
                 raise
-    
+                
     finally:
-        # Clean up temp file
-        if temp_file_path and os.path.exists(temp_file_path):
+        # Clean up temporary file if we created one
+        if temp_file and os.path.exists(chunk_path):
             try:
-                os.unlink(temp_file_path)
+                os.unlink(chunk_path)
             except Exception as e:
-                logger.warning(f"Failed to delete temporary file {temp_file_path}: {e}")
+                logger.warning(f"Failed to remove temporary file: {e}")
 
 def transcribe_audio_in_chunks(file_path: str) -> dict:
     """
-    Transcribe audio in chunks with overlap with Whisper via Groq API.
+    Transcribe audio file in chunks using Groq API.
     
     Args:
-        file_path: Path to audio file
+        file_path: Path to the audio file
         
     Returns:
-        dict: Containing transcription results
+        dict: Transcription result with text and words
     """
-    load_dotenv()
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        logger.error("GROQ_API_KEY environment variable not set")
-        raise ValueError("GROQ_API_KEY environment variable not set")
+    global args
     
-    file_path = Path(file_path)
-    logger.info(f"Starting transcription of: {file_path}")
-    client = Groq(api_key=api_key, max_retries=0)
-    
-    converted_file = None
-    try:
-        # Convert to appropriate format if needed
-        if not args.no_convert:
-            file_extension = file_path.suffix.lower()
-            if file_extension == '.wav':
-                # Check if WAV needs re-encoding
-                audio = AudioSegment.from_file(file_path)
-                if not check_audio_format(audio):
-                    logger.info("WAV file needs re-encoding to meet requirements")
-                    converted_file = convert_to_pcm(file_path) if args.use_pcm else convert_to_flac(file_path)
-                    file_path = converted_file
-            elif file_extension == '.flac' and not args.use_pcm:
-                # Check if FLAC needs re-encoding
-                audio = AudioSegment.from_file(file_path)
-                if not check_audio_format(audio):
-                    logger.info("FLAC file needs re-encoding to meet requirements")
-                    converted_file = convert_to_flac(file_path)
-                    file_path = converted_file
-            else:
-                # Convert other formats
-                converted_file = convert_to_pcm(file_path) if args.use_pcm else convert_to_flac(file_path)
-                file_path = converted_file
-        
-        # Load the audio and get info
-        try:
-            audio = AudioSegment.from_file(file_path)
-        except Exception as e:
-            logger.error(f"Failed to load audio: {str(e)}")
-            raise RuntimeError(f"Failed to load audio: {str(e)}")
-        
-        duration = len(audio)
-        logger.info(f"Audio duration: {duration/1000:.2f}s")
-        
-        # Check if we need to chunk based on duration (10 minutes = 600 seconds)
-        if duration > 600 * 1000:  # Convert seconds to milliseconds
-            logger.info("Audio duration exceeds 10 minutes, using chunking...")
-            # Calculate # of chunks
-            chunk_ms = args.chunk_length * 1000
-            overlap_ms = args.overlap * 1000
-            total_chunks = ((duration - overlap_ms) // (chunk_ms - overlap_ms)) + 1
-            logger.info(f"Processing {total_chunks} chunks...")
-            
-            results = []
-            total_transcription_time = 0
+    if args.debug:
+        logger.info(f"Current working directory: {os.getcwd()}")
 
-            # Loop through each chunk, extract current chunk from audio, transcribe    
-            for i in range(total_chunks):
-                start = i * (chunk_ms - overlap_ms)
-                end = min(start + chunk_ms, duration)
-                    
-                logger.info(f"Processing chunk {i+1}/{total_chunks}")
-                logger.info(f"Time range: {start/1000:.1f}s - {end/1000:.1f}s")
-                    
-                chunk = audio[start:end]
-                result, chunk_time = transcribe_single_chunk(client, chunk, i+1, total_chunks)
-                total_transcription_time += chunk_time
-                results.append((result, start))
-                
-            # Merge the results
-            final_result = merge_transcripts(results, args.overlap)
-            logger.info(f"Total Groq API transcription time: {total_transcription_time:.2f}s")
-            
-            return final_result
-        else:
-            # For short audio, transcribe directly
-            logger.info("Audio duration under 10 minutes, processing in one chunk...")
-            result, total_time = transcribe_single_chunk(client, audio, 1, 1)
-            logger.info(f"Total Groq API transcription time: {total_time:.2f}s")
-            return result
+    # Initialize Groq client
+    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+    # Check if audio file exists
+    if not os.path.exists(file_path):
+        logger.error(f"Audio file not found: {file_path}")
+        sys.exit(1)
+
+    # Get audio file information
+    file_length_secs = check_audio_length(file_path)
+    logger.info(f"Audio length: {file_length_secs} seconds")
+
+    # Check if audio file is not too long
+    if file_length_secs > MAX_AUDIO_LENGTH:
+        logger.error(f"Audio file too long: {file_length_secs} seconds (max: {MAX_AUDIO_LENGTH} seconds)")
+        sys.exit(1)
+
+    # Check file format and convert if necessary
+    original_file = file_path
+    is_converted = False
+
+    if not args.no_convert:
+        logger.info("Checking audio format...")
+        format_ok = check_audio_format(file_path, target_format="flac")
+
+        if not format_ok:
+            logger.info("Converting audio to FLAC format...")
+            if args.use_pcm:
+                logger.info("Using PCM format as requested")
+                new_file_path = convert_to_pcm(file_path)
+            else:
+                logger.info("Using FLAC format")
+                new_file_path = convert_to_flac(file_path)
+
+            if new_file_path:
+                file_path = new_file_path
+                is_converted = True
+                logger.info(f"Converted audio file: {file_path}")
+            else:
+                logger.error("Failed to convert audio file")
+                sys.exit(1)
+    else:
+        logger.info("Using audio file as-is (no conversion)")
+
+    # Check file size and use chunking if necessary
+    file_size_mb = check_file_size(file_path)
+    logger.info(f"File size: {file_size_mb:.2f} MB")
     
-    finally:
-        # Delete temporary file unless --keep-flac is specified
-        if converted_file and not args.keep_flac:
+    # Groq API limit is 25MB
+    if file_size_mb > 25:
+        logger.info("File size exceeds 25MB limit for Groq API. Using chunking...")
+        from pydub import AudioSegment
+
+        # Load audio file
+        audio = AudioSegment.from_file(file_path)
+        
+        # Split audio into chunks
+        chunk_length_ms = args.chunk_length * 1000  # Convert seconds to milliseconds
+        overlap_ms = args.overlap * 1000  # Convert seconds to milliseconds
+        
+        # Calculate number of chunks
+        duration_ms = len(audio)
+        chunks_count = max(1, int((duration_ms - overlap_ms) / (chunk_length_ms - overlap_ms)) + 1)
+        logger.info(f"Splitting audio into {chunks_count} chunks (chunk length: {args.chunk_length}s, overlap: {args.overlap}s)")
+        
+        # Process each chunk
+        results = []
+        temp_files = []
+
+        for i in range(chunks_count):
+            start_ms = i * (chunk_length_ms - overlap_ms)
+            end_ms = min(start_ms + chunk_length_ms, duration_ms)
+            
+            logger.info(f"Processing chunk {i+1}/{chunks_count} ({start_ms/1000:.1f}s to {end_ms/1000:.1f}s)")
+            
+            # Extract chunk
+            chunk = audio[start_ms:end_ms]
+            
+            # Create temporary file for chunk
+            with tempfile.NamedTemporaryFile(suffix=".flac", delete=False) as tmp:
+                chunk_path = tmp.name
+                temp_files.append(chunk_path)
+                
+            # Export chunk to temporary file
+            chunk.export(chunk_path, format="flac")
+            
+            # Transcribe chunk
             try:
-                # Add a small delay to ensure file is released by OS
-                time.sleep(0.5)
-                if isinstance(converted_file, Path):
-                    converted_file.unlink(missing_ok=True)
-                else:
-                    os.unlink(converted_file)
-                logger.info(f"Deleted temporary file: {converted_file}")
+                result, _ = transcribe_single_chunk(client, chunk_path, i+1, chunks_count)
+                results.append((result, start_ms))
             except Exception as e:
-                logger.error(f"Error deleting temporary file: {e}")
+                logger.error(f"Error transcribing chunk {i+1}: {e}")
+                # Continue with next chunk instead of failing completely
+                continue
+                
+        # Clean up temporary files
+        for temp_file in temp_files:
+            try:
+                os.remove(temp_file)
+            except:
+                pass
+                
+        # Merge results
+        if not results:
+            logger.error("No chunks were successfully transcribed")
+            sys.exit(1)
+            
+        merged_result = merge_transcripts(results, args.overlap)
+        
+        # Clean up converted file if we created it
+        if is_converted and not args.keep_flac and os.path.exists(file_path) and file_path != original_file:
+            try:
+                os.remove(file_path)
+                logger.info(f"Removed temporary FLAC file: {file_path}")
+            except Exception as e:
+                logger.warning(f"Failed to remove temporary FLAC file: {e}")
+                
+        return merged_result
+    else:
+        # For smaller files, use single transcription
+        logger.info("Using single transcription (file size is under 25MB)")
+        result, _ = transcribe_single_chunk(client, file_path, 1, 1)
+        
+        # Clean up converted file if we created it
+        if is_converted and not args.keep_flac and os.path.exists(file_path) and file_path != original_file:
+            try:
+                os.remove(file_path)
+                logger.info(f"Removed temporary FLAC file: {file_path}")
+            except Exception as e:
+                logger.warning(f"Failed to remove temporary FLAC file: {e}")
+                
+        return result
 
 def check_json_exists(file_dir, file_name):
     """
