@@ -99,6 +99,10 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 
 ## In Progress Tasks
 
+- [x] modify error handling -  "Rate limiting (429 errors) from Groq API" so when in --folder mode we stop further processing and printout the message (that tells us when we can try again how long we have to wait)
+- [x] Check chunk results before merging
+- [x] Track errors per file in dictionary
+  - [x] Print summary at end with file paths and error types
 
 ## Future Tasks
 

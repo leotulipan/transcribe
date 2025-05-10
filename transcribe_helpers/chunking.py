@@ -172,7 +172,7 @@ def transcribe_with_chunks(audio_path: Union[str, Path],
         overlap: Overlap between chunks in seconds
         
     Returns:
-        Merged transcription dictionary
+        Merged transcription dictionary with status information
         
     From: new - Generic chunking and transcription
     """
@@ -183,6 +183,7 @@ def transcribe_with_chunks(audio_path: Union[str, Path],
     chunks = split_audio(audio_path, chunk_length=chunk_length, overlap=overlap)
     
     results = []
+    failed_chunks = []
     
     # Process each chunk with the provided transcribe function
     for i, (chunk_path, start_time) in enumerate(chunks):
@@ -191,15 +192,39 @@ def transcribe_with_chunks(audio_path: Union[str, Path],
         try:
             # Call the transcribe function on this chunk
             result = transcribe_function(chunk_path)
-            results.append((result, start_time))
+            
+            # Check if result is valid
+            if not result or (isinstance(result, dict) and not result.get('text') and not result.get('segments')):
+                logger.warning(f"Chunk {i+1} returned empty or invalid result")
+                failed_chunks.append((i+1, start_time, "Empty or invalid result"))
+            else:
+                results.append((result, start_time))
+                
         except Exception as e:
             logger.error(f"Error transcribing chunk {i+1}: {str(e)}")
-            raise
+            failed_chunks.append((i+1, start_time, str(e)))
         finally:
             # Clean up the temporary chunk file
             chunk_path.unlink(missing_ok=True)
     
-    # Merge the transcripts
+    # If all chunks failed, propagate the error
+    if not results and failed_chunks:
+        first_error = failed_chunks[0][2]
+        raise Exception(f"All chunks failed transcription. First error: {first_error}")
+    
+    # Merge the transcripts from successful chunks
     merged_result = merge_transcripts(results, overlap)
+    
+    # Add information about failed chunks to the result
+    merged_result["chunk_status"] = {
+        "total_chunks": len(chunks),
+        "successful_chunks": len(results),
+        "failed_chunks": failed_chunks
+    }
+    
+    # Check if we have enough successful chunks for a good transcription
+    if len(results) < len(chunks) * 0.5:  # Less than 50% successful
+        logger.warning(f"Only {len(results)}/{len(chunks)} chunks were successfully transcribed")
+        merged_result["warning"] = f"Transcription may be incomplete. Only {len(results)}/{len(chunks)} chunks were successful."
     
     return merged_result

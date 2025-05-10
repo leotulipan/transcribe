@@ -316,6 +316,46 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                      except Exception as e:
                          logger.error(f"Failed to save raw API response: {e}")
             except Exception as e:
+                 # Check for rate limiting errors (429)
+                 if "429" in str(e) or "rate limit" in str(e).lower() or "too many requests" in str(e).lower():
+                     retry_after = None
+                     # Try to extract retry time from error message
+                     error_msg = str(e)
+                     
+                     # Common patterns for retry information in error messages
+                     import re
+                     retry_patterns = [
+                         r"retry after (\d+)",
+                         r"retry in (\d+)",
+                         r"wait (\d+)",
+                         r"available in (\d+)"
+                     ]
+                     
+                     for pattern in retry_patterns:
+                         match = re.search(pattern, error_msg, re.IGNORECASE)
+                         if match:
+                             retry_after = match.group(1)
+                             break
+                     
+                     error_info = {
+                         "error_type": "rate_limit_exceeded",
+                         "api": api_name,
+                         "file": str(file_path),
+                         "message": error_msg,
+                         "retry_after": retry_after
+                     }
+                     
+                     # Clean up converted file if we created one
+                     if converted_file_path and not kwargs.get("keep_flac", False):
+                         try:
+                             os.unlink(converted_file_path)
+                             logger.info(f"Removed temporary converted file: {converted_file_path}")
+                         except Exception as e2:
+                             logger.warning(f"Failed to remove temporary file: {e2}")
+                     
+                     # Re-raise with structured error info for folder processing to handle
+                     raise type(e)(f"RATE_LIMIT_ERROR: {json.dumps(error_info)}")
+                 
                  logger.error(f"API transcription failed for {file_path}: {e}")
                  # Clean up converted file if we created one
                  if converted_file_path and not kwargs.get("keep_flac", False):
@@ -459,6 +499,9 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
     path = Path(audio_path)
     api_name = kwargs.get('api_name')
     
+    # Initialize error tracking dictionary
+    error_tracker = {}
+    
     if not api_name:
         logger.error("No API name provided")
         return (0, 0)
@@ -528,11 +571,49 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
         
         # Process each unique file
         successful = 0
-        for file in unique_files:
-            logger.info(f"Processing file {successful+1}/{len(unique_files)}: {file}")
-            output_files = process_file(file, **kwargs)
-            if output_files:
-                successful += 1
+        for i, file in enumerate(unique_files):
+            logger.info(f"Processing file {i+1}/{len(unique_files)}: {file}")
+            try:
+                output_files = process_file(file, **kwargs)
+                if output_files:
+                    successful += 1
+            except Exception as e:
+                error_message = str(e)
+                
+                # Special handling for rate limit errors
+                if error_message.startswith("RATE_LIMIT_ERROR:"):
+                    try:
+                        # Extract the JSON error info
+                        error_info = json.loads(error_message.replace("RATE_LIMIT_ERROR:", "").strip())
+                        
+                        # Add to error tracker
+                        error_tracker[str(file)] = error_info
+                        
+                        # Log the rate limit error
+                        retry_msg = f" Retry after {error_info.get('retry_after', 'unknown')} seconds." if error_info.get('retry_after') else ""
+                        logger.error(f"Rate limit exceeded for {error_info.get('api')} API.{retry_msg} Stopping folder processing.")
+                        
+                        # Stop processing more files
+                        break
+                    except json.JSONDecodeError:
+                        # Fallback if error info isn't valid JSON
+                        error_tracker[str(file)] = {
+                            "error_type": "rate_limit_exceeded",
+                            "message": error_message,
+                            "file": str(file)
+                        }
+                        logger.error(f"Rate limit exceeded. Stopping folder processing.")
+                        break
+                else:
+                    # Regular error tracking
+                    error_tracker[str(file)] = {
+                        "error_type": "processing_error",
+                        "message": error_message,
+                        "file": str(file)
+                    }
+        
+        # Store error tracking data in kwargs to be accessed by the main function
+        kwargs['error_tracker'] = error_tracker
         
         return (successful, len(unique_files))
     
@@ -560,14 +641,78 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
             # Set use_input to True for JSON files
             kwargs['use_input'] = True
             
-            output_files = process_file(path, **kwargs)
-            return (1 if output_files else 0, 1)
+            try:
+                output_files = process_file(path, **kwargs)
+                # Store the empty error tracker in kwargs
+                kwargs['error_tracker'] = error_tracker
+                return (1 if output_files else 0, 1)
+            except Exception as e:
+                error_message = str(e)
+                
+                # Special handling for rate limit errors - same as in directory processing
+                if error_message.startswith("RATE_LIMIT_ERROR:"):
+                    try:
+                        error_info = json.loads(error_message.replace("RATE_LIMIT_ERROR:", "").strip())
+                        error_tracker[str(path)] = error_info
+                        retry_msg = f" Retry after {error_info.get('retry_after', 'unknown')} seconds." if error_info.get('retry_after') else ""
+                        logger.error(f"Rate limit exceeded for {error_info.get('api')} API.{retry_msg}")
+                    except json.JSONDecodeError:
+                        error_tracker[str(path)] = {
+                            "error_type": "rate_limit_exceeded",
+                            "message": error_message,
+                            "file": str(path)
+                        }
+                        logger.error("Rate limit exceeded.")
+                else:
+                    # Regular error tracking
+                    error_tracker[str(path)] = {
+                        "error_type": "processing_error",
+                        "message": error_message,
+                        "file": str(path)
+                    }
+                
+                # Store error tracking in kwargs
+                kwargs['error_tracker'] = error_tracker
+                return (0, 1)
         
         # Regular audio file processing
-        output_files = process_file(path, **kwargs)
-        return (1 if output_files else 0, 1)
+        try:
+            output_files = process_file(path, **kwargs)
+            # Store the empty error tracker in kwargs
+            kwargs['error_tracker'] = error_tracker
+            return (1 if output_files else 0, 1)
+        except Exception as e:
+            error_message = str(e)
+            
+            # Rate limit error handling - same as above
+            if error_message.startswith("RATE_LIMIT_ERROR:"):
+                try:
+                    error_info = json.loads(error_message.replace("RATE_LIMIT_ERROR:", "").strip())
+                    error_tracker[str(path)] = error_info
+                    retry_msg = f" Retry after {error_info.get('retry_after', 'unknown')} seconds." if error_info.get('retry_after') else ""
+                    logger.error(f"Rate limit exceeded for {error_info.get('api')} API.{retry_msg}")
+                except json.JSONDecodeError:
+                    error_tracker[str(path)] = {
+                        "error_type": "rate_limit_exceeded",
+                        "message": error_message,
+                        "file": str(path)
+                    }
+                    logger.error("Rate limit exceeded.")
+            else:
+                # Regular error tracking
+                error_tracker[str(path)] = {
+                    "error_type": "processing_error",
+                    "message": error_message,
+                    "file": str(path)
+                }
+            
+            # Store error tracking in kwargs
+            kwargs['error_tracker'] = error_tracker
+            return (0, 1)
     
     logger.error(f"Path not found or invalid: {path}")
+    # Store the empty error tracker in kwargs
+    kwargs['error_tracker'] = error_tracker
     return (0, 0)
 
 @click.command()
@@ -810,6 +955,53 @@ def main(
                 logger.warning(f"{total - successful} files failed processing")
         else:
             logger.error("No files were processed")
+        
+        # Print error summary if there are any errors
+        if 'error_tracker' in params and params['error_tracker']:
+            error_tracker = params['error_tracker']
+            error_count = len(error_tracker)
+            
+            logger.info(f"\nError Summary ({error_count} files with errors):")
+            
+            # Group errors by type
+            error_types = {}
+            for file_path, error_info in error_tracker.items():
+                error_type = error_info.get('error_type', 'unknown')
+                if error_type not in error_types:
+                    error_types[error_type] = []
+                error_types[error_type].append((file_path, error_info))
+            
+            # Print rate limit errors first (if any)
+            if 'rate_limit_exceeded' in error_types:
+                rate_limit_errors = error_types['rate_limit_exceeded']
+                logger.error(f"\nRate Limit Errors ({len(rate_limit_errors)} files):")
+                for file_path, error_info in rate_limit_errors:
+                    api = error_info.get('api', 'unknown')
+                    retry_after = error_info.get('retry_after', 'unknown')
+                    retry_msg = f" Retry after {retry_after} seconds." if retry_after and retry_after != 'unknown' else ""
+                    logger.error(f"  {file_path}: {api} API rate limit exceeded.{retry_msg}")
+                
+                # Provide guidance on rate limits
+                if api == 'groq':
+                    logger.info("\nGroq API Rate Limits:")
+                    logger.info("  Free tier: Limit of 5 requests per minute")
+                    logger.info("  Pro tier: Limit of 20 requests per minute")
+                    logger.info("  To continue processing, wait for the rate limit window to reset.")
+            
+            # Print other error types
+            for error_type, errors in error_types.items():
+                if error_type != 'rate_limit_exceeded':
+                    logger.error(f"\n{error_type.replace('_', ' ').title()} Errors ({len(errors)} files):")
+                    for file_path, error_info in errors:
+                        message = error_info.get('message', 'No details available')
+                        # Truncate very long messages
+                        if len(message) > 150:
+                            message = message[:147] + "..."
+                        logger.error(f"  {file_path}: {message}")
+            
+            logger.info("\nTo process failed files:")
+            logger.info("  1. For rate limit errors: Wait for the rate limit window to reset")
+            logger.info("  2. For other errors: Check error messages and try with --force flag")
             
     except Exception as e:
         logger.error(f"Error during processing: {str(e)}")
