@@ -74,7 +74,9 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
     
     # Debug the silentportions/silent_portions parameter
     silent_portions = kwargs.get("silent_portions", kwargs.get("silentportions", 0))
-    print(f"DEBUG formatters.create_srt_file - silent_portions={silent_portions}")
+    logger.debug(f"First 5 words:")
+    logger.debug(f"Silent portions threshold: {silent_portions}ms")
+    logger.debug(f"Converting timestamps for SRT formatting")
     
     # Create SRT file using the appropriate format
     if format_type == "word":

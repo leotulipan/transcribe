@@ -163,31 +163,42 @@ def transcribe_with_chunks(audio_path: Union[str, Path],
                           chunk_length: int = 600, 
                           overlap: int = 10) -> Dict[str, Any]:
     """
-    Split audio and process with a transcribe function, then merge results.
+    Transcribe an audio file by splitting it into chunks with overlap.
     
     Args:
         audio_path: Path to the audio file
-        transcribe_function: Function that takes a file path and returns a transcription result
+        transcribe_function: Function to call for transcribing each chunk
         chunk_length: Length of each chunk in seconds
         overlap: Overlap between chunks in seconds
         
     Returns:
-        Merged transcription dictionary with status information
-        
-    From: new - Generic chunking and transcription
+        Dictionary with merged transcription results
     """
-    audio_path = Path(audio_path)
-    logger.info(f"Starting chunked transcription of: {audio_path}")
+    from tempfile import NamedTemporaryFile
+    import os
     
-    # Get chunks with their start times
-    chunks = split_audio(audio_path, chunk_length=chunk_length, overlap=overlap)
+    # Import here to avoid circular imports
+    from .audio_processing import preprocess_audio
+    from pydub import AudioSegment
     
+    logger.info(f"Transcribing {audio_path} in chunks")
+    
+    # Step 1: Preprocess audio if needed
+    processed_path = preprocess_audio(audio_path)
+    
+    # Step 2: Split audio into chunks
+    chunks = split_audio(processed_path, chunk_length, overlap)
+    logger.info(f"Split audio into {len(chunks)} chunks")
+    
+    # Lists to store results and track failed chunks
     results = []
     failed_chunks = []
+    temp_chunks = []  # Store all generated temp chunks for cleanup in case of error
     
     # Process each chunk with the provided transcribe function
     for i, (chunk_path, start_time) in enumerate(chunks):
         logger.info(f"Transcribing chunk {i+1}/{len(chunks)}")
+        temp_chunks.append(chunk_path)  # Track for cleanup
         
         try:
             # Call the transcribe function on this chunk
@@ -201,11 +212,49 @@ def transcribe_with_chunks(audio_path: Union[str, Path],
                 results.append((result, start_time))
                 
         except Exception as e:
-            logger.error(f"Error transcribing chunk {i+1}: {str(e)}")
-            failed_chunks.append((i+1, start_time, str(e)))
+            error_message = str(e)
+            logger.error(f"Error transcribing chunk {i+1}: {error_message}")
+            failed_chunks.append((i+1, start_time, error_message))
+            
+            # Immediately stop processing if rate limit error is detected
+            if "429" in error_message or "rate limit" in error_message.lower() or "too many requests" in error_message.lower():
+                logger.error("Rate limit exceeded. Stopping all processing immediately.")
+                
+                # Clean up ALL chunk files before exiting
+                for chunk_file in temp_chunks:
+                    try:
+                        if chunk_file.exists():
+                            chunk_file.unlink()
+                            logger.debug(f"Removed temporary chunk file: {chunk_file}")
+                    except Exception as cleanup_err:
+                        logger.debug(f"Failed to clean up chunk file {chunk_file}: {cleanup_err}")
+                
+                # Extract retry information if available
+                import re
+                retry_after = None
+                retry_patterns = [
+                    r"try again in (\d+[ms][\d\.]*)",
+                    r"retry after (\d+[ms][\d\.]*)",
+                    r"retry in (\d+[ms][\d\.]*)",
+                    r"available in (\d+[ms][\d\.]*)"
+                ]
+                
+                for pattern in retry_patterns:
+                    match = re.search(pattern, error_message, re.IGNORECASE)
+                    if match:
+                        retry_after = match.group(1)
+                        break
+                
+                retry_msg = f" Please try again after {retry_after}." if retry_after else ""
+                raise RuntimeError(f"Rate limit exceeded.{retry_msg} Stopping all processing immediately.")
         finally:
             # Clean up the temporary chunk file
-            chunk_path.unlink(missing_ok=True)
+            try:
+                if chunk_path.exists():
+                    chunk_path.unlink()
+                    temp_chunks.remove(chunk_path)  # Remove from cleanup list
+            except Exception as cleanup_err:
+                logger.debug(f"Failed to clean up chunk file in main loop: {cleanup_err}")
     
     # If all chunks failed, propagate the error
     if not results and failed_chunks:

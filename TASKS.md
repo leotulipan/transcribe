@@ -96,21 +96,26 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [x] check for all api's but specifically groq and assemblyai that the source json gets saved use ./test/audio-test.mkv
 - [x] Invalid AssemblyAI model: whisper-large-v3, falling back to 'best': should always default to best for assemblyai and the other models according to each api default
 - [x] check openai and elevenlabs API class to save the raw json
-
-## In Progress Tasks
-
 - [x] modify error handling -  "Rate limiting (429 errors) from Groq API" so when in --folder mode we stop further processing and printout the message (that tells us when we can try again how long we have to wait)
 - [x] Check chunk results before merging
 - [x] Track errors per file in dictionary
   - [x] Print summary at end with file paths and error types
+- [x] when rate limiting; exit script right away do not try other chunks/other files
+- [x] when using no --verbose or --debug we want to see what folder and file is being processed (but not details)
+- [x] fix exit on chunking + 429 rate limit error: exit on first 429 - do not try to use any chunks. remove all temp transcriptions, if any
+- [x] Invalid or missing Groq model: None, falling back to 'whisper-large-v3' when calling without parameters
+
+## In Progress Tasks
+
+- [ ] double check language codes work as expected in all apis and if necessary write a converter (ie some api need "de" for German some deu or de_DE)
 
 ## Future Tasks
 
 - [ ] gpt-4o-mini-transcribe and gpt-4o-transcribe as per https://platform.openai.com/docs/guides/speech-to-text but they have a different json format that only includes text and no timings so we cannot save srt (see https://platform.openai.com/docs/api-reference/audio/json-object or ask Context7) transcriptions
-- [ ] come up with a robust i8n plan for all messages
 
-
-- [ ] all text in an easy definition (external file?) with english as default so we can translate and add an interface language button in the settings
+- [ ] i8n
+  - [ ] come up with a robust i8n plan for all messages
+  - [ ] all text in an easy definition (external file?) with english as default so we can translate and add an interface language button in the settings
 
 
 - [ ] Add local-whisper/faster-whisper as local transcription option
@@ -125,7 +130,6 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 
 - [ ] clean up. remove old unused scripts and util libaries
 
-- [ ] double check language codes work as expected in all apis and if necessary write a converter (ie some api need de for German some deu or de_DE)
 
 ## Implementation Plan
 

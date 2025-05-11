@@ -30,11 +30,22 @@ def setup_logger(debug: bool = False, verbose: bool = False) -> None:
     
     # Configure console logging based on verbosity
     if debug:
+        # Show all messages in debug mode
         logger.add(lambda msg: print(msg), level="DEBUG")
     elif verbose:
+        # Show info level and above in verbose mode
         logger.add(lambda msg: print(msg), level="INFO")
     else:
-        logger.add(lambda msg: print(msg), level="ERROR")
+        # In normal mode, filter logs:
+        # - Always show file/folder processing messages (tagged with [PROCESSING])
+        # - Always show errors
+        # - Hide other INFO/DEBUG messages
+        logger.add(
+            lambda msg: print(msg) if "[PROCESSING]" in msg or msg.startswith(("ERROR", "ERROR:")) else None, 
+            level="INFO"
+        )
+        # Also show warnings and critical messages
+        logger.add(lambda msg: print(msg), level="WARNING")
 
 
 def in_debug_mode(debug_flag: bool = False) -> bool:

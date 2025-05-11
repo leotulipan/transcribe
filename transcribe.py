@@ -30,6 +30,7 @@ from datetime import datetime
 import time
 from dotenv import load_dotenv
 import click
+import re
 
 # Setup logging
 # Try to import loguru, fallback to our mock implementation
@@ -48,7 +49,7 @@ from transcribe_helpers.audio_processing import (
 )
 from transcribe_helpers.utils import setup_logger
 from utils.formatters import create_output_files
-from utils.parsers import TranscriptionResult, load_json_data, detect_and_parse_json
+from utils.parsers import TranscriptionResult, load_json_data, detect_and_parse_json, parse_json_by_api
 from utils.transcription_api import get_api_instance
 from transcribe_helpers.text_processing import standardize_word_format, process_filler_words
 from transcribe_helpers.chunking import split_audio, transcribe_with_chunks
@@ -100,57 +101,113 @@ def check_transcript_exists(file_path: Union[str, Path], file_name: str) -> bool
 
 def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
     """
-    Process a single audio or JSON file.
-    Handles transcription (if needed), parsing, standardization, cleaning, 
-    and output file generation based on kwargs.
+    Process a single audio/video file for transcription.
     
     Args:
-        file_path: Path to the file to process
-        **kwargs: Additional parameters, including api_name
-    
+        file_path: Path to the audio/video file
+        **kwargs: Additional parameters for transcription
+        
     Returns:
-        List of paths to the created output files.
+        List of output file paths generated
     """
-    file_path = Path(file_path)
-    file_dir = file_path.parent
-    file_name = file_path.stem
+    # Get parameters
+    api_name = kwargs.get("api", "groq").lower()
+    force = kwargs.get("force", False)
+    save_cleaned_json = kwargs.get("save_cleaned_json", False)
+    use_input_json = kwargs.get("use_input_json", False)
+    check_existing = not force
+    verbose = kwargs.get("verbose", False)
+    debug = kwargs.get("debug", False)
     
-    # Get the API name from kwargs
-    api_name = kwargs.get('api_name')
-    if not api_name:
-        logger.error(f"No API name provided for file: {file_path}")
+    # Configure logger level based on verbosity
+    if debug:
+        logger.level = "DEBUG"
+    elif verbose:
+        logger.level = "INFO"
+    else:
+        logger.level = "SUCCESS"  # Show only success and higher
+        
+    # Show which file is being processed (always, even in non-verbose mode)
+    print(f"Processing file: {file_path}")
+    
+    if not os.path.exists(file_path):
+        logger.error(f"File not found: {file_path}")
         return []
     
-    raw_json_data = None
-    detected_api = api_name # Use provided API name initially
-    processed_words = [] # This will hold our standardized intermediary format
-    created_output_files = []
+    # Convert to Path object for easier handling
+    file_path = Path(file_path)
+    original_file_path = file_path  # Keep for reference
+    output_files = []
     
-    # Store the original file path before any conversions
-    original_file_path = file_path
+    # Standardize path handling
+    file_dir = file_path.parent
+    file_name = file_path.stem
+    file_ext = file_path.suffix.lower()
     
-    # 1. Get Raw JSON Data (either from existing file or new transcription)
-    use_input_json = kwargs.get("use_input", False) and file_path.suffix.lower() == '.json'
+    # Start processing time
+    start_time = time.time()
     
-    if use_input_json:
-        logger.info(f"Using existing JSON file as input: {file_path}")
-        raw_json_data = load_json_data(file_path)
-        if not raw_json_data:
-             logger.error(f"Failed to load input JSON: {file_path}. Skipping file.")
-             return [] # Indicate failure for this file
-    else:
-        # Check if a pre-existing API-specific JSON exists
-        json_exists, existing_json_path = check_json_exists(file_dir, file_name, api_name)
+    try:
+        # If instructed to use input as JSON, load it directly
+        raw_json_data = None
+        if use_input_json:
+            # Load direct from the provided JSON file
+            logger.info(f"Loading provided JSON input: {file_path}")
+            
+            # Determine API from filename if possible
+            if api_name == "auto":
+                # Try to auto-detect API from filename
+                api_match = re.search(r'-(assemblyai|groq|openai|elevenlabs)\.json$', str(file_path), re.IGNORECASE)
+                if api_match:
+                    detected_api = api_match.group(1).lower()
+                    logger.info(f"Auto-detected API from filename: {detected_api}")
+                    api_name = detected_api
+                    kwargs["api"] = api_name
+                else:
+                    logger.error("Could not auto-detect API from filename and no API specified with --api")
+                    return []
+            
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    raw_json_data = json.load(f)
+                logger.info(f"Successfully loaded JSON data from: {file_path}")
+            except Exception as e:
+                logger.error(f"Failed to load JSON file: {e}")
+                raw_json_data = None
         
-        if json_exists and not kwargs.get("force", False):
-            logger.info(f"Using existing API JSON file: {existing_json_path}")
-            raw_json_data = load_json_data(existing_json_path)
-            if not raw_json_data:
-                 logger.warning(f"Failed to load existing API JSON: {existing_json_path}. Will attempt transcription.")
-            # Try to get api_name from the loaded json if not provided
-            if not detected_api and raw_json_data and 'api_name' in raw_json_data:
-                 detected_api = raw_json_data['api_name']
-                 logger.info(f"Detected API '{detected_api}' from existing JSON.")
+        # Check if we already have a JSON file for this audio with the correct API
+        elif check_existing:
+            # Possible JSON filenames to check:
+            # - basename-api.json (e.g., audio-assemblyai.json)
+            # - basename.json (legacy)
+            # - basename_api_raw.json (legacy)
+            
+            api_json_path = file_dir / f"{file_name}-{api_name}.json"
+            legacy_json_path = file_dir / f"{file_name}.json"
+            raw_json_path = file_dir / f"{file_name}_{api_name}_raw.json"  # Legacy format
+            
+            json_paths = [api_json_path, legacy_json_path, raw_json_path]
+            
+            for json_path in json_paths:
+                if json_path.exists():
+                    logger.info(f"Found existing JSON: {json_path}")
+                    try:
+                        with open(json_path, 'r', encoding='utf-8') as f:
+                            raw_json_data = json.load(f)
+                        
+                        # Verify this is actually for the right API if we can
+                        if isinstance(raw_json_data, dict) and raw_json_data.get("api_name"):
+                            json_api = raw_json_data.get("api_name").lower()
+                            if json_api != api_name:
+                                logger.info(f"JSON is for different API ({json_api}), not using it for {api_name}")
+                                raw_json_data = None
+                                continue
+                        
+                        logger.info(f"Using existing JSON: {json_path}")
+                        break
+                    except Exception as e:
+                        logger.warning(f"Failed to load existing JSON ({json_path}): {e}")
+                        raw_json_data = None
 
         # If no suitable JSON found or loading failed, or if forced, transcribe
         if not raw_json_data:
@@ -186,304 +243,254 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             converted_file_path = None
             needs_chunking = False
             
-            # Skip conversion if --use-input is specified
-            if not kwargs.get("use_input", False):
-                logger.info(f"Converting input to FLAC format for optimal processing")
-                
-                if kwargs.get("use_pcm", False):
-                    logger.info(f"Using PCM format as requested (larger file size)")
-                    converted_file_path = convert_to_pcm(file_path)
-                else:
-                    converted_file_path = convert_to_flac(file_path)
-                
+            if not file_ext.lower() in ['.flac']:
+                # Convert to FLAC for most APIs
+                logger.info("Converting to FLAC format for smaller file size")
+                converted_file_path = convert_to_flac(file_path)
                 if not converted_file_path:
-                    logger.error(f"Failed to convert audio file to proper format. Skipping file.")
+                    logger.error("Failed to convert to FLAC. Skipping file.")
                     return []
                 
-                file_path = converted_file_path
-                logger.info(f"Conversion complete: {file_path}")
-            
-            # Now check file size AFTER conversion (FLAC is typically smaller)
-            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-            logger.info(f"File size after conversion: {file_size_mb:.2f}MB (limit: {size_limit_mb}MB)")
-            
-            # Determine if chunking is needed
-            if file_size_mb > size_limit_mb:
-                if api_name in ["groq", "openai", "assemblyai"]:
-                    logger.info(f"File size ({file_size_mb:.2f}MB) exceeds {size_limit_mb}MB limit for {api_name} API. Will use chunking.")
+                # Check new file size
+                flac_size_mb = os.path.getsize(converted_file_path) / (1024 * 1024)
+                logger.info(f"FLAC conversion complete. New size: {flac_size_mb:.2f}MB")
+                
+                if flac_size_mb > size_limit_mb:
+                    logger.info(f"FLAC file size ({flac_size_mb:.2f}MB) exceeds {size_limit_mb}MB limit for {api_name} API.")
                     needs_chunking = True
                 else:
-                    logger.error(f"File size ({file_size_mb:.2f}MB) exceeds {size_limit_mb}MB limit for {api_name} API. Aborting.")
+                    # Use the FLAC file instead
+                    file_path = converted_file_path
+            else:
+                # Already FLAC, just check size
+                if original_size_mb > size_limit_mb:
+                    logger.info(f"File size ({original_size_mb:.2f}MB) exceeds {size_limit_mb}MB limit for {api_name} API.")
+                    needs_chunking = True
+            
+            # Prepare parameters for transcription
+            transcribe_params = {}
+            
+            # Filter parameters to include only those relevant to the selected API
+            # Common parameters for all APIs
+            if "language" in kwargs and kwargs["language"]:
+                transcribe_params["language"] = kwargs["language"]
+                
+            # API-specific parameters
+            if api_name == "assemblyai":
+                # Language detection is true by default, only use specific language if provided
+                if "language" in kwargs and kwargs["language"]:
+                    transcribe_params["language_detection"] = False
+                else:
+                    transcribe_params["language_detection"] = True
+                
+                # Speaker labels (diarization)
+                transcribe_params["speaker_labels"] = kwargs.get("speaker_labels", False)
+                
+                # Always enable disfluencies (filler words like "um", "uh")
+                transcribe_params["disfluencies"] = True
+                
+                # Model selection
+                valid_assemblyai_models = ["best", "default", "nano", "small", "medium", "large", "auto"]
+                model_value = kwargs.get("model")
+                if not model_value or model_value not in valid_assemblyai_models:
+                    logger.warning(f"Invalid AssemblyAI model: {model_value}, falling back to 'best'")
+                    transcribe_params["model"] = "best"
+                else:
+                    transcribe_params["model"] = model_value
+                
+            elif api_name == "groq":
+                valid_groq_models = ["whisper-large-v3", "whisper-medium", "whisper-small"]
+                model_value = kwargs.get("model")
+                # Only show warning if an invalid model is specified, not when None
+                if model_value and model_value not in valid_groq_models:
+                    logger.warning(f"Invalid Groq model: {model_value}, falling back to 'whisper-large-v3'")
+                    transcribe_params["model"] = "whisper-large-v3"
+                else:
+                    # Set default or use valid specified model
+                    transcribe_params["model"] = model_value if model_value else "whisper-large-v3"
+            elif api_name == "openai":
+                if "model" in kwargs:
+                    transcribe_params["model"] = kwargs["model"]
+                if "keep_flac" in kwargs:
+                    transcribe_params["keep_flac"] = kwargs["keep_flac"]
+                # Pass original file path for saving output to correct location
+                transcribe_params["original_path"] = original_file_path
+            elif api_name == "elevenlabs":
+                if "model" in kwargs:
+                    transcribe_params["model"] = kwargs["model"]
+
+            # Start transcription process
+            transcription_start_time = time.time()
+            
+            try:
+                # If chunking is needed, use the appropriate method
+                if needs_chunking:
+                    chunk_length = kwargs.get("chunk_length", 600)  # Default 10 minutes
+                    overlap = kwargs.get("overlap", 10)  # Default 10 seconds overlap
+                    
+                    logger.info(f"Using chunking with {chunk_length}s chunks and {overlap}s overlap")
+                    
+                    # Use the generic chunking function
+                    api_result = transcribe_with_chunks(
+                        file_path,
+                        lambda chunk_path: api_instance.transcribe(chunk_path, **transcribe_params),
+                        chunk_length=chunk_length,
+                        overlap=overlap
+                    )
+                else:
+                    # Call transcribe with filtered parameters
+                    api_result = api_instance.transcribe(file_path, **transcribe_params)
+                
+                transcription_time = time.time() - transcription_start_time
+                logger.info(f"API transcription completed in {transcription_time:.2f} seconds.")
+                
+                # Handle different result types from the API
+                if hasattr(api_result, 'to_dict') and callable(getattr(api_result, 'to_dict')):
+                    # This is already a TranscriptionResult object - use it directly
+                    result_obj = api_result
+                    basic_words = result_obj.words
+                    raw_json_data = result_obj.to_dict()  # Convert to dict for saving
+                    logger.debug(f"Received TranscriptionResult object from API")
+                else:
+                    # It's a raw dictionary - needs to be parsed
+                    raw_json_data = api_result
+                    if not raw_json_data:
+                        raise Exception("API returned no data")
+                    
+                    # Check if we need to parse it
+                    if isinstance(raw_json_data, dict) and raw_json_data.get("words"):
+                        # It's already in a standard format with words
+                        basic_words = raw_json_data.get("words", [])
+                    else:
+                        # We need to parse it based on API type
+                        result_obj = parse_json_by_api(raw_json_data, api_name)
+                        if not result_obj:
+                            raise Exception(f"Failed to parse result from {api_name}")
+                        
+                        basic_words = result_obj.words
+                        
+                # Save raw JSON data if requested (always happens when using chunking)
+                if save_cleaned_json or needs_chunking:
+                    cleaned_json_path = file_dir / f"{file_name}-{api_name}-cleaned.json"
+                    with open(cleaned_json_path, 'w', encoding='utf-8') as f:
+                        # This is the standardized word format
+                        json.dump({"api_name": api_name, "text": raw_json_data.get("text", ""), "words": basic_words}, f, indent=2, ensure_ascii=False)
+                    logger.info(f"Saved cleaned standardized JSON to: {cleaned_json_path}")
+                    output_files.append(str(cleaned_json_path))
+            except Exception as e:
+                # Check for rate limiting errors (429)
+                if "429" in str(e) or "rate limit" in str(e).lower() or "too many requests" in str(e).lower():
+                    retry_after = None
+                    # Try to extract retry time from error message
+                    error_msg = str(e)
+                    
+                    # Common patterns for retry information in error messages
+                    retry_patterns = [
+                        r"retry after (\d+)",
+                        r"retry in (\d+)",
+                        r"wait (\d+)",
+                        r"available in (\d+)"
+                    ]
+                    
+                    for pattern in retry_patterns:
+                        match = re.search(pattern, error_msg, re.IGNORECASE)
+                        if match:
+                            retry_after = match.group(1)
+                            break
+                    
+                    error_info = {
+                        "error_type": "rate_limit_exceeded",
+                        "api": api_name,
+                        "file": str(file_path),
+                        "message": error_msg,
+                        "retry_after": retry_after
+                    }
+                    
                     # Clean up converted file if we created one
                     if converted_file_path and not kwargs.get("keep_flac", False):
                         try:
                             os.unlink(converted_file_path)
                             logger.info(f"Removed temporary converted file: {converted_file_path}")
-                        except Exception as e:
-                            logger.warning(f"Failed to remove temporary file: {e}")
-                    return []
-                
-            if file_size_mb > 0.9 * size_limit_mb:
-                logger.warning(f"File size ({file_size_mb:.2f}MB) is close to the {size_limit_mb}MB limit for {api_name} API.")
-                 
-            transcription_start_time = time.time()
-            try:
-                 # Prepare transcription parameters
-                 transcribe_params = {}
-                 
-                 # Add language parameter if provided
-                 if "language" in kwargs and kwargs["language"]:
-                     transcribe_params["language"] = kwargs["language"]
-                     
-                 # Add other API-specific parameters as needed
-                 if api_name == "assemblyai":
-                     if "speaker_labels" in kwargs:
-                         transcribe_params["speaker_labels"] = kwargs["speaker_labels"]
-                     if "dual_channel" in kwargs:
-                         transcribe_params["dual_channel"] = kwargs["dual_channel"]
-                     if "model" in kwargs:
-                         model_value = kwargs["model"]
-                         # AssemblyAI models: best, default, nano, small, medium, large, auto
-                         valid_models = ["best", "default", "nano", "small", "medium", "large", "auto"]
-                         if model_value not in valid_models:
-                             logger.warning(f"Invalid AssemblyAI model: {model_value}, falling back to 'best'")
-                             transcribe_params["model"] = "best"
-                         else:
-                             transcribe_params["model"] = model_value
-                     else:
-                         # Default to 'best' for AssemblyAI
-                         transcribe_params["model"] = "best"
-                 elif api_name == "groq":
-                     if "model" in kwargs:
-                         transcribe_params["model"] = kwargs["model"]
-                 elif api_name == "openai":
-                     if "model" in kwargs:
-                         transcribe_params["model"] = kwargs["model"]
-                     if "keep_flac" in kwargs:
-                         transcribe_params["keep_flac"] = kwargs["keep_flac"]
-                     # Pass original file path for saving output to correct location
-                     transcribe_params["original_path"] = original_file_path
-                 elif api_name == "elevenlabs":
-                     if "model" in kwargs:
-                         transcribe_params["model"] = kwargs["model"]
-                 
-                 # If chunking is needed, use the appropriate method
-                 if needs_chunking:
-                     chunk_length = kwargs.get("chunk_length", 600)  # Default 10 minutes
-                     overlap = kwargs.get("overlap", 10)  # Default 10 seconds overlap
-                     
-                     logger.info(f"Using chunking with {chunk_length}s chunks and {overlap}s overlap")
-                     
-                     # Use the generic chunking function
-                     api_result = transcribe_with_chunks(
-                         file_path,
-                         lambda chunk_path: api_instance.transcribe(chunk_path, **transcribe_params),
-                         chunk_length=chunk_length,
-                         overlap=overlap
-                     )
-                 else:
-                     # Call transcribe with filtered parameters
-                     api_result = api_instance.transcribe(file_path, **transcribe_params)
-                 
-                 transcription_time = time.time() - transcription_start_time
-                 logger.info(f"API transcription completed in {transcription_time:.2f} seconds.")
-                 
-                 # Handle different result types from the API
-                 if hasattr(api_result, 'to_dict') and callable(getattr(api_result, 'to_dict')):
-                     # This is already a TranscriptionResult object - use it directly
-                     result_obj = api_result
-                     basic_words = result_obj.words
-                     raw_json_data = result_obj.to_dict()  # Convert to dict for saving
-                     logger.debug(f"Received TranscriptionResult object from API")
-                 else:
-                     # It's a raw dictionary - needs to be parsed
-                     raw_json_data = api_result
-                     if not raw_json_data:
-                         raise Exception("API returned no data")
-                 
-                 # Save the raw API response as JSON
-                 if raw_json_data:
-                     api_specific_json_path = file_dir / f"{file_name}_{api_name}.json"
-                     try:
-                         # Ensure raw_json_data includes the API name for future reference
-                         if isinstance(raw_json_data, dict) and 'api_name' not in raw_json_data:
-                             raw_json_data['api_name'] = api_name
-                         
-                         with open(api_specific_json_path, 'w') as f:
-                             json.dump(raw_json_data, f, indent=2)
-                         logger.info(f"Saved raw API response to {api_specific_json_path}")
-                         created_output_files.append(str(api_specific_json_path))
-                     except Exception as e:
-                         logger.error(f"Failed to save raw API response: {e}")
-            except Exception as e:
-                 # Check for rate limiting errors (429)
-                 if "429" in str(e) or "rate limit" in str(e).lower() or "too many requests" in str(e).lower():
-                     retry_after = None
-                     # Try to extract retry time from error message
-                     error_msg = str(e)
-                     
-                     # Common patterns for retry information in error messages
-                     import re
-                     retry_patterns = [
-                         r"retry after (\d+)",
-                         r"retry in (\d+)",
-                         r"wait (\d+)",
-                         r"available in (\d+)"
-                     ]
-                     
-                     for pattern in retry_patterns:
-                         match = re.search(pattern, error_msg, re.IGNORECASE)
-                         if match:
-                             retry_after = match.group(1)
-                             break
-                     
-                     error_info = {
-                         "error_type": "rate_limit_exceeded",
-                         "api": api_name,
-                         "file": str(file_path),
-                         "message": error_msg,
-                         "retry_after": retry_after
-                     }
-                     
-                     # Clean up converted file if we created one
-                     if converted_file_path and not kwargs.get("keep_flac", False):
-                         try:
-                             os.unlink(converted_file_path)
-                             logger.info(f"Removed temporary converted file: {converted_file_path}")
-                         except Exception as e2:
-                             logger.warning(f"Failed to remove temporary file: {e2}")
-                     
-                     # Re-raise with structured error info for folder processing to handle
-                     raise type(e)(f"RATE_LIMIT_ERROR: {json.dumps(error_info)}")
-                 
-                 logger.error(f"API transcription failed for {file_path}: {e}")
-                 # Clean up converted file if we created one
-                 if converted_file_path and not kwargs.get("keep_flac", False):
-                     try:
-                         os.unlink(converted_file_path)
-                         logger.info(f"Removed temporary converted file after failed transcription: {converted_file_path}")
-                     except Exception as e2:
-                         logger.warning(f"Failed to remove temporary file: {e2}")
-                 return []
-            
-            # Clean up temporary files
-            if converted_file_path and not kwargs.get("keep_flac", False):
-                try:
-                    os.unlink(converted_file_path)
-                    logger.info(f"Removed temporary converted file: {converted_file_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to remove temporary file: {e}")
-    
-    # --- At this point, we should have either raw_json_data or result_obj ---
-    # If we have raw_json_data, we need to parse it
-    if 'raw_json_data' in locals() and raw_json_data:
-        try:
-             # If API wasn't known before, try to detect it now from the raw data
-             if not detected_api or detected_api == 'unknown':
-                  detected_api, parse_result = detect_and_parse_json(raw_json_data)
-                  logger.info(f"Detected API as '{detected_api}' during parsing.")
-             else:
-                  # Use the known API parser directly
-                  _, parse_result = detect_and_parse_json(raw_json_data) # Reuse detection logic for now
-                  
-             if not parse_result:
-                 logger.warning(f"Parsing resulted in empty word list for {file_path}. Skipping file.")
-                 return []
-                 
-             # If parse_result is a TranscriptionResult, use it directly
-             if hasattr(parse_result, 'words') and hasattr(parse_result, 'to_dict'):
-                 result_obj = parse_result
-                 basic_words = result_obj.words
-             else:
-                 # It's a list of words
-                 basic_words = parse_result
-                 
-        except Exception as e:
-            logger.error(f"Error parsing raw JSON data for {file_path}: {e}", exc_info=True)
-            return []
+                        except Exception as e2:
+                            logger.warning(f"Failed to remove temporary file: {e2}")
+                    
+                    # Re-raise with structured error info for folder processing to handle
+                    raise type(e)(f"RATE_LIMIT_ERROR: {json.dumps(error_info)}")
+                else:
+                    # Just raise the regular error
+                    raise
 
-    # 3. Standardize Format (Add Spacing, ensure ms format)
-    try:
-        standardize_silent_portions = kwargs.get("silent_portions", 0)
-        standardize_show_pauses = kwargs.get("show_pauses", False) or standardize_silent_portions > 0
+        # At this point we have raw_json_data either from file or API
+        # Create standardized TranscriptionResult object
+        result = parse_json_by_api(raw_json_data, api_name)
         
-        # We should now have either result_obj (TranscriptionResult) or basic_words (list)
-        if 'result_obj' in locals() and result_obj:
-            # Already have a TranscriptionResult, use its words directly
-            processed_words = result_obj.words
-            logger.debug(f"Using pre-processed words from TranscriptionResult")
+        if not result:
+            logger.error(f"Failed to parse result from {api_name}")
+            return output_files
+        
+        # If we're reusing a loaded JSON, save a cleaned copy if requested
+        if save_cleaned_json and use_input_json:
+            cleaned_json_path = file_dir / f"{file_name}-{api_name}-cleaned.json"
+            with open(cleaned_json_path, 'w', encoding='utf-8') as f:
+                json.dump({"api_name": api_name, "text": result.text, "words": result.words}, f, indent=2, ensure_ascii=False)
+            logger.info(f"Saved cleaned standardized JSON to: {cleaned_json_path}")
+            output_files.append(str(cleaned_json_path))
+        
+        # Generate outputs
+        # Default to create standard SRT
+        text_filepath = None
+        srt_filepath = None
+        
+        # Always create text file
+        text_filepath = file_dir / f"{file_name}.txt"
+        create_text_file(result, text_filepath)
+        logger.success(f"Created text transcript: {text_filepath}")
+        output_files.append(str(text_filepath))
+        
+        # Create SRT based on parameters
+        if kwargs.get("word_srt", False):
+            srt_filepath = file_dir / f"{file_name}.srt"
+            create_srt(result, srt_filepath, srt_mode="word")
+            logger.success(f"Created word-level SRT: {srt_filepath}")
+            output_files.append(str(srt_filepath))
+        elif kwargs.get("davinci_srt", False):
+            srt_filepath = file_dir / f"{file_name}.srt"
+            create_srt(result, srt_filepath, srt_mode="davinci", show_pauses=kwargs.get("show_pauses", True))
+            logger.success(f"Created DaVinci Resolve optimized SRT: {srt_filepath}")
+            output_files.append(str(srt_filepath))
         else:
-            # Process the basic_words list
-            processed_words = standardize_word_format(
-                basic_words,
-                show_pauses=standardize_show_pauses,
-                silence_threshold=standardize_silent_portions
-            )
-            logger.debug(f"Standardization complete. Word count: {len(processed_words)}")
+            # Standard SRT (default)
+            srt_filepath = file_dir / f"{file_name}.srt"
+            create_srt(result, srt_filepath, srt_mode="standard", fps=kwargs.get("fps", None))
+            logger.success(f"Created standard SRT: {srt_filepath}")
+            output_files.append(str(srt_filepath))
+        
+        # Clean up temp file if needed
+        if converted_file_path and not kwargs.get("keep_flac", False) and converted_file_path != original_file_path:
+            try:
+                os.unlink(converted_file_path)
+                logger.debug(f"Removed temporary converted file: {converted_file_path}")
+            except Exception as e:
+                logger.warning(f"Failed to remove temporary file: {e}")
+        
+        # Total processing time
+        total_time = time.time() - start_time
+        logger.success(f"Completed processing in {total_time:.2f} seconds")
+        
+        return output_files
+        
     except Exception as e:
-        logger.error(f"Error standardizing word format for {file_path}: {e}", exc_info=True)
-        return []
-
-    # 4. Save Cleaned JSON (Intermediary Format) if requested
-    cleaned_json_path = None
-    if kwargs.get("save_cleaned_json", False):
-        # Determine output path for cleaned JSON
-        # If input was a JSON, create cleaned path based on that
-        if use_input_json:
-            cleaned_json_path = file_dir / f"{file_name}_cleaned.json"
-        else:
-            # If input was audio, base it on audio name
-             cleaned_json_path = file_dir / f"{file_path.stem}_cleaned.json"
-             
-        logger.info(f"Saving cleaned and standardized JSON to: {cleaned_json_path}")
-        try:
-            # Use a temporary TranscriptionResult object just for saving
-            # This leverages the existing save method with timestamp formatting
-            temp_result = TranscriptionResult(words=processed_words, api_name=detected_api)
-            temp_result.save_words_only(cleaned_json_path)
-            created_output_files.append(str(cleaned_json_path))
-        except Exception as e:
-            logger.error(f"Failed to save cleaned JSON to {cleaned_json_path}: {e}")
-            # Continue processing even if saving cleaned JSON fails
-
-    # 5. Apply Post-Processing (Fillers, etc.) to the standardized list
-    words_for_output = processed_words # Start with the standardized list
-    if kwargs.get("remove_fillers", False):
-        try:
-            filler_pause_threshold = kwargs.get("silent_portions", 250) # Use silent_portions as threshold
-            logger.debug(f"Applying filler word removal. Current word count: {len(words_for_output)}")
-            words_for_output = process_filler_words(
-                words_for_output,
-                pause_threshold=filler_pause_threshold,
-                # filler_words=None will use defaults e.g. ["äh", "ähm"]
-            )
-            logger.debug(f"Word count after filler removal: {len(words_for_output)}")
-        except Exception as e:
-            logger.error(f"Error during filler word removal for {file_path}: {e}", exc_info=True)
-            # Decide if we should continue or return []
-            # Let's continue with the words we have so far
-
-    # --- Add other post-processing steps here if needed --- 
-
-    # 6. Generate Final Output Files (TXT, SRT, etc.)
-    output_formats = kwargs.get("output", ["text", "srt"])
-    # Use a temporary result object containing the final processed words for formatters
-    final_result_obj = TranscriptionResult(words=words_for_output, api_name=detected_api)
-    
-    try:
-         # Use the original audio path for output files, not the converted temp file
-         output_base_path = original_file_path
-         # Convert Click's tuple of output formats to a list
-         output_format_list = list(output_formats)
-         output_files = create_output_files(final_result_obj, output_base_path, output_format_list, **kwargs)
-         logger.info(f"Created output files: {list(output_files.values())}")
-         created_output_files.extend(list(output_files.values()))
-    except Exception as e:
-         logger.error(f"Error creating output files for {file_path}: {e}", exc_info=True)
-         # Return empty list or partial list depending on desired behavior
-         return [] 
-
-    return created_output_files
+        logger.error(f"Error processing file: {str(e)}")
+        # Clean up converted file if we created one
+        if 'converted_file_path' in locals() and converted_file_path and converted_file_path != original_file_path:
+            try:
+                os.unlink(converted_file_path)
+                logger.debug(f"Removed temporary converted file: {converted_file_path}")
+            except Exception:
+                pass
+        
+        # Re-raise for folder processing to handle
+        raise
 
 def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
     """
@@ -508,7 +515,7 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
     
     # Handle directory processing
     if path.is_dir():
-        logger.info(f"Processing directory: {path}")
+        logger.info(f"[PROCESSING] Directory: {path}")
         
         # Define common audio and video extensions
         audio_extensions = ['.mp3', '.wav', '.flac', '.m4a', '.ogg', '.opus']
@@ -572,7 +579,7 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
         # Process each unique file
         successful = 0
         for i, file in enumerate(unique_files):
-            logger.info(f"Processing file {i+1}/{len(unique_files)}: {file}")
+            logger.info(f"[PROCESSING] File {i+1}/{len(unique_files)}: {file}")
             try:
                 output_files = process_file(file, **kwargs)
                 if output_files:
@@ -635,7 +642,7 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
             
             # If detected from filename, use that API, otherwise keep the one from parameters
             if api_name_from_file:
-                logger.info(f"Detected API '{api_name_from_file}' from filename: {filename}")
+                logger.info(f"[PROCESSING] Detected API '{api_name_from_file}' from filename: {filename}")
                 kwargs['api_name'] = api_name_from_file
             
             # Set use_input to True for JSON files
