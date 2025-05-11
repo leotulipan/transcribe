@@ -3,6 +3,7 @@
 set "filename=%~1"
 cd /d "%~dp1"
 
-REM python "%~dp0\audio_transcribe_assemblyai.py" --file "%filename%" --debug
-uv run --link-mode="copy" "%~dp0\audio_transcribe_assemblyai.py" --file "%filename%" --debug
+REM Call the unified transcribe.py script with AssemblyAI API
+uv run --link-mode="copy" "%~dp0\transcribe.py" --file "%filename%" --api assemblyai --debug
+
 pause

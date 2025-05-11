@@ -48,6 +48,7 @@ from transcribe_helpers.audio_processing import (
     check_audio_length, check_audio_format, convert_to_flac, convert_to_pcm, get_api_file_size_limit, check_file_size
 )
 from transcribe_helpers.utils import setup_logger
+from transcribe_helpers.language_utils import get_language_code, is_language_supported
 from utils.formatters import create_output_files
 from utils.parsers import TranscriptionResult, load_json_data, detect_and_parse_json, parse_json_by_api
 from utils.transcription_api import get_api_instance
@@ -271,14 +272,23 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             transcribe_params = {}
             
             # Filter parameters to include only those relevant to the selected API
-            # Common parameters for all APIs
+            # Common parameters for all APIs - Convert language code if provided
             if "language" in kwargs and kwargs["language"]:
-                transcribe_params["language"] = kwargs["language"]
+                # Convert language code to API-specific format
+                orig_language = kwargs["language"]
+                api_language = get_language_code(orig_language, api_name)
+                
+                if api_language != orig_language:
+                    logger.info(f"Converting language code '{orig_language}' to '{api_language}' for {api_name} API")
+                
+                transcribe_params["language"] = api_language
+            else:
+                transcribe_params["language"] = None
                 
             # API-specific parameters
             if api_name == "assemblyai":
                 # Language detection is true by default, only use specific language if provided
-                if "language" in kwargs and kwargs["language"]:
+                if transcribe_params["language"]:
                     transcribe_params["language_detection"] = False
                 else:
                     transcribe_params["language_detection"] = True

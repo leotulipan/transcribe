@@ -3,6 +3,7 @@
 set "filename=%~1"
 cd /d "%~dp1"
 
-uv run --link-mode=copy C:\Users\leona\OneDrive\_2_Areas\Scripts.Transcribe\audio_transcribe_elevenlabs.py -d -v -s -D --padding 50 -p 350 "%filename%"
+REM Call the unified transcribe.py script with ElevenLabs API and German language
+uv run --link-mode=copy "%~dp0\transcribe.py" --file "%filename%" --api elevenlabs --language de --verbose --debug --show-pauses --davinci-srt --padding-start 50 --silent-portions 350
 
 pause 

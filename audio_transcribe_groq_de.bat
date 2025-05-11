@@ -3,7 +3,7 @@
 set "filename=%~1"
 cd /d "%~dp1"
 
-@REM Previous Version: uv run --link-mode=copy C:\Users\leona\OneDrive\_2_Areas\Scripts.Transcribe\groq_audio_chunking_adapted.py -l de "%filename%"
-uv run --link-mode=copy C:\Users\leona\OneDrive\_2_Areas\Scripts.Transcribe\audio_transcribe_groq.py -d -v -s "%filename%"
+REM Call the unified transcribe.py script with Groq API and German language
+uv run --link-mode=copy "%~dp0\transcribe.py" --file "%filename%" --api groq --language de --debug --verbose --save-cleaned-json
 
 pause

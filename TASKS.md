@@ -104,10 +104,9 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [x] when using no --verbose or --debug we want to see what folder and file is being processed (but not details)
 - [x] fix exit on chunking + 429 rate limit error: exit on first 429 - do not try to use any chunks. remove all temp transcriptions, if any
 - [x] Invalid or missing Groq model: None, falling back to 'whisper-large-v3' when calling without parameters
-
-## In Progress Tasks
-
-- [ ] double check language codes work as expected in all apis and if necessary write a converter (ie some api need "de" for German some deu or de_DE)
+- [x] double check language codes work as expected in all apis and if necessary write a converter (ie some api need "de" for German some deu or de_DE)
+- [x] change audio_transcribe_assemblyai.bat, audio_transcribe_elevenlabs_de.bat, audio_transcribe_groq_de.bat to use the new transcribe.py instead of the old individual .py
+- [x] move legacy single api audio_progressing and _transcribe scripts into a /legacy/ subdir
 
 ## Future Tasks
 
