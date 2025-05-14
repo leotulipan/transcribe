@@ -49,7 +49,7 @@ from transcribe_helpers.audio_processing import (
 )
 from transcribe_helpers.utils import setup_logger
 from transcribe_helpers.language_utils import get_language_code, is_language_supported
-from utils.formatters import create_output_files
+from utils.formatters import create_output_files, create_text_file, create_srt_file
 from utils.parsers import TranscriptionResult, load_json_data, detect_and_parse_json, parse_json_by_api
 from utils.transcription_api import get_api_instance
 from transcribe_helpers.text_processing import standardize_word_format, process_filler_words
@@ -460,18 +460,18 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
         # Create SRT based on parameters
         if kwargs.get("word_srt", False):
             srt_filepath = file_dir / f"{file_name}.srt"
-            create_srt(result, srt_filepath, srt_mode="word")
+            create_srt_file(result, srt_filepath, srt_mode="word")
             logger.success(f"Created word-level SRT: {srt_filepath}")
             output_files.append(str(srt_filepath))
         elif kwargs.get("davinci_srt", False):
             srt_filepath = file_dir / f"{file_name}.srt"
-            create_srt(result, srt_filepath, srt_mode="davinci", show_pauses=kwargs.get("show_pauses", True))
+            create_srt_file(result, srt_filepath, srt_mode="davinci", show_pauses=kwargs.get("show_pauses", True))
             logger.success(f"Created DaVinci Resolve optimized SRT: {srt_filepath}")
             output_files.append(str(srt_filepath))
         else:
             # Standard SRT (default)
             srt_filepath = file_dir / f"{file_name}.srt"
-            create_srt(result, srt_filepath, srt_mode="standard", fps=kwargs.get("fps", None))
+            create_srt_file(result, srt_filepath, srt_mode="standard", fps=kwargs.get("fps", None))
             logger.success(f"Created standard SRT: {srt_filepath}")
             output_files.append(str(srt_filepath))
         
