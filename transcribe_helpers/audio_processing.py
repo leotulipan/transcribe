@@ -242,4 +242,4 @@ def get_api_file_size_limit(api_name: str) -> int:
         return 25
     if api_name == "elevenlabs":
         return 100
-    return 1000  # fallback
+    return 25  # fallback

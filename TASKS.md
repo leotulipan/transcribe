@@ -107,6 +107,15 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [x] double check language codes work as expected in all apis and if necessary write a converter (ie some api need "de" for German some deu or de_DE)
 - [x] change audio_transcribe_assemblyai.bat, audio_transcribe_elevenlabs_de.bat, audio_transcribe_groq_de.bat to use the new transcribe.py instead of the old individual .py
 - [x] move legacy single api audio_progressing and _transcribe scripts into a /legacy/ subdir
+- [x] Fix API selection issues:
+  - [x] Fix file size check using incorrect API limits (showing 25MB Groq limit even when AssemblyAI selected)
+  - [x] Check all places where API name is passed to ensure correct API is used throughout the codebase
+  - [x] Ensure the API selected with --api parameter is consistently used in all processing steps
+  - [x] Fix the case where original file size check doesn't respect the correct API's limit (AssemblyAI: 200MB, Groq: 25MB, etc.)
+
+## In Progress Tasks
+
+- [ ] davinci-srt needs to set as default: --silent-portions 250 --remove-fillers --padding-start -125 but these values need to be overriden if also given on the command line
 
 ## Future Tasks
 
@@ -168,10 +177,4 @@ Output options have been streamlined with sensible defaults while maintaining fl
   - `create_standard_srt` — Write standard SRT.
   - `create_word_level_srt` — Write word-per-line SRT.
   - `create_davinci_srt` — Write DaVinci-optimized SRT.
-  - `create_text_file` — Write plain text transcript.
-  - `convert_to_srt` — Convert Groq JSON to SRT.
-  - `split_text_into_chunks` — Split text for SRT lines.
-  - `format_transcript_with_speakers` — Add speaker labels to transcript.
-  - `export_subtitles` — Export subtitles via API.
-  - `custom_export_subtitles` — Export with custom formatting.
-  - `
+  - `create_text_file`

@@ -112,7 +112,7 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
         List of output file paths generated
     """
     # Get parameters
-    api_name = kwargs.get("api", "groq").lower()
+    api_name = kwargs.get("api_name", "groq").lower()  # Ensure we use api_name from kwargs
     force = kwargs.get("force", False)
     save_cleaned_json = kwargs.get("save_cleaned_json", False)
     use_input_json = kwargs.get("use_input_json", False)
@@ -163,7 +163,7 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                     detected_api = api_match.group(1).lower()
                     logger.info(f"Auto-detected API from filename: {detected_api}")
                     api_name = detected_api
-                    kwargs["api"] = api_name
+                    kwargs["api_name"] = api_name
                 else:
                     logger.error("Could not auto-detect API from filename and no API specified with --api")
                     return []
@@ -244,7 +244,18 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             converted_file_path = None
             needs_chunking = False
             
-            if not file_ext.lower() in ['.flac']:
+            # Check if user wants to use the original input file
+            if kwargs.get("use_input", False):
+                logger.info("Using original input file as requested (--use-input)")
+                # Check if original file exceeds the API limit
+                if original_size_mb > size_limit_mb:
+                    # If using original input is required but file is too large, abort
+                    logger.error(f"Original file size ({original_size_mb:.2f}MB) exceeds the {size_limit_mb}MB limit for {api_name} API.")
+                    logger.error(f"Cannot process this file with --use-input flag. Please remove the flag to enable conversion and chunking.")
+                    return []
+                # Use original file path
+                file_path = original_file_path
+            elif not file_ext.lower() in ['.flac']:
                 # Convert to FLAC for most APIs
                 logger.info("Converting to FLAC format for smaller file size")
                 converted_file_path = convert_to_flac(file_path)
@@ -476,7 +487,7 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             output_files.append(str(srt_filepath))
         
         # Clean up temp file if needed
-        if converted_file_path and not kwargs.get("keep_flac", False) and converted_file_path != original_file_path:
+        if 'converted_file_path' in locals() and converted_file_path and not kwargs.get("keep_flac", False) and converted_file_path != original_file_path:
             try:
                 os.unlink(converted_file_path)
                 logger.debug(f"Removed temporary converted file: {converted_file_path}")
