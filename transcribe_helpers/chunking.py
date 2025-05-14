@@ -202,6 +202,7 @@ def transcribe_with_chunks(audio_path: Union[str, Path],
         
         try:
             # Call the transcribe function on this chunk
+            # The transcribe_function is a lambda that calls api_instance.transcribe with the correct API
             result = transcribe_function(chunk_path)
             
             # Check if result is valid

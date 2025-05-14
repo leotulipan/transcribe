@@ -899,3 +899,39 @@ def load_json_data(file_path: Union[str, Path]) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Error loading JSON file {file_path}: {e}")
         return None 
+
+
+def parse_json_by_api(data: Dict[str, Any], api_name: str) -> Optional[TranscriptionResult]:
+    """
+    Parse JSON data according to the specified API format.
+    
+    Args:
+        data: Raw JSON data from the API
+        api_name: Name of the API ('assemblyai', 'elevenlabs', 'groq', 'openai')
+        
+    Returns:
+        Standardized TranscriptionResult object or None if parsing fails
+    """
+    if not data:
+        logger.error("No data provided for parsing")
+        return None
+        
+    api_name = api_name.lower()
+    
+    try:
+        if api_name == "assemblyai":
+            return parse_assemblyai_format(data)
+        elif api_name == "elevenlabs":
+            return parse_elevenlabs_format(data)
+        elif api_name == "groq":
+            return parse_groq_format(data)
+        elif api_name == "openai":
+            return parse_openai_format(data)
+        else:
+            # Try to detect the API type from the data structure
+            detected_api, result = detect_and_parse_json(data)
+            logger.info(f"Auto-detected API format: {detected_api}")
+            return result
+    except Exception as e:
+        logger.error(f"Error parsing {api_name} format: {str(e)}")
+        return None 

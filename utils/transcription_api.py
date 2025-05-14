@@ -170,6 +170,68 @@ class AssemblyAIAPI(TranscriptionAPI):
             logger.error(f"Failed to validate AssemblyAI API key: {str(e)}")
             return False
             
+    def transcribe_chunk(self, audio_chunk_path: Union[str, Path],
+                         chunk_start_ms: int = 0, model: str = "best",
+                         language: Optional[str] = None) -> Tuple[Dict[str, Any], int]:
+        """
+        Transcribe a single audio chunk using AssemblyAI.
+        
+        Args:
+            audio_chunk_path: Path to the audio chunk file
+            chunk_start_ms: Start time of this chunk in milliseconds
+            model: AssemblyAI model to use (default: best)
+            language: Language code (optional)
+            
+        Returns:
+            Tuple of (chunk_result, chunk_start_ms)
+        """
+        if not self.client:
+            raise ValueError("AssemblyAI client not initialized")
+            
+        # Convert Path to string if needed
+        if isinstance(audio_chunk_path, Path):
+            audio_chunk_path = str(audio_chunk_path)
+            
+        logger.info(f"Transcribing chunk starting at {chunk_start_ms}ms with AssemblyAI (model: {model})")
+        
+        # Validate the model
+        valid_models = ["default", "nano", "small", "medium", "large", "auto", "best"]
+        if model not in valid_models:
+            logger.warning(f"Invalid AssemblyAI model: {model}, falling back to 'best'")
+            model = "best"
+            
+        # Check if a language is specified
+        language_detection = True if language is None else False
+        
+        # Prepare transcription config
+        config = self.aai.TranscriptionConfig(
+            language_code=language,
+            language_detection=language_detection,
+            speaker_labels=True,
+            speech_model=model,
+            disfluencies=True  # Always enable disfluencies
+        )
+        
+        # Create transcriber
+        transcriber = self.aai.Transcriber()
+        
+        try:
+            with open(audio_chunk_path, "rb") as audio_file:
+                # Submit and wait for completion using file content
+                transcript = transcriber.transcribe(audio_file, config=config)
+                
+                # Extract JSON response
+                result_dict = transcript.json_response
+                
+                # Add API name to the result dict
+                result_dict["api_name"] = self.api_name
+                
+                return result_dict, chunk_start_ms
+                
+        except Exception as e:
+            logger.error(f"Error transcribing chunk with AssemblyAI: {str(e)}")
+            raise
+            
     def transcribe(self, audio_path: Union[str, Path], **kwargs) -> Optional[Dict[str, Any]]:
         """
         Transcribe audio file using AssemblyAI.
@@ -182,6 +244,8 @@ class AssemblyAIAPI(TranscriptionAPI):
                 - speaker_labels: Enable speaker diarization
                 - dual_channel: Enable dual channel transcription
                 - model: Speech model to use (default, nano, small, medium, large, auto, best)
+                - chunk_length: Length of each chunk in seconds (default: 600)
+                - overlap: Overlap between chunks in seconds (default: 10)
                 
         Returns:
             Raw JSON response as dictionary, or None on failure
@@ -200,19 +264,10 @@ class AssemblyAIAPI(TranscriptionAPI):
             
         logger.info(f"Using AssemblyAI model: {speech_model}")
         
-        # Check if a language is specified
-        language_code = kwargs.get("language")
-        language_detection = True if language_code is None else False
-        
-        # Prepare transcription config
-        config = self.aai.TranscriptionConfig(
-            language_code=language_code,
-            language_detection=language_detection,
-            speaker_labels=kwargs.get("speaker_labels", True),
-            dual_channel=kwargs.get("dual_channel", False),
-            speech_model=speech_model,
-            disfluencies=True  # Always enable disfluencies
-        )
+        # Extract parameters
+        language = kwargs.get("language")
+        chunk_length = kwargs.get("chunk_length", 600)  # seconds
+        overlap = kwargs.get("overlap", 10)  # seconds
         
         # Convert Path to string if needed
         if isinstance(audio_path, Path):
@@ -220,35 +275,110 @@ class AssemblyAIAPI(TranscriptionAPI):
             
         logger.info(f"Transcribing {audio_path} with AssemblyAI")
         
-        # Create transcriber
-        transcriber = self.aai.Transcriber()
+        # Convert to FLAC if needed
+        from transcribe_helpers.audio_processing import convert_to_flac
+        flac_path = convert_to_flac(audio_path)
+        if not flac_path or not os.path.exists(flac_path):
+            logger.error(f"Failed to convert audio to FLAC: {audio_path}")
+            return None
         
-        # Instead of passing the path directly, manually handle file upload
+        # Check file size - AssemblyAI has a 200MB limit
+        file_size_mb = os.path.getsize(flac_path) / (1024 * 1024)
+        
         try:
-            with open(audio_path, "rb") as audio_file:
-                # Submit and wait for completion using file content
-                transcript = transcriber.transcribe(audio_file, config=config)
+            # Check if we need to chunk the audio
+            from pydub import AudioSegment
+            audio = AudioSegment.from_file(flac_path)
+            duration = len(audio)  # Duration in milliseconds
+            logger.info(f"Audio duration: {duration/1000:.2f} seconds")
+            
+            # If audio is short enough, transcribe in a single request
+            if file_size_mb <= 200 and duration <= 14400000:  # 4 hours max for direct upload
+                logger.info("Audio is within size and duration limits for direct transcription")
                 
-                logger.info(f"Transcription completed: {transcript.id}")
+                # Check if a language is specified
+                language_detection = True if language is None else False
                 
-                # Return the raw JSON response
-                result_dict = transcript.json_response
+                # Prepare transcription config
+                config = self.aai.TranscriptionConfig(
+                    language_code=language,
+                    language_detection=language_detection,
+                    speaker_labels=kwargs.get("speaker_labels", True),
+                    dual_channel=kwargs.get("dual_channel", False),
+                    speech_model=speech_model,
+                    disfluencies=True  # Always enable disfluencies
+                )
                 
-                # Save the raw response for debugging and reference
-                file_dir = os.path.dirname(audio_path) if isinstance(audio_path, str) else audio_path.parent
-                file_name = os.path.splitext(os.path.basename(audio_path))[0] if isinstance(audio_path, str) else audio_path.stem
-                raw_json_path = os.path.join(file_dir, f"{file_name}.json") 
-                try:
-                    with open(raw_json_path, 'w', encoding='utf-8') as f:
-                        json.dump(result_dict, f, indent=2, ensure_ascii=False)
-                    logger.info(f"Saved raw AssemblyAI response to {raw_json_path}")
-                except Exception as save_err:
-                    logger.error(f"Failed to save raw AssemblyAI response: {save_err}")
+                # Create transcriber
+                transcriber = self.aai.Transcriber()
                 
-                return result_dict
+                # Instead of passing the path directly, manually handle file upload
+                with open(flac_path, "rb") as audio_file:
+                    # Submit and wait for completion using file content
+                    transcript = transcriber.transcribe(audio_file, config=config)
+                    
+                    logger.info(f"Transcription completed: {transcript.id}")
+                    
+                    # Return the raw JSON response
+                    result_dict = transcript.json_response
+                    
+                    # Add API name to the response
+                    result_dict["api_name"] = self.api_name
+                    
+            else:
+                # Need to chunk the audio
+                logger.info(f"Audio is {duration/1000:.2f}s long or {file_size_mb:.2f}MB, splitting into chunks of {chunk_length}s with {overlap}s overlap")
+                
+                # Import chunking functionality
+                from transcribe_helpers.chunking import split_audio, merge_transcripts
+                
+                chunks = split_audio(flac_path, chunk_length=chunk_length, overlap=overlap)
+                results = []
+                
+                for i, (chunk_path, start_time) in enumerate(chunks):
+                    logger.info(f"Transcribing chunk {i+1}/{len(chunks)}")
+                    
+                    try:
+                        # Transcribe this chunk
+                        chunk_result, _ = self.transcribe_chunk(
+                            chunk_path, 
+                            chunk_start_ms=start_time, 
+                            model=speech_model, 
+                            language=language
+                        )
+                        results.append((chunk_result, start_time))
+                    except Exception as e:
+                        logger.error(f"Error transcribing chunk {i+1}: {str(e)}")
+                        raise
+                    finally:
+                        # Clean up temporary chunk file
+                        try:
+                            if os.path.exists(chunk_path):
+                                os.unlink(chunk_path)
+                        except Exception as e:
+                            logger.warning(f"Failed to delete temporary chunk file: {e}")
+                
+                # Merge results from all chunks
+                result_dict = merge_transcripts(results, overlap=overlap)
+                
+                # Add API name to the response
+                result_dict["api_name"] = self.api_name
+            
+            # Save raw result for debugging and reference
+            file_dir = os.path.dirname(audio_path) if isinstance(audio_path, str) else audio_path.parent
+            file_name = os.path.splitext(os.path.basename(audio_path))[0] if isinstance(audio_path, str) else audio_path.stem
+            raw_json_path = os.path.join(file_dir, f"{file_name}.json")
+            try:
+                with open(raw_json_path, 'w', encoding='utf-8') as f:
+                    json.dump(result_dict, f, indent=2, ensure_ascii=False)
+                logger.info(f"Saved raw AssemblyAI response to {raw_json_path}")
+            except Exception as save_err:
+                logger.error(f"Failed to save raw AssemblyAI response: {save_err}")
+            
+            return result_dict
+            
         except Exception as e:
             logger.error(f"Failed to transcribe with AssemblyAI: {str(e)}")
-            # raise # Optionally re-raise
             return None
 
 
