@@ -112,10 +112,15 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] Check all places where API name is passed to ensure correct API is used throughout the codebase
   - [x] Ensure the API selected with --api parameter is consistently used in all processing steps
   - [x] Fix the case where original file size check doesn't respect the correct API's limit (AssemblyAI: 200MB, Groq: 25MB, etc.)
+- [x] davinci-srt needs to set as default: --silent-portions 250 --remove-fillers --padding-start -125 but these values need to be overriden if also given on the command line
+- [x] the source json needs to ALWAYS be saved and the name of the api used needs to be added (ie FILENAME_assemblyai.json)
+  - [x] if an audio/video file is given and the json for the selected API exists do not re-encode
+- [x] output all relevant subtitle settings used if --debug and just before srt is generated
+- [x] "DEBUG create_srt - First 5 words:" output: use official loguru throughout the whole script
 
 ## In Progress Tasks
 
-- [ ] davinci-srt needs to set as default: --silent-portions 250 --remove-fillers --padding-start -125 but these values need to be overriden if also given on the command line
+- [ ] save .log files in a subdirectore ./logs/ not in the root
 
 ## Future Tasks
 
@@ -124,7 +129,6 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [ ] i8n
   - [ ] come up with a robust i8n plan for all messages
   - [ ] all text in an easy definition (external file?) with english as default so we can translate and add an interface language button in the settings
-
 
 - [ ] Add local-whisper/faster-whisper as local transcription option
 

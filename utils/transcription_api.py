@@ -52,27 +52,38 @@ class TranscriptionAPI(ABC):
         """
         pass
         
-    def save_result(self, result: TranscriptionResult, audio_path: Union[str, Path]) -> str:
+    def save_result(self, result: Dict[str, Any], audio_path: Union[str, Path]) -> str:
         """
         Save transcription result to a JSON file.
         
         Args:
-            result: TranscriptionResult object
+            result: Transcription result data
             audio_path: Path to the original audio file
             
         Returns:
             Path to the saved JSON file
         """
-        file_path = Path(audio_path)
-        file_dir = file_path.parent
-        file_name = file_path.stem
+        # Convert Path to string if needed
+        if isinstance(audio_path, Path):
+            audio_path = str(audio_path)
+            
+        # Ensure result contains the API name
+        if "api_name" not in result:
+            result["api_name"] = self.api_name
+            
+        # Get directory and base name
+        file_dir = os.path.dirname(audio_path)
+        file_name = os.path.splitext(os.path.basename(audio_path))[0]
         
-        # Save with API-specific suffix
-        json_path = file_dir / f"{file_name}_{self.api_name}.json"
-        result.save(json_path)
-        logger.info(f"Saved transcription result to {json_path}")
+        # Create the JSON filename with API name
+        json_file = os.path.join(file_dir, f"{file_name}_{self.api_name}.json")
         
-        return str(json_path)
+        # Save the result to a JSON file
+        with open(json_file, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
+            
+        logger.info(f"Saved transcription result to {json_file}")
+        return json_file
         
     @staticmethod
     def load_from_env(env_var_name: str) -> Optional[str]:

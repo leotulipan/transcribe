@@ -178,37 +178,21 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
         
         # Check if we already have a JSON file for this audio with the correct API
         elif check_existing:
-            # Possible JSON filenames to check:
-            # - basename-api.json (e.g., audio-assemblyai.json)
-            # - basename.json (legacy)
-            # - basename_api_raw.json (legacy)
+            # Check for API-specific JSON file: basename_api.json (e.g., audio_assemblyai.json)
+            api_json_path = file_dir / f"{file_name}_{api_name}.json"
             
-            api_json_path = file_dir / f"{file_name}-{api_name}.json"
-            legacy_json_path = file_dir / f"{file_name}.json"
-            raw_json_path = file_dir / f"{file_name}_{api_name}_raw.json"  # Legacy format
-            
-            json_paths = [api_json_path, legacy_json_path, raw_json_path]
-            
-            for json_path in json_paths:
-                if json_path.exists():
-                    logger.info(f"Found existing JSON: {json_path}")
-                    try:
-                        with open(json_path, 'r', encoding='utf-8') as f:
-                            raw_json_data = json.load(f)
-                        
-                        # Verify this is actually for the right API if we can
-                        if isinstance(raw_json_data, dict) and raw_json_data.get("api_name"):
-                            json_api = raw_json_data.get("api_name").lower()
-                            if json_api != api_name:
-                                logger.info(f"JSON is for different API ({json_api}), not using it for {api_name}")
-                                raw_json_data = None
-                                continue
-                        
-                        logger.info(f"Using existing JSON: {json_path}")
-                        break
-                    except Exception as e:
-                        logger.warning(f"Failed to load existing JSON ({json_path}): {e}")
-                        raw_json_data = None
+            if api_json_path.exists():
+                logger.info(f"Found existing JSON for selected API: {api_json_path}")
+                try:
+                    with open(api_json_path, 'r', encoding='utf-8') as f:
+                        raw_json_data = json.load(f)
+                    logger.info(f"Using existing JSON for {api_name}: {api_json_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to load existing JSON ({api_json_path}): {e}")
+                    raw_json_data = None
+            else:
+                logger.info(f"No existing JSON found for {api_name}, will transcribe")
+                raw_json_data = None
 
         # If no suitable JSON found or loading failed, or if forced, transcribe
         if not raw_json_data:
