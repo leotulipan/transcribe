@@ -241,5 +241,6 @@ def get_api_file_size_limit(api_name: str) -> int:
     if api_name == "openai":
         return 25
     if api_name == "elevenlabs":
-        return 100
+        # https://elevenlabs.io/docs/api-reference/speech-to-text/convert 1GB
+        return 1000
     return 25  # fallback
