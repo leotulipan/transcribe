@@ -17,14 +17,25 @@ with open(filename, 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 words = data.get('words', [])
+words = [w for w in words if w.get('type', 'word') == 'word']
 if not words or len(words) < 2:
     print("No or too few words found.")
     sys.exit(1)
 
+def to_ms(val):
+    """Convert S.ms to ms if float or string with '.', else return as int ms."""
+    if isinstance(val, (float, int)):
+        return int(val * 1000) if not isinstance(val, int) else val
+    if isinstance(val, str) and '.' in val:
+        return int(float(val) * 1000)
+    return int(val)
+
 # Compute pause lengths
 pauses = []
 for prev, curr in zip(words[:-1], words[1:]):
-    pause = curr['start'] - prev['end']
+    prev_end = to_ms(prev['end'])
+    curr_start = to_ms(curr['start'])
+    pause = curr_start - prev_end
     # Only consider positive pauses
     if pause > 0:
         # Round to nearest 50 ms
