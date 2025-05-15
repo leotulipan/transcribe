@@ -117,10 +117,10 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] if an audio/video file is given and the json for the selected API exists do not re-encode
 - [x] output all relevant subtitle settings used if --debug and just before srt is generated
 - [x] "DEBUG create_srt - First 5 words:" output: use official loguru throughout the whole script
+- [x] 422 bug with elevenlabs
 
 ## In Progress Tasks
 
-- [ ] save .log files in a subdirectore ./logs/ not in the root
 
 ## Future Tasks
 

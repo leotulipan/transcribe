@@ -439,12 +439,13 @@ class ElevenLabsAPI(TranscriptionAPI):
             logger.error(f"Failed to validate ElevenLabs API key: {str(e)}")
             return False
             
-    def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
+    def transcribe(self, audio_path: Union[str, Path], model_id: str = "scribe_v1", **kwargs) -> TranscriptionResult:
         """
         Transcribe audio file using ElevenLabs.
         
         Args:
             audio_path: Path to the audio file
+            model_id: The ID of the model to use (e.g., "scribe_v1").
             **kwargs: Additional ElevenLabs-specific parameters:
                 - language: Language code (optional)
                 
@@ -458,14 +459,14 @@ class ElevenLabsAPI(TranscriptionAPI):
         if isinstance(audio_path, Path):
             audio_path = str(audio_path)
             
-        logger.info(f"Transcribing {audio_path} with ElevenLabs")
+        logger.info(f"Transcribing {audio_path} with ElevenLabs (model: {model_id})")
         
         # Prepare request
         url = f"{self.base_url}/speech-to-text"
         headers = {"xi-api-key": self.api_key}
         
         # Prepare optional parameters
-        data = {}
+        data = {"model_id": model_id}
         if "language" in kwargs and kwargs["language"]:
             data["language"] = kwargs["language"]
             
@@ -474,10 +475,19 @@ class ElevenLabsAPI(TranscriptionAPI):
             
             # Make the API call with retry logic
             def make_request():
-                response = self.requests.post(url, headers=headers, data=data, files=files)
-                response.raise_for_status()
-                return response.json()
-                
+                try:
+                    response = self.requests.post(url, headers=headers, data=data, files=files)
+                    response.raise_for_status()
+                    return response.json()
+                except self.requests.exceptions.HTTPError as http_err:
+                    # Log more detailed error information
+                    error_content = http_err.response.text if http_err.response else "No response content"
+                    logger.error(f"HTTP error occurred: {http_err} - Response: {error_content}")
+                    raise  # Re-raise the exception to be caught by with_retry
+                except Exception as e:
+                    logger.error(f"An unexpected error occurred during request: {e}")
+                    raise # Re-raise to be caught by with_retry
+                    
             response_data = self.with_retry(make_request)
         
         # Add API name to the response
@@ -487,9 +497,24 @@ class ElevenLabsAPI(TranscriptionAPI):
         from utils.parsers import parse_elevenlabs_format
         result = parse_elevenlabs_format(response_data)
         
-        # Save result
-        self.save_result(result, audio_path)
+        # Save result using TranscriptionResult's own save method
+        # Construct the path similarly to how TranscriptionAPI.save_result does it.
+        if isinstance(audio_path, Path):
+            audio_path_str = str(audio_path)
+        else:
+            audio_path_str = audio_path
+        file_dir = os.path.dirname(audio_path_str)
+        file_name_stem = os.path.splitext(os.path.basename(audio_path_str))[0]
+        json_file_path = os.path.join(file_dir, f"{file_name_stem}_{self.api_name}.json")
         
+        try:
+            result.save(json_file_path)
+            logger.info(f"Saved standardized ElevenLabs transcription to {json_file_path}")
+        except Exception as e:
+            logger.error(f"Failed to save ElevenLabs transcription result using result.save(): {e}")
+            # Optionally, fall back to the old method or handle error
+            # For now, we just log and continue, as the result object is still returned.
+
         return result
 
 
