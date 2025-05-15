@@ -118,9 +118,13 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [x] output all relevant subtitle settings used if --debug and just before srt is generated
 - [x] "DEBUG create_srt - First 5 words:" output: use official loguru throughout the whole script
 - [x] 422 bug with elevenlabs
+- [x] changes BASENAME_apiname.json save handling
+- [x]  __main__:process_file:497 - Error processing file: name 'process_filler_words' is not defined
+  - [x] test with call `uv run transcribe.py -v -d --api elevenlabs --davinci-srt --file .\test\audio-test.mkv` until error is solved
 
 ## In Progress Tasks
 
+- [ ] dont put api key in debug output (or mask it) e.g. with elevenlabs: 2025-05-15 09:59:48.969 | DEBUG    | utils.transcription_api:make_request:496 - Headers: {'xi-api-key': 
 
 ## Future Tasks
 

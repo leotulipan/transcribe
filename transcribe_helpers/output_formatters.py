@@ -3,6 +3,8 @@ Output formatting functions for transcription results
 """
 import os
 import re
+import io
+import math
 import json
 import requests
 import textwrap
@@ -23,6 +25,9 @@ except ImportError:
     
     # Import our mock logger
     from loguru_patch import logger
+
+# Import process_filler_words from text_processing module
+from transcribe_helpers.text_processing import process_filler_words
 
 
 def format_time(seconds: float) -> str:
@@ -415,18 +420,110 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
                        fps: Optional[float] = None, fps_offset_start: int = -1, 
                        fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0) -> None:
     """Standard SRT format with character limits per line"""
-    create_srt(
-        words=words,
-        output_file=output_file,
-        chars_per_line=chars_per_line,
-        silentportions=silentportions,
-        fps=fps,
-        fps_offset_start=fps_offset_start,
-        fps_offset_end=fps_offset_end,
-        padding_start=padding_start,
-        padding_end=padding_end,
-        srt_mode="standard"
-    )
+    # Instead of recursively calling create_srt, implement the standard SRT logic directly here
+    output_file = Path(output_file)
+    counter = 1
+    
+    with open(output_file, 'w', encoding='utf-8') as file_obj:
+        current_subtitle = []
+        current_text = ""
+        current_start = None
+        current_end = None
+        
+        for i, word in enumerate(words):
+            if word.get('type') == 'spacing' and silentportions > 0:
+                # Check if this is a meaningful silent portion
+                if len(current_subtitle) > 0 and word.get('text', '').strip() and word.get('end', 0) - word.get('start', 0) >= silentportions / 1000.0:
+                    # We have a significant pause, output current subtitle
+                    if current_subtitle and current_start is not None and current_end is not None:
+                        # Write current subtitle
+                        start_ms = int(current_start * 1000)
+                        end_ms = int(current_end * 1000)
+                        
+                        # Split text into lines based on character limit
+                        text_lines = textwrap.wrap(current_text, width=chars_per_line, break_long_words=False)
+                        if not text_lines:
+                            text_lines = [current_text]  # Fallback in case wrap returned empty list
+                        
+                        file_obj.write(f"{counter}\n")
+                        file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+                        file_obj.write("\n".join(text_lines) + "\n\n")
+                        counter += 1
+                    
+                    # Reset for next subtitle
+                    current_subtitle = []
+                    current_text = ""
+                    current_start = None
+                    current_end = None
+                    
+                    # Add pause marker as its own subtitle if needed
+                    if word.get('text', '').strip():
+                        pause_start = int(word.get('start', 0) * 1000)
+                        pause_end = int(word.get('end', 0) * 1000)
+                        
+                        file_obj.write(f"{counter}\n")
+                        file_obj.write(f"{format_time_ms(pause_start)} --> {format_time_ms(pause_end)}\n")
+                        file_obj.write(word.get('text', '').strip() + "\n\n")
+                        counter += 1
+                
+                continue
+            
+            # Skip non-word items that aren't significant pauses
+            if word.get('type') == 'spacing' or not word.get('text', '').strip():
+                continue
+            
+            # Add this word to the current subtitle
+            if not current_subtitle:
+                # First word of this subtitle
+                current_start = word.get('start', 0)
+            
+            current_subtitle.append(word)
+            current_end = word.get('end', 0)
+            
+            # Add space before word unless it's the first word or follows punctuation
+            if current_text and not current_text[-1] in ".,;:!?-":
+                current_text += " "
+            
+            current_text += word.get('text', '').strip()
+            
+            # Check if we should break subtitle here based on length or punctuation
+            if (len(current_text) >= chars_per_line and 
+                (current_text[-1] in ".!?,:;" or i == len(words) - 1 or i < len(words) - 1 and words[i+1].get('type') == 'spacing')):
+                # Output current subtitle
+                if current_subtitle and current_start is not None and current_end is not None:
+                    start_ms = int(current_start * 1000)
+                    end_ms = int(current_end * 1000)
+                    
+                    # Split text into lines based on character limit
+                    text_lines = textwrap.wrap(current_text, width=chars_per_line, break_long_words=False)
+                    if not text_lines:
+                        text_lines = [current_text]  # Fallback
+                    
+                    file_obj.write(f"{counter}\n")
+                    file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+                    file_obj.write("\n".join(text_lines) + "\n\n")
+                    counter += 1
+                
+                # Reset for next subtitle
+                current_subtitle = []
+                current_text = ""
+                current_start = None
+                current_end = None
+        
+        # Write final subtitle if there's anything left
+        if current_subtitle and current_start is not None and current_end is not None:
+            start_ms = int(current_start * 1000)
+            end_ms = int(current_end * 1000)
+            
+            # Split text into lines based on character limit
+            text_lines = textwrap.wrap(current_text, width=chars_per_line, break_long_words=False)
+            if not text_lines:
+                text_lines = [current_text]  # Fallback
+            
+            file_obj.write(f"{counter}\n")
+            file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+            file_obj.write("\n".join(text_lines) + "\n\n")
+
 
 def create_word_level_srt(words: List[Dict[str, Any]], output_file: Union[str, Path], 
                          remove_fillers: bool = False, filler_words: Optional[List[str]] = None,

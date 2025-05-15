@@ -232,12 +232,22 @@ class AssemblyAIAPI(TranscriptionAPI):
                 transcript = transcriber.transcribe(audio_file, config=config)
                 
                 # Extract JSON response
-                result_dict = transcript.json_response
+                raw_data = transcript.json_response
                 
-                # Add API name to the result dict
-                result_dict["api_name"] = self.api_name
+                # Save the raw response for this chunk
+                chunk_file_path = Path(audio_chunk_path)
+                raw_chunk_json_path = chunk_file_path.with_name(f"{chunk_file_path.stem}_{self.api_name}.json")
+                try:
+                    with open(raw_chunk_json_path, 'w', encoding='utf-8') as f_raw_chunk:
+                        json.dump(raw_data, f_raw_chunk, indent=2, ensure_ascii=False)
+                    logger.info(f"Saved raw AssemblyAI chunk response to {raw_chunk_json_path}")
+                except Exception as e_raw_chunk_save:
+                    logger.error(f"Failed to save raw AssemblyAI chunk response: {e_raw_chunk_save}")
+
+                # Add API name to the result dict (parser should ideally handle this, or the main transcribe method)
+                # raw_data["api_name"] = self.api_name 
                 
-                return result_dict, chunk_start_ms
+                return raw_data, chunk_start_ms
                 
         except Exception as e:
             logger.error(f"Error transcribing chunk with AssemblyAI: {str(e)}")
@@ -378,7 +388,7 @@ class AssemblyAIAPI(TranscriptionAPI):
             # Save raw result for debugging and reference
             file_dir = os.path.dirname(audio_path) if isinstance(audio_path, str) else audio_path.parent
             file_name = os.path.splitext(os.path.basename(audio_path))[0] if isinstance(audio_path, str) else audio_path.stem
-            raw_json_path = os.path.join(file_dir, f"{file_name}.json")
+            raw_json_path = os.path.join(file_dir, f"{file_name}_{self.api_name}.json")
             try:
                 with open(raw_json_path, 'w', encoding='utf-8') as f:
                     json.dump(result_dict, f, indent=2, ensure_ascii=False)
@@ -459,6 +469,11 @@ class ElevenLabsAPI(TranscriptionAPI):
         if isinstance(audio_path, Path):
             audio_path = str(audio_path)
             
+        # Ensure model_id has a value
+        if model_id is None:
+            model_id = "scribe_v1"
+            logger.info(f"No model_id provided, using default: {model_id}")
+            
         logger.info(f"Transcribing {audio_path} with ElevenLabs (model: {model_id})")
         
         # Prepare request
@@ -476,7 +491,24 @@ class ElevenLabsAPI(TranscriptionAPI):
             # Make the API call with retry logic
             def make_request():
                 try:
+                    # Log more detailed request information
+                    logger.debug(f"Sending request to {url}")
+                    logger.debug(f"Headers: {headers}")
+                    logger.debug(f"Data params: {data}")
+                    # Log file info without reading entire content
+                    file_info = {}
+                    for k, v in files.items():
+                        if hasattr(v, 'name'):
+                            file_info[k] = {'name': v.name, 'mode': v.mode if hasattr(v, 'mode') else 'unknown'}
+                        else:
+                            file_info[k] = str(type(v))
+                    logger.debug(f"Files info: {file_info}")
+                    
                     response = self.requests.post(url, headers=headers, data=data, files=files)
+                    logger.debug(f"Response status: {response.status_code}")
+                    if response.status_code != 200:
+                        logger.debug(f"Response headers: {response.headers}")
+                        logger.debug(f"Response content: {response.text[:500]}...")
                     response.raise_for_status()
                     return response.json()
                 except self.requests.exceptions.HTTPError as http_err:
@@ -488,33 +520,29 @@ class ElevenLabsAPI(TranscriptionAPI):
                     logger.error(f"An unexpected error occurred during request: {e}")
                     raise # Re-raise to be caught by with_retry
                     
-            response_data = self.with_retry(make_request)
-        
-        # Add API name to the response
-        response_data["api_name"] = self.api_name
-        
-        # Import here to avoid circular imports
-        from utils.parsers import parse_elevenlabs_format
-        result = parse_elevenlabs_format(response_data)
-        
-        # Save result using TranscriptionResult's own save method
-        # Construct the path similarly to how TranscriptionAPI.save_result does it.
+            raw_response_data = self.with_retry(make_request)
+
+        # Determine file paths
         if isinstance(audio_path, Path):
             audio_path_str = str(audio_path)
         else:
             audio_path_str = audio_path
         file_dir = os.path.dirname(audio_path_str)
         file_name_stem = os.path.splitext(os.path.basename(audio_path_str))[0]
-        json_file_path = os.path.join(file_dir, f"{file_name_stem}_{self.api_name}.json")
-        
-        try:
-            result.save(json_file_path)
-            logger.info(f"Saved standardized ElevenLabs transcription to {json_file_path}")
-        except Exception as e:
-            logger.error(f"Failed to save ElevenLabs transcription result using result.save(): {e}")
-            # Optionally, fall back to the old method or handle error
-            # For now, we just log and continue, as the result object is still returned.
 
+        # Save raw API response immediately
+        raw_json_save_path = os.path.join(file_dir, f"{file_name_stem}_{self.api_name}.json")
+        try:
+            with open(raw_json_save_path, 'w', encoding='utf-8') as f_raw:
+                json.dump(raw_response_data, f_raw, indent=2, ensure_ascii=False)
+            logger.info(f"Saved raw ElevenLabs API response to {raw_json_save_path}")
+        except Exception as e_raw_save:
+            logger.error(f"Failed to save raw ElevenLabs API response: {e_raw_save}")
+
+        # Parse the response
+        from utils.parsers import parse_elevenlabs_format
+        result = parse_elevenlabs_format(raw_response_data)
+        
         return result
 
 
@@ -608,15 +636,25 @@ class GroqAPI(TranscriptionAPI):
                 # Extract data from the result
                 if hasattr(result, 'model_dump'):
                     # Handle Pydantic model response (newer Groq SDK)
-                    data = result.model_dump()
+                    raw_data = result.model_dump()
                 else:
                     # Handle dict-like response
-                    data = dict(result)
+                    raw_data = dict(result)
                 
-                # Add API name to the result dict
-                data["api_name"] = self.api_name
+                # Save the raw response for this chunk
+                chunk_file_path = Path(audio_chunk_path)
+                raw_chunk_json_path = chunk_file_path.with_name(f"{chunk_file_path.stem}_{self.api_name}.json")
+                try:
+                    with open(raw_chunk_json_path, 'w', encoding='utf-8') as f_raw_chunk:
+                        json.dump(raw_data, f_raw_chunk, indent=2, ensure_ascii=False)
+                    logger.info(f"Saved raw Groq chunk response to {raw_chunk_json_path}")
+                except Exception as e_raw_chunk_save:
+                    logger.error(f"Failed to save raw Groq chunk response: {e_raw_chunk_save}")
+
+                # Add API name to the result dict (parser should ideally handle this)
+                # raw_data["api_name"] = self.api_name 
                 
-                return data, chunk_start_ms
+                return raw_data, chunk_start_ms
                 
             except Exception as e:
                 logger.error(f"Error transcribing chunk with Groq: {str(e)}")
@@ -715,7 +753,7 @@ class GroqAPI(TranscriptionAPI):
             # Save raw result for debugging and reference
             file_dir = os.path.dirname(audio_path) if isinstance(audio_path, str) else audio_path.parent
             file_name = os.path.splitext(os.path.basename(audio_path))[0] if isinstance(audio_path, str) else audio_path.stem
-            raw_json_path = os.path.join(file_dir, f"{file_name}.json")
+            raw_json_path = os.path.join(file_dir, f"{file_name}_{self.api_name}.json")
             try:
                 with open(raw_json_path, 'w', encoding='utf-8') as f:
                     json.dump(result_dict, f, indent=2, ensure_ascii=False)
@@ -725,11 +763,7 @@ class GroqAPI(TranscriptionAPI):
             
             # Import here to avoid circular imports
             from utils.parsers import parse_groq_format
-            result = parse_groq_format(result_dict)
-            
-            # Save result
-            result_path = self.save_result(result, audio_path)
-            logger.info(f"Saved Groq transcription to {result_path}")
+            result_obj = parse_groq_format(result_dict)
             
             return result_dict
             
@@ -903,13 +937,23 @@ class OpenAIAPI(TranscriptionAPI):
             
             # Extract data from response object
             if hasattr(transcription_response, "model_dump"):
-                data = transcription_response.model_dump()
+                raw_data = transcription_response.model_dump()
             elif hasattr(transcription_response, "__dict__"):
-                data = transcription_response.__dict__
+                raw_data = transcription_response.__dict__
             else:
-                data = {"text": str(transcription_response)}
+                raw_data = {"text": str(transcription_response)}
+
+            # Save the raw response for this chunk
+            chunk_file_path = Path(audio_chunk_path)
+            raw_chunk_json_path = chunk_file_path.with_name(f"{chunk_file_path.stem}_{self.api_name}.json")
+            try:
+                with open(raw_chunk_json_path, 'w', encoding='utf-8') as f_raw_chunk:
+                    json.dump(raw_data, f_raw_chunk, indent=2, ensure_ascii=False)
+                logger.info(f"Saved raw OpenAI chunk response to {raw_chunk_json_path}")
+            except Exception as e_raw_chunk_save:
+                logger.error(f"Failed to save raw OpenAI chunk response: {e_raw_chunk_save}")
                 
-            return data, chunk_start_ms
+            return raw_data, chunk_start_ms
             
     def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
         """
@@ -1007,26 +1051,15 @@ class OpenAIAPI(TranscriptionAPI):
                 # Merge results from all chunks
                 merged_data = merge_transcripts(results, overlap=overlap)
                 
-                # Save raw merged data for analysis
-                raw_json_path = file_dir / f"{file_name}.json"
-                try:
-                    with open(raw_json_path, 'w', encoding='utf-8') as f:
-                        json.dump(merged_data, f, indent=2, ensure_ascii=False)
-                    logger.info(f"Saved merged OpenAI response to {raw_json_path}")
-                except Exception as save_err:
-                    logger.error(f"Failed to save merged OpenAI response: {save_err}")
-                    
-                # Add API name to merged data
+                # Add API name to merged data (Parser expects this or sets its own)
+                # If parse_openai_format sets api_name, this is not needed.
+                # For now, let's assume it's needed as parser might be generic.
                 merged_data["api_name"] = self.api_name
                 
                 # Parse using our parser
                 try:
                     from utils.parsers import parse_openai_format
                     result = parse_openai_format(merged_data)
-                    # Save the API-specific result
-                    api_json_path = file_dir / f"{file_name}_{self.api_name}.json"
-                    result.save(api_json_path)
-                    logger.info(f"Saved standardized OpenAI result to {api_json_path}")
                     return result
                 except Exception as parse_err:
                     logger.error(f"Failed to parse merged OpenAI response: {parse_err}")
@@ -1039,10 +1072,6 @@ class OpenAIAPI(TranscriptionAPI):
                         words=words,
                         api_name=self.api_name
                     )
-                    # Save the API-specific result
-                    api_json_path = file_dir / f"{file_name}_{self.api_name}.json"
-                    result.save(api_json_path)
-                    logger.info(f"Saved minimal OpenAI result to {api_json_path}")
                     return result
                 
             else:
@@ -1083,7 +1112,7 @@ class OpenAIAPI(TranscriptionAPI):
                             data["api_name"] = self.api_name
                             
                             # Save raw response with standard name format
-                            raw_json_path = file_dir / f"{file_name}.json"
+                            raw_json_path = file_dir / f"{file_name}_{self.api_name}.json"
                             try:
                                 with open(raw_json_path, 'w', encoding='utf-8') as f:
                                     json.dump(data, f, indent=2, ensure_ascii=False)
@@ -1095,10 +1124,6 @@ class OpenAIAPI(TranscriptionAPI):
                             try:
                                 from utils.parsers import parse_openai_format
                                 result = parse_openai_format(data)
-                                # Save the API-specific result
-                                api_json_path = file_dir / f"{file_name}_{self.api_name}.json"
-                                result.save(api_json_path)
-                                logger.info(f"Saved standardized OpenAI result to {api_json_path}")
                                 return result
                             except Exception as parse_err:
                                 logger.error(f"Failed to parse OpenAI response: {parse_err}")
@@ -1111,10 +1136,6 @@ class OpenAIAPI(TranscriptionAPI):
                                     words=words,
                                     api_name=self.api_name
                                 )
-                                # Save the API-specific result
-                                api_json_path = file_dir / f"{file_name}_{self.api_name}.json"
-                                result.save(api_json_path)
-                                logger.info(f"Saved minimal OpenAI result to {api_json_path}")
                                 return result
                             
                         except Exception as e:
