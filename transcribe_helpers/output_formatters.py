@@ -125,7 +125,8 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                fps: Optional[float] = None, fps_offset_start: int = -1, 
                fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0,
                srt_mode: str = "standard", max_words_per_block: int = 0,
-               remove_fillers: bool = False, filler_words: Optional[List[str]] = None) -> None:
+               remove_fillers: bool = False, filler_words: Optional[List[str]] = None,
+               show_pauses: bool = False) -> None:
     """
     Create SRT subtitle file from words.
     
@@ -143,6 +144,7 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
         max_words_per_block: Max words per subtitle block (0=no limit)
         remove_fillers: Whether to remove filler words
         filler_words: List of filler words to remove
+        show_pauses: Whether to show pause indicators (...)
     """
     # Log all subtitle settings
     logger.debug("SRT Generation Settings:")
@@ -152,11 +154,16 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
     logger.debug(f"- Silent threshold: {silentportions}ms")
     logger.debug(f"- Padding start: {padding_start}ms")
     logger.debug(f"- Padding end: {padding_end}ms")
+    logger.debug(f"- Show pauses: {show_pauses}")
     if fps:
         logger.debug(f"- FPS: {fps}")
         logger.debug(f"- FPS offset start: {fps_offset_start} frames")
         logger.debug(f"- FPS offset end: {fps_offset_end} frames")
     logger.debug(f"- Remove fillers: {remove_fillers}")
+    
+    # Count pause markers in input
+    pause_marker_count = sum(1 for w in words if w.get('type') == 'spacing' and '(...)' in w.get('text', ''))
+    logger.debug(f"Input words already contain {pause_marker_count} pause markers")
     
     # Log first 5 words for debugging
     if len(words) > 0:
@@ -172,6 +179,19 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
             
         words_copy = process_filler_words(words_copy, silentportions, filler_words)
         
+    # Make sure pauses are properly detected and marked (only if not already done)
+    if show_pauses and silentportions > 0 and pause_marker_count == 0:
+        from transcribe_helpers.text_processing import standardize_word_format
+        logger.debug(f"Re-standardizing words after filler removal to detect pauses: show_pauses={show_pauses}, silence_threshold={silentportions}")
+        words_copy = standardize_word_format(
+            words_copy, 
+            show_pauses=show_pauses, 
+            silence_threshold=silentportions
+        )
+        # Count pause markers after standardization
+        pause_marker_count = sum(1 for w in words_copy if w.get('type') == 'spacing' and '(...)' in w.get('text', ''))
+        logger.debug(f"After re-standardization: {pause_marker_count} pause markers")
+    
     # Apply padding to word timings if requested
     if padding_start != 0 or padding_end != 0:
         apply_intelligent_padding(words_copy, padding_start, padding_end)
@@ -854,7 +874,8 @@ def custom_export_subtitles(transcript_id: str, headers: Dict[str, str],
         fps_offset_end=fps_offset_end,
         padding_start=padding_start,
         padding_end=padding_end,
-        remove_fillers=False  # Already handled
+        remove_fillers=False,  # Already handled
+        show_pauses=show_pauses
     )
     
     logger.info(f"Custom SRT export saved to {srt_file}")

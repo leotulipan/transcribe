@@ -52,6 +52,102 @@ class TranscriptionAPI(ABC):
         """
         pass
         
+    def mask_api_key(self, key: str) -> str:
+        """
+        Mask an API key for safer logging.
+        
+        Args:
+            key: The API key to mask
+            
+        Returns:
+            A masked version of the API key showing only first 4 and last 4 characters
+        """
+        if not key:
+            return ""
+        
+        # Show only first 4 and last 4 characters if key is long enough
+        if len(key) > 8:
+            return f"{key[:4]}...{key[-4:]}"
+        else:
+            return "****"
+    
+    def mask_headers(self, headers: Dict[str, str]) -> Dict[str, str]:
+        """
+        Create a copy of headers with API keys masked for safer logging.
+        
+        Args:
+            headers: Dictionary of HTTP headers
+            
+        Returns:
+            Dictionary with sensitive values masked
+        """
+        masked_headers = {}
+        for k, v in headers.items():
+            if k.lower() in ('xi-api-key', 'authorization', 'api-key', 'x-api-key') and v:
+                masked_headers[k] = self.mask_api_key(v)
+            else:
+                masked_headers[k] = v
+        return masked_headers
+        
+    def load_from_env(self, env_var_name: str) -> Optional[str]:
+        """
+        Load API key from environment variable.
+        
+        Args:
+            env_var_name: Name of the environment variable containing the API key
+            
+        Returns:
+            API key from environment or None if not found
+        """
+        api_key = os.environ.get(env_var_name)
+        
+        if api_key:
+            logger.debug(f"Loaded API key from environment variable: {env_var_name}")
+            return api_key
+        else:
+            logger.debug(f"Environment variable {env_var_name} not found or empty")
+            return None
+            
+    def with_retry(self, func, max_retries: Optional[int] = None, retry_delay: Optional[int] = None):
+        """
+        Execute a function with retry logic.
+        
+        Args:
+            func: Function to execute
+            max_retries: Maximum number of retries (default: self.max_retries)
+            retry_delay: Delay between retries in seconds (default: self.retry_delay)
+            
+        Returns:
+            Result of the function
+            
+        Raises:
+            Exception: If the function fails after all retries
+        """
+        if max_retries is None:
+            max_retries = self.max_retries
+            
+        if retry_delay is None:
+            retry_delay = self.retry_delay
+            
+        last_error = None
+        for attempt in range(max_retries + 1):
+            try:
+                if attempt > 0:
+                    logger.info(f"Retry attempt {attempt}/{max_retries}...")
+                    
+                return func()
+            except Exception as e:
+                logger.warning(f"Attempt {attempt + 1}/{max_retries + 1} failed: {str(e)}")
+                last_error = e
+                
+                if attempt < max_retries:
+                    logger.info(f"Waiting {retry_delay} seconds before retrying...")
+                    time.sleep(retry_delay)
+                    
+        # If we're here, all retries failed
+        logger.error(f"All {max_retries + 1} attempts failed")
+        raise last_error
+
     def save_result(self, result: Dict[str, Any], audio_path: Union[str, Path]) -> str:
         """
         Save transcription result to a JSON file.
@@ -84,47 +180,6 @@ class TranscriptionAPI(ABC):
             
         logger.info(f"Saved transcription result to {json_file}")
         return json_file
-        
-    @staticmethod
-    def load_from_env(env_var_name: str) -> Optional[str]:
-        """
-        Load API key from environment variable.
-        
-        Args:
-            env_var_name: Name of the environment variable
-            
-        Returns:
-            API key if found, None otherwise
-        """
-        api_key = os.getenv(env_var_name)
-        if not api_key:
-            logger.warning(f"No API key found in environment variable: {env_var_name}")
-            return None
-        return api_key
-        
-    def with_retry(self, func, *args, **kwargs):
-        """
-        Execute a function with retry logic.
-        
-        Args:
-            func: Function to execute
-            *args: Positional arguments for the function
-            **kwargs: Keyword arguments for the function
-            
-        Returns:
-            Result of the function
-        """
-        retries = 0
-        while retries < self.max_retries:
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                retries += 1
-                if retries >= self.max_retries:
-                    logger.error(f"Failed after {self.max_retries} retries: {str(e)}")
-                    raise
-                logger.warning(f"Error: {str(e)}. Retrying in {self.retry_delay} seconds... (attempt {retries}/{self.max_retries})")
-                time.sleep(self.retry_delay)
 
 
 class AssemblyAIAPI(TranscriptionAPI):
@@ -155,6 +210,9 @@ class AssemblyAIAPI(TranscriptionAPI):
             
             # Set the API key in settings instead of creating client
             if self.api_key:
+                # Log masked API key for debugging
+                masked_key = self.mask_api_key(self.api_key)
+                logger.debug(f"Setting AssemblyAI API key: {masked_key}")
                 self.aai.settings.api_key = self.api_key
                 self.client = True  # Just a flag to indicate we have a working setup
             else:
@@ -493,8 +551,13 @@ class ElevenLabsAPI(TranscriptionAPI):
                 try:
                     # Log more detailed request information
                     logger.debug(f"Sending request to {url}")
-                    logger.debug(f"Headers: {headers}")
+                    
+                    # Create masked headers for logging
+                    masked_headers = self.mask_headers(headers)
+                    
+                    logger.debug(f"Headers: {masked_headers}")
                     logger.debug(f"Data params: {data}")
+                    
                     # Log file info without reading entire content
                     file_info = {}
                     for k, v in files.items():
@@ -519,29 +582,23 @@ class ElevenLabsAPI(TranscriptionAPI):
                 except Exception as e:
                     logger.error(f"An unexpected error occurred during request: {e}")
                     raise # Re-raise to be caught by with_retry
-                    
-            raw_response_data = self.with_retry(make_request)
-
-        # Determine file paths
-        if isinstance(audio_path, Path):
-            audio_path_str = str(audio_path)
-        else:
-            audio_path_str = audio_path
-        file_dir = os.path.dirname(audio_path_str)
-        file_name_stem = os.path.splitext(os.path.basename(audio_path_str))[0]
-
-        # Save raw API response immediately
-        raw_json_save_path = os.path.join(file_dir, f"{file_name_stem}_{self.api_name}.json")
-        try:
-            with open(raw_json_save_path, 'w', encoding='utf-8') as f_raw:
-                json.dump(raw_response_data, f_raw, indent=2, ensure_ascii=False)
-            logger.info(f"Saved raw ElevenLabs API response to {raw_json_save_path}")
-        except Exception as e_raw_save:
-            logger.error(f"Failed to save raw ElevenLabs API response: {e_raw_save}")
-
-        # Parse the response
-        from utils.parsers import parse_elevenlabs_format
-        result = parse_elevenlabs_format(raw_response_data)
+                
+            response_data = self.with_retry(make_request)
+            
+        # Parse the response into our standardized format
+        from .parsers import parse_elevenlabs_format
+        result = parse_elevenlabs_format(response_data)
+        
+        # Save raw response if requested
+        original_path = kwargs.get('original_path', audio_path)
+        output_dir = Path(original_path).parent
+        file_stem = Path(original_path).stem
+        
+        # Save raw API response
+        raw_json_path = output_dir / f"{file_stem}_elevenlabs.json"
+        with open(raw_json_path, 'w', encoding='utf-8') as f:
+            json.dump(response_data, f, ensure_ascii=False, indent=2)
+        logger.info(f"Saved raw API response to {raw_json_path}")
         
         return result
 
@@ -564,8 +621,15 @@ class GroqAPI(TranscriptionAPI):
             
         # Import here to avoid circular imports
         try:
-            from groq import Groq
-            self.client = Groq(api_key=self.api_key) if self.api_key else None
+            import groq
+            self.groq = groq
+            
+            # Log masked API key for debugging
+            if self.api_key:
+                masked_key = self.mask_api_key(self.api_key)
+                logger.debug(f"Initializing Groq client with API key: {masked_key}")
+                
+            self.client = groq.Groq(api_key=self.api_key) if self.api_key else None
         except ImportError:
             logger.error("Groq package not found. Please install it: uv add groq")
             self.client = None
@@ -874,6 +938,12 @@ class OpenAIAPI(TranscriptionAPI):
         # Import here to avoid circular imports
         try:
             from openai import OpenAI, APIConnectionError, AuthenticationError, RateLimitError, APIError
+            
+            # Log masked API key for debugging
+            if self.api_key:
+                masked_key = self.mask_api_key(self.api_key)
+                logger.debug(f"Initializing OpenAI client with API key: {masked_key}")
+                
             self.client = OpenAI(api_key=self.api_key)
             self.APIConnectionError = APIConnectionError
             self.AuthenticationError = AuthenticationError

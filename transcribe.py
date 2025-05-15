@@ -455,81 +455,40 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
     # Process a single file
     if path.is_file():
         logger.debug(f"Processing single file: {path}")
-        # Check if it's a JSON file for direct input
-        if path.suffix.lower() == '.json' and kwargs.get("use_json_input", False):
-            # Extract API name from filename if it contains it
-            filename = path.stem
-            api_name_from_file = None
-            if "_assemblyai" in filename:
-                api_name_from_file = "assemblyai"
-            elif "_elevenlabs" in filename:
-                api_name_from_file = "elevenlabs"
-            elif "_groq" in filename:
-                api_name_from_file = "groq"
-            elif "_openai" in filename:
-                api_name_from_file = "openai"
-            
-            # If detected from filename, use that API, otherwise keep the one from parameters
-            if api_name_from_file:
-                logger.info(f"[PROCESSING] Detected API '{api_name_from_file}' from filename: {filename}")
-                kwargs['api_name'] = api_name_from_file
-            
-            # Set use_input to True for JSON files
-            kwargs['use_input'] = True
-            
-            try:
-                output_files = process_file(path, **kwargs)
-                # Store the empty error tracker in kwargs
-                kwargs['error_tracker'] = error_tracker
-                return (1 if output_files else 0, 1)
-            except Exception as e:
-                error_message = str(e)
-                
-                # Special handling for rate limit errors - same as in directory processing
-                if error_message.startswith("RATE_LIMIT_ERROR:"):
-                    try:
-                        error_info = json.loads(error_message.replace("RATE_LIMIT_ERROR:", "").strip())
-                        error_tracker[str(path)] = error_info
-                        retry_msg = f" Retry after {error_info.get('retry_after', 'unknown')} seconds." if error_info.get('retry_after') else ""
-                        logger.error(f"Rate limit exceeded for {error_info.get('api')} API.{retry_msg}")
-                    except json.JSONDecodeError:
-                        error_tracker[str(path)] = {
-                            "error_type": "rate_limit_exceeded",
-                            "message": error_message,
-                            "file": str(path)
-                        }
-                        logger.error("Rate limit exceeded.")
-                else:
-                    # Regular error tracking
-                    error_tracker[str(path)] = {
-                        "error_type": "processing_error",
-                        "message": error_message,
-                        "file": str(path)
-                    }
-                
-                # Store error tracking in kwargs
-                kwargs['error_tracker'] = error_tracker
-                return (0, 1)
         
-        # Regular audio file processing
-        logger.debug(f"Starting regular audio file processing: {path}")
+        # Auto-apply --use-json-input if file is a JSON file
+        if path.suffix.lower() == '.json':
+            logger.info(f"Auto-enabling JSON input mode for file: {path}")
+            kwargs['use_json_input'] = True
+            
+            # Try to detect API from filename if not specified or if "auto"
+            if api_name == "auto" or not api_name:
+                # Extract API name from filename if it contains it
+                filename = path.stem
+                api_name_from_file = None
+                if "_assemblyai" in filename:
+                    api_name_from_file = "assemblyai"
+                elif "_elevenlabs" in filename:
+                    api_name_from_file = "elevenlabs"
+                elif "_groq" in filename:
+                    api_name_from_file = "groq"
+                elif "_openai" in filename:
+                    api_name_from_file = "openai"
+                
+                # If detected from filename, use that API
+                if api_name_from_file:
+                    logger.info(f"[PROCESSING] Detected API '{api_name_from_file}' from filename: {filename}")
+                    kwargs['api_name'] = api_name_from_file
+        
         try:
-            try:
-                output_files = process_file(path, **kwargs)
-                logger.debug(f"process_file returned: {output_files}")
-                # Store the empty error tracker in kwargs
-                kwargs['error_tracker'] = error_tracker
-                return (1 if output_files else 0, 1)
-            except Exception as e:
-                logger.error(f"Error in process_file: {str(e)}")
-                import traceback
-                logger.debug(f"Traceback: {traceback.format_exc()}")
-                raise  # Re-raise to be handled by the outer try-except
+            output_files = process_file(path, **kwargs)
+            # Store the empty error tracker in kwargs
+            kwargs['error_tracker'] = error_tracker
+            return (1 if output_files else 0, 1)
         except Exception as e:
             error_message = str(e)
-            logger.error(f"Caught error in process_audio_path: {error_message}")
             
-            # Rate limit error handling - same as above
+            # Special handling for rate limit errors - same as in directory processing
             if error_message.startswith("RATE_LIMIT_ERROR:"):
                 try:
                     error_info = json.loads(error_message.replace("RATE_LIMIT_ERROR:", "").strip())
@@ -775,6 +734,11 @@ def main(
         if remove_fillers == False:  # False is the default value
             remove_fillers = True
             logger.debug("Using davinci-srt default to remove filler words")
+            
+        # Check if chars_per_line was specified on command line
+        if chars_per_line == 80:  # 80 is the default value
+            chars_per_line = 500
+            logger.debug("Using davinci-srt default for chars-per-line: 500")
     
     # Create dictionary of parameters
     params = {

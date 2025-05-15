@@ -74,11 +74,21 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
     
     # Debug the silentportions/silent_portions parameter
     silent_portions = kwargs.get("silent_portions", kwargs.get("silentportions", 0))
-    logger.debug(f"First 5 words:")
+    show_pauses = kwargs.get("show_pauses", False) or silent_portions > 0
+    logger.debug(f"First 5 words: {words[:5] if words else 'None'}")
     logger.debug(f"Silent portions threshold: {silent_portions}ms")
+    logger.debug(f"Show pauses: {show_pauses}")
     logger.debug(f"Converting timestamps for SRT formatting")
     
-    # Create SRT file using the appropriate format
+    # Look for pause markers in the data
+    pause_count = 0
+    for word in words[:50]:  # Check first 50 words
+        if word.get('type') == 'spacing' and '(...)' in word.get('text', ''):
+            pause_count += 1
+            logger.debug(f"Found pause marker: {word}")
+    logger.debug(f"Found {pause_count} pause markers in input words")
+    
+    # Create SRT file using the appropriate format - always pass show_pauses
     if format_type == "word":
         create_srt(
             words, 
@@ -90,7 +100,9 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             padding_start=kwargs.get("padding_start", 0),
             padding_end=kwargs.get("padding_end", 0),
             remove_fillers=kwargs.get("remove_fillers", False),
-            filler_words=kwargs.get("filler_words")
+            filler_words=kwargs.get("filler_words"),
+            show_pauses=show_pauses,
+            silentportions=silent_portions
         )
     elif format_type == "davinci":
         create_srt(
@@ -106,7 +118,8 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             padding_end=kwargs.get("padding_end", 0),
             remove_fillers=kwargs.get("remove_fillers", True),
             filler_words=kwargs.get("filler_words"),
-            max_words_per_block=kwargs.get("max_words_per_block", 500)
+            max_words_per_block=kwargs.get("max_words_per_block", 500),
+            show_pauses=show_pauses
         )
     else:  # standard
         create_srt(
@@ -121,7 +134,8 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             padding_start=kwargs.get("padding_start", 0),
             padding_end=kwargs.get("padding_end", 0),
             remove_fillers=kwargs.get("remove_fillers", False),
-            filler_words=kwargs.get("filler_words")
+            filler_words=kwargs.get("filler_words"),
+            show_pauses=show_pauses
         )
     
     logger.info(f"SRT file created: {output_file}")
@@ -146,7 +160,11 @@ def create_output_files(result: TranscriptionResult, audio_path: Union[str, Path
     
     file_path = Path(audio_path)
     file_dir = file_path.parent
+    # Remove _apiname from stem if present
     file_name = file_path.stem
+    for api in ["_assemblyai", "_elevenlabs", "_groq", "_openai"]:
+        if file_name.endswith(api):
+            file_name = file_name[: -len(api)]
     
     # Make sure silent portions are properly marked if requested
     # Use either silent_portions or silentportions parameter
@@ -154,57 +172,63 @@ def create_output_files(result: TranscriptionResult, audio_path: Union[str, Path
     show_pauses = kwargs.get("show_pauses", False) or silent_portions > 0
     
     # Debug
-    print(f"DEBUG formatters.create_output_files - silent_portions={silent_portions}")
+    logger.debug(f"create_output_files - silent_portions={silent_portions}")
+    logger.debug(f"create_output_files - show_pauses={show_pauses} (kwarg={kwargs.get('show_pauses', 'not set')})")
+    
+    # Process filler words first if requested (moved this section up)
+    remove_fillers = kwargs.get("remove_fillers", False)
+    if remove_fillers and result.words:
+        from transcribe_helpers.text_processing import process_filler_words
+        logger.debug("Processing filler words before pause detection")
+        result.words = process_filler_words(
+            result.words,
+            silent_portions,
+            kwargs.get("filler_words", None)
+        )
     
     # Re-standardize word format to ensure appropriate spacing elements
-    # for silent portions detection
-    if (show_pauses or silent_portions > 0) and result.words:
+    # for silent portions detection - MOVED OUTSIDE the format loop
+    if silent_portions > 0 or show_pauses:
         from transcribe_helpers.text_processing import standardize_word_format
+        logger.debug(f"Applying standardize_word_format with show_pauses={show_pauses}, silence_threshold={silent_portions}")
         result.words = standardize_word_format(
-            result.words, 
+            result.words,
             show_pauses=show_pauses,
             silence_threshold=silent_portions
         )
-    
-    created_files = {}
-    
-    # Check if the CLI flag --word-srt was used (stored as a boolean in kwargs)
-    word_srt_flag = kwargs.get("word_srt", False)
-    
-    for format_type in format_types:
-        if format_type == "text":
-            output_file = file_dir / f"{file_name}.txt"
-            create_text_file(result, output_file)
-            created_files["text"] = str(output_file)
         
-        elif format_type == "srt":
+        # Log some of the words to verify pauses were added
+        pause_count = 0
+        for word in result.words[:50]:  # Check first 50 words
+            if word.get('type') == 'spacing' and '(...)' in word.get('text', ''):
+                pause_count += 1
+        logger.debug(f"Found {pause_count} pause markers in first 50 words after standardization")
+    
+    # Now just use result.words for all formats
+    created_files = {}
+    word_srt_flag = kwargs.get("word_srt", False)
+    for format_type in format_types:
+        if format_type == "srt":
             output_file = file_dir / f"{file_name}.srt"
-            # If word_srt flag is True, create word-level SRT but save as normal .srt
             if word_srt_flag:
                 create_srt_file(result, output_file, "word", **kwargs)
             else:
-                # Pass both parameter names for backward compatibility
-                create_srt_file(result, output_file, "standard", 
-                               silentportions=silent_portions, 
-                               **kwargs)
+                create_srt_file(result, output_file, "standard", **kwargs)
             created_files["srt"] = str(output_file)
-        
         elif format_type == "word_srt":
             output_file = file_dir / f"{file_name}.word.srt"
             create_srt_file(result, output_file, "word", **kwargs)
             created_files["word_srt"] = str(output_file)
-        
         elif format_type == "davinci_srt":
             output_file = file_dir / f"{file_name}.davinci.srt"
-            # Pass both parameter names for backward compatibility
-            create_srt_file(result, output_file, "davinci", 
-                           silentportions=silent_portions,
-                           **kwargs)
+            create_srt_file(result, output_file, "davinci", **kwargs)
             created_files["davinci_srt"] = str(output_file)
-        
+        elif format_type == "text":
+            output_file = file_dir / f"{file_name}.txt"
+            create_text_file(result, output_file)
+            created_files["text"] = str(output_file)
         elif format_type == "json":
             output_file = file_dir / f"{file_name}.json"
             result.save(output_file)
             created_files["json"] = str(output_file)
-    
     return created_files 

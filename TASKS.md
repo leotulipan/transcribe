@@ -121,10 +121,24 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [x] changes BASENAME_apiname.json save handling
 - [x]  __main__:process_file:497 - Error processing file: name 'process_filler_words' is not defined
   - [x] test with call `uv run transcribe.py -v -d --api elevenlabs --davinci-srt --file .\test\audio-test.mkv` until error is solved
+- [x] dont put api key in debug output (or mask it) e.g. with elevenlabs: 2025-05-15 09:59:48.969 | DEBUG    | utils.transcription_api:make_request:496 - Headers: {'xi-api-key': 
+- [x] if --file name that is given ends in .json auto-apply/assume --use-json-input option
+- [x] Characters per line: default for --davinci-srt to 500
+- [x] run pause detection AFTER filler word removal and make sure pauses are output as (...)
+  - [x] Debug the sequence of operations in create_output_files and create_srt_file functions
+  - [x] Fix formatters.py to ensure pause detection runs after filler words are removed
+  - [x] Make sure pause detection works when using JSON input with -j option
+  - [x] Add debug logging to show pause lengths being processed
+  - [x] Add option to output a debug file showing all word gaps and which ones were marked as pauses
+  - [x] **DONE:** Added 1800 pause markers in the output SRT file with --show-pauses --silent-portions 250
 
 ## In Progress Tasks
 
-- [ ] dont put api key in debug output (or mask it) e.g. with elevenlabs: 2025-05-15 09:59:48.969 | DEBUG    | utils.transcription_api:make_request:496 - Headers: {'xi-api-key': 
+- [ ] even when using _apiname.json direct to save the resulting .txt and .srt without an api name
+- [ ] test run the following task implementation with `uv run transcribe.py -v -d --api elevenlabs --davinci-srt --file "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle_elevenlabs.json"`
+  - [ ] count ähm with `Select-String -Pattern 'ähm'  "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle.srt"| Measure-Object -Line | Select-Object -ExpandProperty Lines` should return a number less then 10
+  - [ ] count pauses (....) with `Select-String -Pattern "\(\."  "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle.srt"| Measure-Object -Line | Select-Object -ExpandProperty Lines` should be a number greater than 0
+- [ ] Update filler word regex to handle attached punctuation (ie attached chars: ",;." ) in process_filler_words and make sure all filler words are removed 
 
 ## Future Tasks
 

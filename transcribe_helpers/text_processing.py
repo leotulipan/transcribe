@@ -83,6 +83,7 @@ def standardize_word_format(basic_words: List[Dict[str, Any]],
         pause_text = " "
         if show_pauses and words[0]['start'] > silence_threshold_adj:
             pause_text = " (...) "
+            logger.debug(f"Added initial pause marker: duration={words[0]['start']}, threshold={silence_threshold_adj}")
             
         standardized.append({
             'text': pause_text,
@@ -105,6 +106,7 @@ def standardize_word_format(basic_words: List[Dict[str, Any]],
                 pause_text = " "
                 if show_pauses and gap > silence_threshold_adj:
                     pause_text = " (...) "
+                    logger.debug(f"Added pause marker: index={i}, gap={gap}, threshold={silence_threshold_adj}")
                 
                 standardized.append({
                     'text': pause_text,
@@ -116,6 +118,20 @@ def standardize_word_format(basic_words: List[Dict[str, Any]],
                 })
             elif gap < -start_threshold:
                  logger.warning(f"Overlap detected between word {i} ({word.get('text')}) and word {i+1} ({next_word.get('text')}). Start/End: {word['end']} / {next_word['start']}")
+
+    # Check and convert existing spacing elements to pauses if they exceed threshold 
+    if show_pauses and silence_threshold > 0:
+        logger.debug(f"Looking for existing spacing elements that exceed threshold {silence_threshold}ms")
+        pause_count = 0
+        for i, item in enumerate(standardized):
+            if item.get('type') == 'spacing' and '(...)' not in item.get('text', ''):
+                duration = item['end'] - item['start']
+                duration_ms = duration * 1000 if is_decimal_format else duration
+                if duration_ms >= silence_threshold:
+                    item['text'] = ' (...) '
+                    pause_count += 1
+                    logger.debug(f"Converted spacing to pause: index={i}, duration={duration_ms}ms")
+        logger.debug(f"Converted {pause_count} spacings to pause markers")
 
     logger.debug(f"Standardized to {len(standardized)} elements (words and spaces)")
     if len(standardized) > 1:
@@ -208,8 +224,11 @@ def process_filler_words(words: List[Dict[str, Any]], pause_threshold: int,
         if words[i].get('type') == 'word':
             word_text = words[i].get('text', '').lower()
             
+            # Strip punctuation before checking for filler words
+            clean_word_text = word_text.rstrip(',;.!?:')
+            
             # If the word is a filler word
-            if word_text in filler_words:
+            if clean_word_text in filler_words:
                 # Check if we have both previous and next spacing
                 prev_spacing = i > 0 and words[i-1].get('type') == 'spacing'
                 next_spacing = i < len(words) - 1 and words[i+1].get('type') == 'spacing'
