@@ -476,7 +476,16 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             output_files.append(str(srt_filepath))
         elif kwargs.get("davinci_srt", False):
             srt_filepath = file_dir / f"{file_name}.srt"
-            create_srt_file(result, srt_filepath, srt_mode="davinci", show_pauses=kwargs.get("show_pauses", True))
+            create_srt_file(
+                result, 
+                srt_filepath, 
+                srt_mode="davinci", 
+                show_pauses=kwargs.get("show_pauses", True),
+                silent_portions=kwargs.get("silent_portions", 250),  # Pass the silent_portions parameter
+                padding_start=kwargs.get("padding_start", -125),     # Pass the padding_start parameter
+                padding_end=kwargs.get("padding_end", 0),            # Pass padding_end explicitly
+                remove_fillers=kwargs.get("remove_fillers", True)    # Pass remove_fillers parameter
+            )
             logger.success(f"Created DaVinci Resolve optimized SRT: {srt_filepath}")
             output_files.append(str(srt_filepath))
         else:
@@ -940,6 +949,24 @@ def main(
     
     # Load environment variables
     load_config_from_multiple_locations()
+    
+    # Apply DaVinci Resolve SRT default parameters if davinci_srt is enabled
+    # but only if the user hasn't explicitly specified these values
+    if davinci_srt:
+        # Check if silent_portions was specified on command line
+        if silent_portions == 0:  # 0 is the default value
+            silent_portions = 250
+            logger.debug("Using davinci-srt default for silent-portions: 250ms")
+            
+        # Check if padding_start was specified on command line (default is 0)
+        if padding_start == 0:
+            padding_start = -125
+            logger.debug("Using davinci-srt default for padding-start: -125ms")
+            
+        # Check if remove_fillers was specified on command line
+        if remove_fillers == False:  # False is the default value
+            remove_fillers = True
+            logger.debug("Using davinci-srt default to remove filler words")
     
     # Create dictionary of parameters
     params = {
