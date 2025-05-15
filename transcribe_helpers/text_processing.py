@@ -222,46 +222,54 @@ def process_filler_words(words: List[Dict[str, Any]], pause_threshold: int,
         
         # Check if current item is a word with text that could be a filler word
         if words[i].get('type') == 'word':
-            word_text = words[i].get('text', '').lower()
+            word_text = words[i].get('text', '')
             
-            # Strip punctuation before checking for filler words
-            clean_word_text = word_text.rstrip(',;.!?:')
-            
-            # If the word is a filler word
-            if clean_word_text in filler_words:
-                # Check if we have both previous and next spacing
-                prev_spacing = i > 0 and words[i-1].get('type') == 'spacing'
-                next_spacing = i < len(words) - 1 and words[i+1].get('type') == 'spacing'
-                
-                if prev_spacing and next_spacing:
-                    # Create a new spacing element replacing previous spacing + filler + next spacing
-                    filler_pause = {
-                        'type': 'spacing',
-                        'start': words[i-1]['start'],
-                        'end': words[i+1]['end'],
-                        'text': ' ',
-                        'speaker_id': words[i].get('speaker_id', '')
-                    }
+            # Create a regex pattern for case-insensitive matching of filler words
+            # with any punctuation before or after
+            for filler in filler_words:
+                # Create pattern that matches the filler word with optional punctuation
+                # around it (non-word characters like ,;.-!? etc)
+                pattern = re.compile(rf'^(\W*){filler}(\W*)$', re.IGNORECASE)
+                if pattern.match(word_text):
+                    logger.debug(f"Matched filler word: '{word_text}' with pattern '{filler}'")
+                    # Check if we have both previous and next spacing
+                    prev_spacing = i > 0 and words[i-1].get('type') == 'spacing'
+                    next_spacing = i < len(words) - 1 and words[i+1].get('type') == 'spacing'
                     
-                    # Apply padding to the preceding word if it exists
-                    if len(processed_words) > 0 and processed_words[-1].get('type') == 'word':
-                        # Record the original end time
-                        orig_end = processed_words[-1]['end']
-                        # Add padding (convert to seconds)
-                        padding = 30  # Default padding in ms
-                        processed_words[-1]['end'] += padding / 1000.0
+                    if prev_spacing and next_spacing:
+                        # Create a new spacing element replacing previous spacing + filler + next spacing
+                        filler_pause = {
+                            'type': 'spacing',
+                            'start': words[i-1]['start'],
+                            'end': words[i+1]['end'],
+                            'text': ' ',
+                            'speaker_id': words[i].get('speaker_id', '')
+                        }
                         
-                        logger.debug(f"Added {padding}ms padding to word ending at {orig_end}")
-                    
-                    # Add the filler pause
-                    processed_words.append(filler_pause)
-                    
-                    # Skip the filler word and the next spacing
-                    i += 2
-                    continue
-            
-            # Not a filler word or not surrounded by spacings, add as-is
-            processed_words.append(words[i])
+                        # Apply padding to the preceding word if it exists
+                        if len(processed_words) > 0 and processed_words[-1].get('type') == 'word':
+                            # Record the original end time
+                            orig_end = processed_words[-1]['end']
+                            # Add padding (convert to seconds)
+                            padding = 30  # Default padding in ms
+                            processed_words[-1]['end'] += padding / 1000.0
+                            
+                            logger.debug(f"Added {padding}ms padding to word ending at {orig_end}")
+                        
+                        # Add the filler pause
+                        processed_words.append(filler_pause)
+                        
+                        # Skip the filler word and the next spacing
+                        i += 2
+                        break  # Exit the filler word loop
+                    else:
+                        # No spacing on both sides - still remove the filler word
+                        # but don't add it to processed_words
+                        i += 1
+                        break  # Exit the filler word loop
+            else:
+                # Not a filler word, add as-is (we didn't break out of the loop)
+                processed_words.append(words[i])
         else:
             # Not a word, add as-is
             processed_words.append(words[i])

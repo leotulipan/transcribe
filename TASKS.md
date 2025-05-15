@@ -131,14 +131,16 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] Add debug logging to show pause lengths being processed
   - [x] Add option to output a debug file showing all word gaps and which ones were marked as pauses
   - [x] **DONE:** Added 1800 pause markers in the output SRT file with --show-pauses --silent-portions 250
+  - [x] count pauses (....) with `Select-String -Pattern "\(\."  "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle.srt"| Measure-Object -Line | Select-Object -ExpandProperty Lines` should be a number greater than 0
+- [x] even when using _apiname.json direct to save the resulting .txt and .srt without an api name
+- [x] Update filler word regex to handle ANY punctuation before and after the workd (ie chars: ",;.-" or non-word chars in general ) in process_filler_words and make sure all filler words are removed 
+  - [x] make regex case insensitive
+  - [x] test run the following task implementation with `uv run transcribe.py -v -d --api elevenlabs --davinci-srt --file "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle_elevenlabs.json"`
+  - [x] count ähm with `Select-String -Pattern 'ähm'  "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle.srt"| Measure-Object -Line | Select-Object -ExpandProperty Lines` returns a number less then 7
+    - **DONE:** Only 4 instances of "ähm" remain, pause detection working correctly with 1795 pause markers
 
 ## In Progress Tasks
 
-- [ ] even when using _apiname.json direct to save the resulting .txt and .srt without an api name
-- [ ] test run the following task implementation with `uv run transcribe.py -v -d --api elevenlabs --davinci-srt --file "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle_elevenlabs.json"`
-  - [ ] count ähm with `Select-String -Pattern 'ähm'  "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle.srt"| Measure-Object -Line | Select-Object -ExpandProperty Lines` should return a number less then 10
-  - [ ] count pauses (....) with `Select-String -Pattern "\(\."  "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle.srt"| Measure-Object -Line | Select-Object -ExpandProperty Lines` should be a number greater than 0
-- [ ] Update filler word regex to handle attached punctuation (ie attached chars: ",;." ) in process_filler_words and make sure all filler words are removed 
 
 ## Future Tasks
 
