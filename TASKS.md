@@ -138,9 +138,24 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] test run the following task implementation with `uv run transcribe.py -v -d --api elevenlabs --davinci-srt --file "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle_elevenlabs.json"`
   - [x] count ähm with `Select-String -Pattern 'ähm'  "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle.srt"| Measure-Object -Line | Select-Object -ExpandProperty Lines` returns a number less then 7
     - **DONE:** Only 4 instances of "ähm" remain, pause detection working correctly with 1795 pause markers
+- [x] Fix model parameter handling bug
+  - [x] In `transcribe.py`, update the model parameter handling to properly set default models when None is provided
+  - [x] Ensure Groq API always gets "whisper-large-v3" as default model if none specified
+  - [x] Update the debug output to show the actual model being used in all API calls
+  - [x] Review model parameter handling in all API classes to ensure consistent defaults
+  - [x] Add validation to prevent None being passed as model parameter to any API
+- [x] Fix Groq API timestamp granularity and result handling
+  - [x] Update Groq API to request word-level timestamps instead of segment-level
+  - [x] Properly handle Groq API dict response in process_file function
+  - [x] Ensure parse_groq_format properly handles the API response format
+  - [x] Test with ./test/audio-test.mkv to verify it generates proper SRT and TXT
+- [x] fix assemblyai ms timestamp detection
 
 ## In Progress Tasks
 
+- [ ] run test with `uv run transcribe.py --api APINAME --force --file ./test/audio-test.mkv -v -d` for all apis
+  - [ ] test that a _apiname.json is being created everytime
+  - [ ] test that a .srt and a .txt are being created each time (check the modified time)
 
 ## Future Tasks
 

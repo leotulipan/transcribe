@@ -332,6 +332,32 @@ def parse_assemblyai_format(data: Dict[str, Any]) -> TranscriptionResult:
     # AssemblyAI doesn't explicitly mark spaces, so we'll need to identify them
     # during standardization in a separate step
     
+    # Check if timestamps are in milliseconds format by examining the first few words
+    # If most values are large (>100), they're likely milliseconds
+    ms_format_detected = False
+    ms_count = 0
+    s_count = 0
+    
+    # Sample the first 10 words (or all if fewer) to check timestamp format
+    for word in raw_words[:min(10, len(raw_words))]:
+        start = word.get('start', 0)
+        end = word.get('end', 0)
+        
+        # Skip zero values
+        if start == 0 and end == 0:
+            continue
+        
+        # If value is >100, likely milliseconds
+        if start > 100 or end > 100:
+            ms_count += 1
+        else:
+            s_count += 1
+    
+    # If most timestamps appear to be in milliseconds
+    if ms_count > s_count:
+        ms_format_detected = True
+        logger.info(f"Detected millisecond timestamps in AssemblyAI data. Converting to seconds format.")
+    
     # Convert words to our standard format
     words = []
     scientific_notation_count = 0
@@ -359,6 +385,11 @@ def parse_assemblyai_format(data: Dict[str, Any]) -> TranscriptionResult:
                 scientific_notation_count += 1
                 logger.warning(f"Fixed scientific notation or very small timestamp: {end} → 0")
                 end = 0
+        
+        # Convert milliseconds to seconds if we detected ms format
+        if ms_format_detected:
+            start = start / 1000.0
+            end = end / 1000.0
         
         # Identify spaces (should be marked as spacing type, not word) 
         if word_text.strip() == '' or word_text.isspace():
@@ -463,10 +494,42 @@ def parse_groq_format(data: Dict[str, Any]) -> TranscriptionResult:
     logger.debug("Parsing Groq format")
     text = data.get("text", "")
     language = data.get("language", "")
-    raw_words = data.get("words", [])
+    
+    # Log structure information for debugging
+    logger.debug(f"Groq response keys: {list(data.keys())}")
+    
+    # Check for word-level timestamps in the response
+    has_word_timestamps = False
+    if "words" in data and isinstance(data["words"], list) and len(data["words"]) > 0:
+        logger.debug(f"Found words array with {len(data['words'])} items")
+        if len(data["words"]) > 0:
+            logger.debug(f"First word item: {data['words'][0]}")
+        has_word_timestamps = True
+        raw_words = data["words"]
+    else:
+        logger.debug("No valid words array found in Groq response")
+        # Try to extract words from segments if available
+        if "segments" in data and isinstance(data["segments"], list) and len(data["segments"]) > 0:
+            logger.debug(f"Found segments array with {len(data['segments'])} items")
+            # If we have segments with words, extract them
+            all_words = []
+            for segment in data["segments"]:
+                if isinstance(segment, dict) and "words" in segment and isinstance(segment["words"], list):
+                    all_words.extend(segment["words"])
+            
+            if len(all_words) > 0:
+                logger.debug(f"Extracted {len(all_words)} words from segments")
+                has_word_timestamps = True
+                raw_words = all_words
+            else:
+                logger.debug("No words found in segments")
+                raw_words = []
+        else:
+            logger.debug("No segments found with word-level timestamps")
+            raw_words = []
 
     # Fallback: generate word timings if missing
-    if (not raw_words or len(raw_words) == 0) and text:
+    if not has_word_timestamps and text:
         logger.info("Generating words from text content since words array is empty")
         tokens = text.split()
         fake_duration = 0.5  # seconds per word
@@ -494,48 +557,47 @@ def parse_groq_format(data: Dict[str, Any]) -> TranscriptionResult:
     
     # Process words to add spacing elements and preserve decimal precision
     prev_end = None
-    for i, word in enumerate(raw_words):
-        word_text = word.get('text', '')
+    
+    for word_data in raw_words:
+        # Handle Groq's different word format (using 'word' instead of 'text')
+        word_text = word_data.get('text', word_data.get('word', ''))
         
-        # Handle Groq's S.ms format (seconds) 
-        # Ensure we keep the decimal precision by using float
-        start = float(word.get('start', 0))
-        end = float(word.get('end', 0))
-        
-        # Add initial spacing if needed (for first word)
-        if i == 0 and start > 0.01:  # More than 10ms from start
-            spacing_text = " (...) " if start > 0.5 else " "
-            spacing = {
-                "text": spacing_text,
-                "start": 0.0,  # Explicitly use 0.0 to keep decimal
-                "end": start,   # Preserve original decimal precision
-                "type": "spacing"
-            }
-            words_with_spacing.append(spacing)
-            logger.debug(f"Added initial spacing: 0.0s to {start:.3f}s")
-        
-        # Add spacing between words if needed
-        elif prev_end is not None and start > prev_end + 0.01:  # Gap larger than 10ms
-            spacing_duration = start - prev_end
-            spacing_text = " (...) " if spacing_duration > 0.5 else " "
+        # Ensure we have start and end
+        if 'start' not in word_data or 'end' not in word_data:
+            logger.warning(f"Skipping word data missing required keys: {word_data}")
+            continue
             
-            spacing = {
-                "text": spacing_text,
-                "start": prev_end,  # Preserve decimal precision
-                "end": start,       # Preserve decimal precision 
-                "type": "spacing"
-            }
-            words_with_spacing.append(spacing)
-            logger.debug(f"Added spacing between words: {prev_end:.3f}s to {start:.3f}s ({spacing_duration:.3f}s)")
+        # Handle different time formats
+        start = float(word_data.get('start', 0))
+        end = float(word_data.get('end', 0))
         
-        # Convert the word and add it to the result with preserved decimal precision
+        # Create word object
         word_obj = {
             "text": word_text,
-            "start": start,  # Keep original float value with decimal precision
-            "end": end,      # Keep original float value with decimal precision
-            "confidence": float(word.get("confidence", 0.9)),
+            "start": start,
+            "end": end,
             "type": "word"
         }
+        
+        # Only add confidence if present
+        if 'confidence' in word_data:
+            word_obj['confidence'] = word_data.get('confidence')
+            
+        # Add spacing element if this isn't the first word
+        if prev_end is not None:
+            # Calculate gap between words
+            gap = start - prev_end
+            
+            # Only add spacing if there's a meaningful gap
+            if gap > 0.001:  # Small threshold to avoid rounding issues
+                spacing_obj = {
+                    "text": "",
+                    "start": prev_end,
+                    "end": start,
+                    "type": "spacing"
+                }
+                words_with_spacing.append(spacing_obj)
+        
         words_with_spacing.append(word_obj)
         prev_end = end
     
@@ -574,6 +636,7 @@ def parse_groq_format(data: Dict[str, Any]) -> TranscriptionResult:
         api_name=data.get("api_name", "groq")
     )
     
+    logger.debug(f"Created TranscriptionResult with {len(result.words)} words")
     return result
 
 

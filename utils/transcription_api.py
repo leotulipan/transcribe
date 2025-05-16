@@ -309,12 +309,11 @@ class AssemblyAIAPI(TranscriptionAPI):
                 
         except Exception as e:
             logger.error(f"Error transcribing chunk with AssemblyAI: {str(e)}")
-            raise
+            raise ValueError(f"AssemblyAI transcription failed: {str(e)}")
             
-    def transcribe(self, audio_path: Union[str, Path], **kwargs) -> Optional[Dict[str, Any]]:
+    def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
         """
         Transcribe audio file using AssemblyAI.
-        Returns the raw JSON response data as a dictionary, or None on failure.
         
         Args:
             audio_path: Path to the audio file
@@ -327,7 +326,7 @@ class AssemblyAIAPI(TranscriptionAPI):
                 - overlap: Overlap between chunks in seconds (default: 10)
                 
         Returns:
-            Raw JSON response as dictionary, or None on failure
+            TranscriptionResult object with the standardized format
         """
         if not self.client:
             raise ValueError("AssemblyAI client not initialized")
@@ -454,11 +453,15 @@ class AssemblyAIAPI(TranscriptionAPI):
             except Exception as save_err:
                 logger.error(f"Failed to save raw AssemblyAI response: {save_err}")
             
-            return result_dict
+            # Import here to avoid circular imports
+            from utils.parsers import parse_assemblyai_format
+            result_obj = parse_assemblyai_format(result_dict)
+            
+            return result_obj
             
         except Exception as e:
             logger.error(f"Failed to transcribe with AssemblyAI: {str(e)}")
-            return None
+            raise ValueError(f"AssemblyAI transcription failed: {str(e)}")
 
 
 class ElevenLabsAPI(TranscriptionAPI):
@@ -678,7 +681,12 @@ class GroqAPI(TranscriptionAPI):
         if isinstance(audio_chunk_path, Path):
             audio_chunk_path = str(audio_chunk_path)
             
-        logger.info(f"Transcribing chunk starting at {chunk_start_ms}ms with Groq")
+        # Ensure model is never None
+        if model is None:
+            model = "whisper-large-v3"
+            logger.info(f"No model specified for chunk, using default: {model}")
+            
+        logger.info(f"Transcribing chunk starting at {chunk_start_ms}ms with Groq (model: {model})")
         
         # Open the file in binary mode
         with open(audio_chunk_path, "rb") as audio_file:
@@ -686,13 +694,14 @@ class GroqAPI(TranscriptionAPI):
                 # Use the audio.transcriptions.create endpoint
                 # Pass the file directly as a tuple (filename, fileobj, content_type)
                 start_time = time.time()
+                logger.debug(f"Calling Groq API with model={model}, language={language if language else 'None'}")
                 result = self.client.audio.transcriptions.create(
                     file=("chunk.flac", audio_file, "audio/flac"),
                     model=model,
                     language=language,
                     response_format="verbose_json",
                     temperature=0,  # For best transcription quality
-                    timestamp_granularities=["segment"]  # Get segment-level timestamps
+                    timestamp_granularities=["word", "segment"]  # Request both word and segment-level timestamps
                 )
                 transcription_time = time.time() - start_time
                 logger.info(f"Chunk processed in {transcription_time:.2f}s")
@@ -722,9 +731,9 @@ class GroqAPI(TranscriptionAPI):
                 
             except Exception as e:
                 logger.error(f"Error transcribing chunk with Groq: {str(e)}")
-                raise
+                raise ValueError(f"Groq transcription failed: {str(e)}")
             
-    def transcribe(self, audio_path: Union[str, Path], **kwargs) -> Optional[Dict[str, Any]]:
+    def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
         """
         Transcribe audio file using Groq with proper chunking for long files.
         
@@ -737,7 +746,7 @@ class GroqAPI(TranscriptionAPI):
                 - overlap: Overlap between chunks in seconds (default: 10)
                 
         Returns:
-            Dictionary with transcription results
+            Standardized TranscriptionResult object
         """
         if not self.client:
             raise ValueError("Groq client not initialized")
@@ -745,6 +754,12 @@ class GroqAPI(TranscriptionAPI):
         # Extract parameters
         language = kwargs.get("language")
         model = kwargs.get("model", "whisper-large-v3")
+        
+        # Always ensure we have a valid model - never pass None
+        if model is None:
+            model = "whisper-large-v3"
+            logger.info(f"No model specified, using default: {model}")
+            
         chunk_length = kwargs.get("chunk_length", 600)  # seconds
         overlap = kwargs.get("overlap", 10)  # seconds
         
@@ -803,6 +818,9 @@ class GroqAPI(TranscriptionAPI):
                     try:
                         result, _ = self.transcribe_chunk(chunk_path, start, model, language)
                         results.append((result, start))
+                    except Exception as e:
+                        logger.error(f"Error transcribing chunk {i+1}: {str(e)}")
+                        raise
                     finally:
                         # Clean up temp file
                         if os.path.exists(chunk_path):
@@ -829,11 +847,11 @@ class GroqAPI(TranscriptionAPI):
             from utils.parsers import parse_groq_format
             result_obj = parse_groq_format(result_dict)
             
-            return result_dict
+            return result_obj
             
         except Exception as e:
             logger.error(f"Error transcribing with Groq: {str(e)}")
-            return None
+            raise ValueError(f"Groq transcription failed: {str(e)}")
         finally:
             # Clean up temporary FLAC file
             keep_flac = kwargs.get("keep_flac", False)

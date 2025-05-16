@@ -252,25 +252,51 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             if api_name == "elevenlabs":
                 transcribe_kwargs['model_id'] = kwargs.get('model', 'scribe_v1') # Get model or default
                 logger.debug(f"Using ElevenLabs model_id: {transcribe_kwargs['model_id']}")
-            else: # for other APIs, pass 'model' from kwargs if it exists
-                 if 'model' in kwargs and kwargs['model'] is not None:
-                    transcribe_kwargs['model'] = kwargs['model']
+            else: # for other APIs, set model with appropriate defaults
+                if api_name == "groq":
+                    transcribe_kwargs['model'] = kwargs.get('model', 'whisper-large-v3')
+                elif api_name == "openai":
+                    transcribe_kwargs['model'] = kwargs.get('model', 'whisper-1')
+                elif api_name == "assemblyai":
+                    transcribe_kwargs['model'] = kwargs.get('model', 'best')
+                else:
+                    # For any other API, still pass model if it exists
+                    if 'model' in kwargs and kwargs['model'] is not None:
+                        transcribe_kwargs['model'] = kwargs['model']
+                
+                if 'model' in transcribe_kwargs:
                     logger.debug(f"Using model: {transcribe_kwargs['model']}")
 
 
             api_call_response = api_instance.transcribe(current_audio_file_path, **transcribe_kwargs)
 
-            if api_name == "assemblyai": # AssemblyAI's transcribe returns a dict
-                if api_call_response and isinstance(api_call_response, dict):
+            # Handle API response based on its type
+            logger.debug(f"API response type: {type(api_call_response)}")
+
+            # Check if response is already a TranscriptionResult object
+            if isinstance(api_call_response, TranscriptionResult):
+                logger.info("API returned a TranscriptionResult object directly")
+                transcription_result = api_call_response
+            # Handle raw dict responses from different APIs
+            elif isinstance(api_call_response, dict):
+                if api_name == "assemblyai":
                     logger.info("Parsing AssemblyAI raw response...")
                     transcription_result = all_parsers.parse_assemblyai_format(api_call_response)
+                elif api_name == "groq":
+                    logger.info("Parsing Groq raw response...")
+                    transcription_result = all_parsers.parse_groq_format(api_call_response)
                 else:
-                    logger.error("AssemblyAI transcription failed or returned unexpected data.")
-                    transcription_result = None
-            elif isinstance(api_call_response, TranscriptionResult):
-                transcription_result = api_call_response
+                    logger.info(f"Parsing generic {api_name} raw response...")
+                    # Try to use the specific parser for this API type
+                    parser_func_name = f"parse_{api_name}_format"
+                    parser_func = getattr(all_parsers, parser_func_name, None)
+                    if parser_func:
+                        transcription_result = parser_func(api_call_response)
+                    else:
+                        logger.error(f"No parser found for API: {api_name}")
+                        transcription_result = None
             else:
-                logger.error(f"{api_name} API call did not return a TranscriptionResult or expected raw dict. Type: {type(api_call_response)}")
+                logger.error(f"{api_name} API call returned unexpected type: {type(api_call_response)}")
                 transcription_result = None
 
         # At this point, transcription_result should be a TranscriptionResult object or None
