@@ -1,0 +1,1 @@
+ Wir testen nun das Audio Transkript und ob die Textdatei korrekt angelegt wird.

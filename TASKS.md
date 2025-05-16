@@ -150,12 +150,19 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] Ensure parse_groq_format properly handles the API response format
   - [x] Test with ./test/audio-test.mkv to verify it generates proper SRT and TXT
 - [x] fix assemblyai ms timestamp detection
+- [x] run test with `uv run transcribe.py --api APINAME --force --file ./test/audio-test.mkv -v -d` for all apis
+  - [x] test that a _apiname.json is being created everytime
+  - [x] test that a .srt and a .txt are being created each time (check the modified time)
 
 ## In Progress Tasks
 
-- [ ] run test with `uv run transcribe.py --api APINAME --force --file ./test/audio-test.mkv -v -d` for all apis
-  - [ ] test that a _apiname.json is being created everytime
-  - [ ] test that a .srt and a .txt are being created each time (check the modified time)
+- [ ] groq chunking timestamp debugging (save chunk json, look at join algo)
+  - [x] Created debug_groq_chunking.py to analyze chunk timestamps 
+  - [x] Added visualization of gaps between chunks
+  - [x] Added ability to save and analyze all chunk JSON files
+  - [x] Created debug_groq_chunking.bat for easy Windows execution
+  - [ ] Test with longer audio files to analyze join algorithm issues
+  - [ ] Identify and fix any timestamp offset issues in the merger algorithm
 
 ## Future Tasks
 

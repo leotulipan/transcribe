@@ -1,0 +1,8 @@
+1
+00:00:01,100 --> 00:00:06,719
+Wir testen nun das Audiotranskript und ob die Textdatei korrekt angelegt wird.
+
+2
+00:00:07,078 --> 00:00:08,778
+((Hintergrundgeräusch))
+

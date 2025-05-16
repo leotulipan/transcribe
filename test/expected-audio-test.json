@@ -1,0 +1,182 @@
+{
+  "language_code": "deu",
+  "language_probability": 0.9889869093894958,
+  "text": "Wir testen nun das Audiotranskript und ob die Textdatei korrekt angelegt wird. (Hintergrundgeräusch)",
+  "words": [
+    {
+      "text": "Wir",
+      "start": 1.1,
+      "end": 1.339,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 1.339,
+      "end": 1.339,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "testen",
+      "start": 1.339,
+      "end": 1.919,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 1.919,
+      "end": 1.919,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "nun",
+      "start": 1.919,
+      "end": 2.22,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 2.22,
+      "end": 2.22,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "das",
+      "start": 2.22,
+      "end": 2.659,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 2.659,
+      "end": 2.659,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "Audiotranskript",
+      "start": 2.659,
+      "end": 3.799,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 3.799,
+      "end": 3.799,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "und",
+      "start": 3.799,
+      "end": 4.039,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 4.039,
+      "end": 4.039,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "ob",
+      "start": 4.039,
+      "end": 4.239,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 4.239,
+      "end": 4.259,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "die",
+      "start": 4.259,
+      "end": 4.379,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 4.379,
+      "end": 4.4,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "Textdatei",
+      "start": 4.4,
+      "end": 5.059,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 5.059,
+      "end": 5.059,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "korrekt",
+      "start": 5.059,
+      "end": 5.659,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 5.659,
+      "end": 5.719,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "angelegt",
+      "start": 5.719,
+      "end": 6.239,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 6.239,
+      "end": 6.239,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "wird.",
+      "start": 6.239,
+      "end": 6.719,
+      "type": "word",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": " ",
+      "start": 6.719,
+      "end": 7.079,
+      "type": "spacing",
+      "speaker_id": "speaker_0"
+    },
+    {
+      "text": "(Hintergrundgeräusch)",
+      "start": 7.079,
+      "end": 8.779,
+      "type": "audio_event",
+      "speaker_id": "speaker_1"
+    }
+  ]
+}

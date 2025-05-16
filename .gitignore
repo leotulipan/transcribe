@@ -1,5 +1,4 @@
 # custom files with personal information that shouldn't be on github
-*test*
 
 *.csv
 invoice*.pdf
@@ -197,3 +196,5 @@ intermarket_bmd/class_PlentymarketsAPI.py
 # Ignore all files langchain turorials
 */langchain-tutorials/*
 parser_log.txt
+compare_audio-test.*
+test/audio-test*.json

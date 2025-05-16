@@ -1,0 +1,1 @@
+Speaker speaker_0: Wir testen nun das Audiotranskript und ob die Textdatei korrekt angelegt wird. ((Hintergrundgeräusch)) 
