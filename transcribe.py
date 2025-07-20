@@ -697,6 +697,12 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
     is_flag=True,
     help="Show all log messages in console"
 )
+@click.option(
+    "--start-hour",
+    type=int,
+    default=None,
+    help="Hour offset for SRT timestamps (default: 0, with --davinci-srt: 1)"
+)
 def main(
     file: Optional[str],
     folder: Optional[str],
@@ -725,7 +731,8 @@ def main(
     save_cleaned_json: bool,
     use_json_input: bool,
     debug: bool,
-    verbose: bool
+    verbose: bool,
+    start_hour: Optional[int],
 ) -> None:
     """Transcribe audio/video files using various APIs."""
     # Validate input parameters
@@ -743,28 +750,25 @@ def main(
     # Load environment variables
     load_config_from_multiple_locations()
     
-    # Apply DaVinci Resolve SRT default parameters if davinci_srt is enabled
-    # but only if the user hasn't explicitly specified these values
+    # DaVinci SRT defaults
     if davinci_srt:
-        # Check if silent_portions was specified on command line
-        if silent_portions == 0:  # 0 is the default value
+        if silent_portions == 0:
             silent_portions = 250
             logger.debug("Using davinci-srt default for silent-portions: 250ms")
-            
-        # Check if padding_start was specified on command line (default is 0)
         if padding_start == 0:
             padding_start = -125
             logger.debug("Using davinci-srt default for padding-start: -125ms")
-            
-        # Check if remove_fillers was specified on command line
-        if remove_fillers == False:  # False is the default value
+        if remove_fillers == False:
             remove_fillers = True
             logger.debug("Using davinci-srt default to remove filler words")
-            
-        # Check if chars_per_line was specified on command line
-        if chars_per_line == 80:  # 80 is the default value
+        if chars_per_line == 80:
             chars_per_line = 500
             logger.debug("Using davinci-srt default for chars-per-line: 500")
+        if start_hour is None:
+            start_hour = 1
+            logger.debug("Using davinci-srt default for start-hour: 1")
+    if start_hour is None:
+        start_hour = 0
     
     # Create dictionary of parameters
     params = {
@@ -791,7 +795,8 @@ def main(
         'overlap': overlap,
         'force': force,
         'save_cleaned_json': save_cleaned_json,
-        'use_json_input': use_json_input
+        'use_json_input': use_json_input,
+        'start_hour': start_hour,
     }
     
     # Process file or folder

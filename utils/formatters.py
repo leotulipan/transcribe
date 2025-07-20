@@ -89,6 +89,7 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
     logger.debug(f"Found {pause_count} pause markers in input words")
     
     # Create SRT file using the appropriate format - always pass show_pauses
+    start_hour = kwargs.get("start_hour", 0)
     if format_type == "word":
         create_srt(
             words, 
@@ -102,7 +103,8 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             remove_fillers=kwargs.get("remove_fillers", False),
             filler_words=kwargs.get("filler_words"),
             show_pauses=show_pauses,
-            silentportions=silent_portions
+            silentportions=silent_portions,
+            start_hour=start_hour
         )
     elif format_type == "davinci":
         create_srt(
@@ -119,7 +121,8 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             remove_fillers=kwargs.get("remove_fillers", True),
             filler_words=kwargs.get("filler_words"),
             max_words_per_block=kwargs.get("max_words_per_block", 500),
-            show_pauses=show_pauses
+            show_pauses=show_pauses,
+            start_hour=start_hour
         )
     else:  # standard
         create_srt(
@@ -135,7 +138,8 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             padding_end=kwargs.get("padding_end", 0),
             remove_fillers=kwargs.get("remove_fillers", False),
             filler_words=kwargs.get("filler_words"),
-            show_pauses=show_pauses
+            show_pauses=show_pauses,
+            start_hour=start_hour
         )
     
     logger.info(f"SRT file created: {output_file}")

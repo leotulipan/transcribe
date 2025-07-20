@@ -24,6 +24,37 @@ except ImportError:
     from audio_transcribe.loguru_patch import logger
 
 
+def join_text_with_proper_spacing(current_text: str, new_word: str) -> str:
+    """
+    Join text with proper spacing after periods, commas, etc.
+    
+    Args:
+        current_text: The current text string
+        new_word: The new word to add
+        
+    Returns:
+        The joined text with proper spacing
+    """
+    if not current_text:
+        return new_word
+    
+    # Check if the current text ends with punctuation that needs a space after it
+    punctuation_needing_space = ".,:;!?"
+    
+    # Get the last character of current text
+    last_char = current_text[-1]
+    
+    # If the last character is punctuation that needs a space, add one
+    if last_char in punctuation_needing_space:
+        return current_text + " " + new_word
+    # If the last character is not punctuation, add a space before the new word
+    elif last_char not in ".,;:!?-":
+        return current_text + " " + new_word
+    else:
+        # Last character is punctuation that doesn't need a space (like hyphen)
+        return current_text + new_word
+
+
 def format_time(seconds: float, fps: Optional[float] = None, frames_display: bool = False) -> str:
     """
     Format time in seconds to SRT timestamp format.
@@ -119,13 +150,11 @@ def process_standard_block(file, counter: int, words: List[Dict[str, Any]],
         end_time: End time of the block in seconds
         chars_per_line: Maximum characters per line
     """
-    # Build text from all words
+    # Build text from all words with proper spacing after punctuation
     text = ""
     for word in words:
         word_text = word.get('word', word.get('text', ''))
-        if text and not text.endswith(' '):
-            text += ' '
-        text += word_text
+        text = join_text_with_proper_spacing(text, word_text)
         
     # Format into lines respecting chars_per_line
     lines = textwrap.wrap(text, width=chars_per_line)
@@ -148,11 +177,11 @@ def process_davinci_block(file, counter: int, words: List[Dict[str, Any]],
         start_time: Start time of the block in seconds
         end_time: End time of the block in seconds
     """
-    # Build text from all words
+    # Build text from all words with proper spacing after punctuation
     text = ""
     for word in words:
         word_text = word.get('word', word.get('text', ''))
-        text += word_text + " "
+        text = join_text_with_proper_spacing(text, word_text)
         
     # Write to file
     file.write(f"{counter}\n")
@@ -497,9 +526,10 @@ def create_text_file(words: List[Dict[str, Any]], output_file: Union[str, Path])
             text += word_text
         else:
             prev_is_spacing = idx > 0 and words[idx-1].get('type') == 'spacing'
-            if not prev_is_spacing and text:
-                text += ' '
-            text += word_text
+            if not prev_is_spacing:
+                text = join_text_with_proper_spacing(text, word_text)
+            else:
+                text += word_text
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(text)
     logger.info("Text file created successfully")
@@ -552,7 +582,7 @@ def convert_to_srt(result: Dict[str, Any], output_path: Union[str, Path],
             # If segments overlap or are very close (within 0.1s), merge them
             if next_segment['start'] <= current_segment['end'] + 0.1:
                 current_segment['end'] = max(current_segment['end'], next_segment['end'])
-                current_segment['text'] = current_segment['text'] + ' ' + next_segment['text']
+                current_segment['text'] = join_text_with_proper_spacing(current_segment['text'], next_segment['text'])
             else:
                 merged_segments.append(current_segment)
                 current_segment = next_segment.copy()
@@ -646,7 +676,7 @@ def format_transcript_with_speakers(segments: List[Dict[str, Any]]) -> str:
             transcript += f"Speaker {speaker}: {text}"
             current_speaker = speaker
         else:
-            transcript += f" {text}"
+            transcript = join_text_with_proper_spacing(transcript, text)
     
     return transcript
 

@@ -30,19 +30,51 @@ except ImportError:
 from transcribe_helpers.text_processing import process_filler_words
 
 
-def format_time(seconds: float) -> str:
+def join_text_with_proper_spacing(current_text: str, new_word: str) -> str:
+    """
+    Join text with proper spacing after periods, commas, etc.
+    
+    Args:
+        current_text: The current text string
+        new_word: The new word to add
+        
+    Returns:
+        The joined text with proper spacing
+    """
+    if not current_text:
+        return new_word
+    
+    # Check if the current text ends with punctuation that needs a space after it
+    punctuation_needing_space = ".,:;!?"
+    
+    # Get the last character of current text
+    last_char = current_text[-1]
+    
+    # If the last character is punctuation that needs a space, add one
+    if last_char in punctuation_needing_space:
+        return current_text + " " + new_word
+    # If the last character is not punctuation, add a space before the new word
+    elif last_char not in ".,;:!?-":
+        return current_text + " " + new_word
+    else:
+        # Last character is punctuation that doesn't need a space (like hyphen)
+        return current_text + new_word
+
+
+def format_time(seconds: float, start_hour: int = 0) -> str:
     """Format time in seconds to HH:MM:SS,ms format."""
     # Convert seconds to milliseconds integer for calculation
     total_milliseconds = int(round(seconds * 1000))
     
     hours, total_milliseconds = divmod(total_milliseconds, 3600000)
+    hours += start_hour
     minutes, total_milliseconds = divmod(total_milliseconds, 60000)
     seconds_part, milliseconds = divmod(total_milliseconds, 1000)
     
     return f"{hours:02d}:{minutes:02d}:{seconds_part:02d},{milliseconds:03d}"
 
 
-def format_time_ms(milliseconds: int) -> str:
+def format_time_ms(milliseconds: int, start_hour: int = 0) -> str:
     """Format time in integer milliseconds to HH:MM:SS,ms format."""
     if not isinstance(milliseconds, int):
         logger.warning(f"format_time_ms received non-integer: {milliseconds}. Converting.")
@@ -54,6 +86,7 @@ def format_time_ms(milliseconds: int) -> str:
     
     # Process as normal
     hours, milliseconds = divmod(milliseconds, 3600000)
+    hours += start_hour
     minutes, milliseconds = divmod(milliseconds, 60000)
     seconds_part, milliseconds = divmod(milliseconds, 1000)
     
@@ -126,7 +159,7 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0,
                srt_mode: str = "standard", max_words_per_block: int = 0,
                remove_fillers: bool = False, filler_words: Optional[List[str]] = None,
-               show_pauses: bool = False) -> None:
+               show_pauses: bool = False, start_hour: int = 0) -> None:
     """
     Create SRT subtitle file from words.
     
@@ -145,6 +178,7 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
         remove_fillers: Whether to remove filler words
         filler_words: List of filler words to remove
         show_pauses: Whether to show pause indicators (...)
+        start_hour: Hour to offset timestamps
     """
     # Log all subtitle settings
     logger.debug("SRT Generation Settings:")
@@ -202,16 +236,16 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
     
     # Choose SRT creation mode
     if srt_mode == "word":
-        create_word_level_srt(words_copy, output_file, fps=fps, padding_start=0, padding_end=0)
+        create_word_level_srt(words_copy, output_file, fps=fps, padding_start=0, padding_end=0, start_hour=start_hour)
     elif srt_mode == "davinci":
         create_davinci_srt(
             words_copy, output_file, silentportions=silentportions,
-            fps=fps, padding_start=0, padding_end=0, remove_fillers=False
+            fps=fps, padding_start=0, padding_end=0, remove_fillers=False, start_hour=start_hour
         )
     else:  # standard
         create_standard_srt(
             words_copy, output_file, chars_per_line=chars_per_line,
-            silentportions=silentportions, fps=fps, padding_start=0, padding_end=0
+            silentportions=silentportions, fps=fps, padding_start=0, padding_end=0, start_hour=start_hour
         )
     
     logger.info(f"Created SRT file: {output_file}")
@@ -364,7 +398,10 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
             if not regular_words:
                 continue
                 
-            sentence_text = " ".join([w['text'] for w in regular_words])
+            # Join words with proper spacing after punctuation
+            sentence_text = ""
+            for word in regular_words:
+                sentence_text = join_text_with_proper_spacing(sentence_text, word['text'])
             sentence_end = regular_words[-1]['end']
             
             # Check for audio events within this sentence timeframe
@@ -375,7 +412,7 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
                 end_ms = int(sentence_end * 1000)
                 
                 file_obj.write(f"{current_counter}\n")
-                file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+                file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
                 file_obj.write(f"{sentence_text}\n\n")
                 current_counter += 1
                 
@@ -385,7 +422,7 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
                     end_ms = int(event['end'] * 1000)
                     
                     file_obj.write(f"{current_counter}\n")
-                    file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+                    file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
                     file_obj.write(f"({event['text']})\n\n")
                     current_counter += 1
             else:
@@ -394,7 +431,7 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
                 end_ms = int(sentence_end * 1000)
                 
                 file_obj.write(f"{current_counter}\n")
-                file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+                file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
                 file_obj.write(f"{sentence_text}\n\n")
             
             current_start = sentence_end
@@ -405,13 +442,16 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
         audio_events = [w for w in block_words if w.get('type') == 'audio_event']
         
         if regular_words:
-            block_text = " ".join([w['text'] for w in regular_words])
+            # Join words with proper spacing after punctuation
+            block_text = ""
+            for word in regular_words:
+                block_text = join_text_with_proper_spacing(block_text, word['text'])
             
             start_ms = int(start_time * 1000)
             end_ms = int(end_time * 1000)
             
             file_obj.write(f"{counter}\n")
-            file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+            file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
             file_obj.write(f"{block_text}\n\n")
             counter_offset = 1
             
@@ -421,7 +461,7 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
                 end_ms = int(event['end'] * 1000)
                 
                 file_obj.write(f"{counter + counter_offset}\n")
-                file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+                file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
                 file_obj.write(f"({event['text']})\n\n")
                 counter_offset += 1
         elif audio_events:
@@ -431,14 +471,14 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
                 end_ms = int(event['end'] * 1000)
                 
                 file_obj.write(f"{counter + i}\n")
-                file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+                file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
                 file_obj.write(f"({event['text']})\n\n")
 
 
 def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Path], 
                        chars_per_line: int = 80, silentportions: int = 0,
                        fps: Optional[float] = None, fps_offset_start: int = -1, 
-                       fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0) -> None:
+                       fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0, start_hour: int = 0) -> None:
     """Standard SRT format with character limits per line"""
     # Instead of recursively calling create_srt, implement the standard SRT logic directly here
     output_file = Path(output_file)
@@ -466,7 +506,7 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
                             text_lines = [current_text]  # Fallback in case wrap returned empty list
                         
                         file_obj.write(f"{counter}\n")
-                        file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+                        file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
                         file_obj.write("\n".join(text_lines) + "\n\n")
                         counter += 1
                     
@@ -482,7 +522,7 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
                         pause_end = int(word.get('end', 0) * 1000)
                         
                         file_obj.write(f"{counter}\n")
-                        file_obj.write(f"{format_time_ms(pause_start)} --> {format_time_ms(pause_end)}\n")
+                        file_obj.write(f"{format_time_ms(pause_start, start_hour)} --> {format_time_ms(pause_end, start_hour)}\n")
                         file_obj.write(word.get('text', '').strip() + "\n\n")
                         counter += 1
                 
@@ -500,11 +540,8 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
             current_subtitle.append(word)
             current_end = word.get('end', 0)
             
-            # Add space before word unless it's the first word or follows punctuation
-            if current_text and not current_text[-1] in ".,;:!?-":
-                current_text += " "
-            
-            current_text += word.get('text', '').strip()
+            # Join text with proper spacing after punctuation
+            current_text = join_text_with_proper_spacing(current_text, word.get('text', '').strip())
             
             # Check if we should break subtitle here based on length or punctuation
             if (len(current_text) >= chars_per_line and 
@@ -520,7 +557,7 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
                         text_lines = [current_text]  # Fallback
                     
                     file_obj.write(f"{counter}\n")
-                    file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+                    file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
                     file_obj.write("\n".join(text_lines) + "\n\n")
                     counter += 1
                 
@@ -541,37 +578,40 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
                 text_lines = [current_text]  # Fallback
             
             file_obj.write(f"{counter}\n")
-            file_obj.write(f"{format_time_ms(start_ms)} --> {format_time_ms(end_ms)}\n")
+            file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
             file_obj.write("\n".join(text_lines) + "\n\n")
 
 
 def create_word_level_srt(words: List[Dict[str, Any]], output_file: Union[str, Path], 
                          remove_fillers: bool = False, filler_words: Optional[List[str]] = None,
                          fps: Optional[float] = None, fps_offset_start: int = -1, 
-                         fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0) -> None:
+                         fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0, start_hour: int = 0) -> None:
     """Word-level SRT with each word as a separate subtitle"""
     if filler_words is None:
         # Default filler words in multiple languages
         filler_words = ["uh", "um", "ah", "er", "hmm", "äh", "ähm", "hmm", "hm", "eh"]
         
-    create_srt(
-        words=words,
-        output_file=output_file,
-        fps=fps,
-        fps_offset_start=fps_offset_start,
-        fps_offset_end=fps_offset_end,
-        padding_start=padding_start,
-        padding_end=padding_end,
-        srt_mode="word",
-        remove_fillers=remove_fillers,
-        filler_words=filler_words
-    )
+    output_file = Path(output_file)
+    counter = 1
+    with open(output_file, 'w', encoding='utf-8') as f:
+        for word in words:
+            if word.get('type') == 'spacing':
+                continue
+            word_text = word.get('word', word.get('text', ''))
+            if not word_text:
+                continue
+            start_time = word.get('start', 0)
+            end_time = word.get('end', start_time + 0.5)
+            f.write(f"{counter}\n")
+            f.write(f"{format_time(start_time, start_hour)} --> {format_time(end_time, start_hour)}\n")
+            f.write(f"{word_text}\n\n")
+            counter += 1
 
 def create_davinci_srt(words: List[Dict[str, Any]], output_file: Union[str, Path], 
                       silentportions: int = 0, padding_start: int = 0, padding_end: int = 0,
                       fps: Optional[float] = None, fps_offset_start: int = -1, 
                       fps_offset_end: int = 0, remove_fillers: bool = True,
-                      filler_words: Optional[List[str]] = None) -> None:
+                      filler_words: Optional[List[str]] = None, start_hour: int = 0) -> None:
     """Create SRT file optimized for Davinci Resolve Studio"""
     create_srt(
         words=words,
@@ -585,7 +625,8 @@ def create_davinci_srt(words: List[Dict[str, Any]], output_file: Union[str, Path
         srt_mode="davinci",
         max_words_per_block=500,
         remove_fillers=remove_fillers,
-        filler_words=filler_words
+        filler_words=filler_words,
+        start_hour=start_hour
     )
 
 
@@ -607,9 +648,10 @@ def create_text_file(words: List[Dict[str, Any]], output_file: Union[str, Path])
             text += word_text
         else:
             prev_is_spacing = idx > 0 and words[idx-1].get('type') == 'spacing'
-            if not prev_is_spacing and text:
-                text += ' '
-            text += word_text
+            if not prev_is_spacing:
+                text = join_text_with_proper_spacing(text, word_text)
+            else:
+                text += word_text
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(text)
     logger.info("Text file created successfully")
@@ -662,7 +704,7 @@ def convert_to_srt(result: Dict[str, Any], output_path: Union[str, Path],
             # If segments overlap or are very close (within 0.1s), merge them
             if next_segment['start'] <= current_segment['end'] + 0.1:
                 current_segment['end'] = max(current_segment['end'], next_segment['end'])
-                current_segment['text'] = current_segment['text'] + ' ' + next_segment['text']
+                current_segment['text'] = join_text_with_proper_spacing(current_segment['text'], next_segment['text'])
             else:
                 merged_segments.append(current_segment)
                 current_segment = next_segment.copy()
