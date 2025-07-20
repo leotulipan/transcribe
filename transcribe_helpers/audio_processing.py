@@ -49,21 +49,71 @@ def check_audio_format(audio: AudioSegment, file_extension: str = None) -> bool:
     Check if audio meets requirements (mono, 16kHz, 16-bit).
     
     Args:
-        audio: AudioSegment object to check
-        file_extension: Optional file extension to determine if format checks should be bypassed
+        audio: AudioSegment to check
+        file_extension: File extension for format-specific checks
         
     Returns:
-        True if audio meets requirements or is FLAC (bypass), False otherwise
+        True if audio meets requirements, False otherwise
     
-    From: elevenlabs - Verify audio has correct specifications
+    From: elevenlabs - Check audio format requirements
     """
-    # Always return True for FLAC files to bypass format checks
-    if file_extension is not None and file_extension.lower() == '.flac':
-        return True
+    # Check basic requirements
+    if audio.channels != 1:
+        return False
+    if audio.frame_rate != 16000:
+        return False
+    if audio.sample_width != 2:  # 16-bit
+        return False
+    return True
+
+
+def extract_audio_from_mp4(input_path: Union[str, Path]) -> Optional[str]:
+    """
+    Extract audio stream from MP4 file without re-encoding.
+    
+    Args:
+        input_path: Path to MP4 file
         
-    return (audio.channels == 1 and 
-            audio.frame_rate == 16000 and 
-            audio.sample_width == 2)
+    Returns:
+        Path to extracted audio file (M4A) or None if extraction failed
+    """
+    if isinstance(input_path, str):
+        input_path = Path(input_path)
+        
+    # Only process MP4 files
+    if input_path.suffix.lower() != '.mp4':
+        logger.debug(f"File is not MP4, skipping extraction: {input_path}")
+        return None
+        
+    logger.info(f"Extracting audio from MP4: {input_path}")
+    
+    try:
+        # Load the video file
+        audio = AudioSegment.from_file(str(input_path))
+        
+        # Create output path with M4A extension
+        output_path = input_path.with_suffix('.m4a')
+        
+        # Export audio without re-encoding (copy audio stream)
+        audio.export(str(output_path), format="mp4", codec="aac")
+        
+        # Check if extraction was successful and resulted in smaller file
+        original_size_mb = os.path.getsize(input_path) / (1024 * 1024)
+        extracted_size_mb = os.path.getsize(output_path) / (1024 * 1024)
+        
+        logger.info(f"Extracted audio: {extracted_size_mb:.1f}MB (original: {original_size_mb:.1f}MB)")
+        
+        if extracted_size_mb < original_size_mb:
+            logger.info(f"Audio extraction successful, file size reduced by {original_size_mb - extracted_size_mb:.1f}MB")
+            return str(output_path)
+        else:
+            logger.warning(f"Extracted audio is not smaller than original, removing extracted file")
+            os.unlink(output_path)
+            return None
+            
+    except Exception as e:
+        logger.error(f"Audio extraction failed: {str(e)}")
+        return None
 
 
 def convert_to_flac(input_path: Union[str, Path], sample_rate: int = 16000) -> Optional[str]:

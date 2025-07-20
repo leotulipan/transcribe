@@ -535,7 +535,16 @@ class ElevenLabsAPI(TranscriptionAPI):
             model_id = "scribe_v1"
             logger.info(f"No model_id provided, using default: {model_id}")
             
-        logger.info(f"Transcribing {audio_path} with ElevenLabs (model: {model_id})")
+        # Try to extract audio from MP4 to reduce file size
+        from transcribe_helpers.audio_processing import extract_audio_from_mp4
+        extracted_audio_path = extract_audio_from_mp4(audio_path)
+        if extracted_audio_path:
+            logger.info(f"Using extracted audio: {extracted_audio_path}")
+            current_audio_path = extracted_audio_path
+        else:
+            current_audio_path = audio_path
+            
+        logger.info(f"Transcribing {current_audio_path} with ElevenLabs (model: {model_id})")
         
         # Prepare request
         url = f"{self.base_url}/speech-to-text"
@@ -546,7 +555,7 @@ class ElevenLabsAPI(TranscriptionAPI):
         if "language" in kwargs and kwargs["language"]:
             data["language"] = kwargs["language"]
             
-        with open(audio_path, "rb") as f:
+        with open(current_audio_path, "rb") as f:
             files = {"file": f}
             
             # Make the API call with retry logic
@@ -602,6 +611,14 @@ class ElevenLabsAPI(TranscriptionAPI):
         with open(raw_json_path, 'w', encoding='utf-8') as f:
             json.dump(response_data, f, ensure_ascii=False, indent=2)
         logger.info(f"Saved raw API response to {raw_json_path}")
+        
+        # Clean up extracted audio file if it was created
+        if extracted_audio_path and extracted_audio_path != audio_path:
+            try:
+                os.unlink(extracted_audio_path)
+                logger.debug(f"Cleaned up extracted audio file: {extracted_audio_path}")
+            except Exception as e:
+                logger.warning(f"Failed to clean up extracted audio file: {e}")
         
         return result
 

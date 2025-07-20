@@ -1,7 +1,7 @@
 ---
-description: Whenever we do Tasks, Planning, PRDs or have finished a task
+description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 # Task List Management
 # based on https://github.com/elie222/inbox-zero/blob/main/.cursor/rules/task-list.mdc

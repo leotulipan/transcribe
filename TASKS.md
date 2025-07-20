@@ -138,6 +138,13 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] test run the following task implementation with `uv run transcribe.py -v -d --api elevenlabs --davinci-srt --file "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle_elevenlabs.json"`
   - [x] count ähm with `Select-String -Pattern 'ähm'  "D:\2025-05-10 und 11 - Fachfortbildung Keto Innsbruck\Signalmoleküle.srt"| Measure-Object -Line | Select-Object -ExpandProperty Lines` returns a number less then 7
     - **DONE:** Only 4 instances of "ähm" remain, pause detection working correctly with 1795 pause markers
+- [x] **MP4 Audio Extraction for ElevenLabs** 
+  - [x] Add extract_audio_from_mp4() function to audio_processing.py
+  - [x] Extract audio stream from MP4 using pydub without re-encoding
+  - [x] Save extracted audio as M4A format with AAC codec
+  - [x] Check if extracted M4A is smaller than original MP4
+  - [x] Integrate MP4 extraction in ElevenLabs API transcribe method
+  - [x] Add cleanup of temporary extracted files after transcription
 - [x] Fix model parameter handling bug
   - [x] In `transcribe.py`, update the model parameter handling to properly set default models when None is provided
   - [x] Ensure Groq API always gets "whisper-large-v3" as default model if none specified
@@ -153,9 +160,130 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [x] run test with `uv run transcribe.py --api APINAME --force --file ./test/audio-test.mkv -v -d` for all apis
   - [x] test that a _apiname.json is being created everytime
   - [x] test that a .srt and a .txt are being created each time (check the modified time)
+- [x] New CLI option start-hour
+  - [x] Numeric value default to 0
+  - [x] with --davinci-srt set it to 1 (ie start with hour 01 instead of 00)
+- [x] space after periods, commas, etc when joining subs
+  - [x] add back spaces after periods and commas when joining subs ( "you,as in" => "you, as in")
+  - [x] Created join_text_with_proper_spacing() helper function to handle proper spacing after punctuation
+  - [x] Updated text joining logic in create_standard_srt, process_davinci_block, convert_to_srt, and create_text_file functions
+  - [x] Applied fix to both transcribe_helpers/output_formatters.py and audio_transcribe/transcribe_helpers/output_formatters.py
+  - [x] Updated format_transcript_with_speakers function to use proper spacing
 
 ## In Progress Tasks
 
+- [ ] When citing the filename in loguru, remove the path utils.transcription_api:make_request:580 - Files info: {'file': {'name': 'G:\\Geteilte Ablagen\\Podcast\\CON-81 - Science Talk Keto Cancer NHANES Studie Debunking\\riverside_julia_tulipan_raw-video-cfr_julia_... > utils.transcription_api:make_request:580 - Files info: {'file': {'name': 'riverside_julia_tulipan_raw-video-cfr_julia_...'
+
+- [ ] **File Size Check Integration** (High Priority - Easy)
+  - [ ] Add file size check in `process_file()` before API call
+  - [ ] Use `get_api_file_size_limit()` to get ElevenLabs limit (1000MB)
+  - [ ] Show file size in debug output
+  - [ ] Stop processing if file exceeds limit after all compression attempts
+
+- [ ] **Progressive Compression Strategy** (elevenlabs)
+  - [ ] **Step 1:** If extracted/to encode audio file > 500MB: Apply FLAC mono compression (16kHz, mono, same as Groq)
+  - [ ] **Step 2:** If file still > 1000MB: Apply AAC 128kbps mono with 22.05kHz sample rate
+  - [ ] **Step 3:** If still > 1000MB: Error out
+  - [ ] Use the smallest resulting file that's under 1000MB
+
+
+## Future Tasks
+
+## API Resilience Enhancement Tasks
+
+### High Priority - Easy Implementation
+
+- [ ] **Improve HTTP Error Handling**
+  - [ ] Distinguish between retryable (500, 502, 503, 504) and non-retryable (400, 401, 403, 413) errors
+  - [ ] Add specific handling for 500 Server Error vs 400 Bad Request
+  - [ ] Stop retrying immediately on non-retryable errors (400, 401, 403, 413)
+  - [ ] Continue retrying on server errors (500, 502, 503, 504)
+
+- [ ] **Exponential Backoff Retry Strategy**
+  - [ ] Replace fixed 5-second delay with exponential backoff
+  - [ ] Start at 5 seconds, then 10s, 20s, 40s, 80s
+  - [ ] Add jitter (±20% randomization) to prevent thundering herd
+  - [ ] Maximum retry duration of 3 minutes total
+  - [ ] Log remaining retry time for user awareness
+
+### Medium Priority - Medium Implementation
+
+- [ ] **Enhanced Retry Logic in `with_retry()` method**
+  - [ ] Update `utils/transcription_api.py` TranscriptionAPI.with_retry()
+  - [ ] Add error classification function: `is_retryable_error(status_code)`
+  - [ ] Implement exponential backoff calculation
+  - [ ] Add total elapsed time tracking
+  - [ ] Better logging with countdown timers
+
+- [ ] **API Health Monitoring**
+  - [ ] Add simple API health check before transcription
+  - [ ] Log API response times for performance monitoring  
+  - [ ] Detect patterns of API instability
+  - [ ] Suggest alternative APIs when one is consistently failing
+
+### Low Priority - Advanced Features
+
+- [ ] **Circuit Breaker Pattern**
+  - [ ] Implement circuit breaker for each API
+  - [ ] Open circuit after consecutive failures (e.g., 5 in a row)
+  - [ ] Half-open circuit after cooldown period
+  - [ ] Automatically switch to backup API when circuit is open
+
+- [ ] **Multi-API Fallback Strategy**
+  - [ ] When ElevenLabs fails consistently, auto-suggest Groq/AssemblyAI
+  - [ ] Implement automatic fallback with user confirmation
+  - [ ] Maintain API preference order per user
+
+### Implementation Example:
+
+```python
+def improved_retry_strategy(self, func, max_duration_seconds=180):
+    """
+    Retry with exponential backoff for up to 3 minutes.
+    
+    Strategy:
+    - 5s, 10s, 20s, 40s, 80s delays (with jitter)
+    - Only retry on 500, 502, 503, 504 errors
+    - Stop immediately on 400, 401, 403, 413
+    - Total max duration: 3 minutes
+    """
+    start_time = time.time()
+    attempt = 0
+    base_delay = 5
+    
+    while time.time() - start_time < max_duration_seconds:
+        try:
+            return func()
+        except requests.HTTPError as e:
+            if not self.is_retryable_error(e.response.status_code):
+                logger.error(f"Non-retryable error {e.response.status_code}, stopping retries")
+                raise
+                
+            attempt += 1
+            delay = min(base_delay * (2 ** (attempt - 1)), 80)  # Cap at 80s
+            jitter = delay * 0.2 * (random.random() - 0.5)  # ±10% jitter
+            actual_delay = delay + jitter
+            
+            remaining_time = max_duration_seconds - (time.time() - start_time)
+            if remaining_time <= actual_delay:
+                logger.error(f"Timeout reached, no more retries")
+                raise
+                
+            logger.warning(f"Attempt {attempt} failed with {e.response.status_code}, retrying in {actual_delay:.1f}s (remaining: {remaining_time:.1f}s)")
+            time.sleep(actual_delay)
+    
+    logger.error("Max retry duration exceeded")
+    raise
+```
+
+
+
+- [ ] when only one _apiname json exists use this to recreate subtitles, even when no api is specified on cli
+- [ ] long silence handler
+  - [ ] remove long silences before converting to flac. note the exact ms position and length
+  - [ ] add the silences back in when making the srt at the correct time marks as (...) for davinci, otherwise simply no subs
+
+- [ ] check groq join algo for files > 10 min
 - [ ] groq chunking timestamp debugging (save chunk json, look at join algo)
   - [x] Created debug_groq_chunking.py to analyze chunk timestamps 
   - [x] Added visualization of gaps between chunks
@@ -163,8 +291,6 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] Created debug_groq_chunking.bat for easy Windows execution
   - [ ] Test with longer audio files to analyze join algorithm issues
   - [ ] Identify and fix any timestamp offset issues in the merger algorithm
-
-## Future Tasks
 
 - [ ] gpt-4o-mini-transcribe and gpt-4o-transcribe as per https://platform.openai.com/docs/guides/speech-to-text but they have a different json format that only includes text and no timings so we cannot save srt (see https://platform.openai.com/docs/api-reference/audio/json-object or ask Context7) transcriptions
 
