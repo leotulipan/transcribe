@@ -1,0 +1,281 @@
+{
+  "language_code": "de",
+  "audio_url": "https://cdn.assemblyai.com/upload/58831f45-94d8-43d3-8dc0-dbfdd2092ff7",
+  "punctuate": true,
+  "format_text": true,
+  "dual_channel": false,
+  "multichannel": null,
+  "audio_channels": null,
+  "webhook_url": null,
+  "webhook_auth_header_name": null,
+  "webhook_auth_header_value": null,
+  "audio_start_from": null,
+  "audio_end_at": null,
+  "word_boost": [],
+  "boost_param": null,
+  "filter_profanity": false,
+  "redact_pii": false,
+  "redact_pii_audio": false,
+  "redact_pii_audio_quality": null,
+  "redact_pii_policies": null,
+  "redact_pii_sub": null,
+  "speaker_labels": true,
+  "speakers_expected": null,
+  "content_safety": false,
+  "content_safety_confidence": null,
+  "iab_categories": false,
+  "custom_spelling": null,
+  "disfluencies": true,
+  "sentiment_analysis": false,
+  "auto_chapters": false,
+  "entity_detection": false,
+  "summarization": false,
+  "summary_model": null,
+  "summary_type": null,
+  "auto_highlights": false,
+  "language_detection": true,
+  "language_confidence_threshold": null,
+  "language_confidence": 0.9973,
+  "speech_threshold": null,
+  "speech_model": "best",
+  "prompt": null,
+  "keyterms_prompt": [],
+  "id": "b649e6a7-725e-4078-ba81-3a984945b768",
+  "status": "completed",
+  "error": null,
+  "text": "Wir testen nun das Audio Transkript und ob die Textdatei korrekt angelegt wird.",
+  "words": [
+    {
+      "text": "Wir",
+      "start": 1120,
+      "end": 1280,
+      "confidence": 0.99992,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "testen",
+      "start": 1280,
+      "end": 1864,
+      "confidence": 0.99993,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "nun",
+      "start": 1912,
+      "end": 2168,
+      "confidence": 0.99725,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "das",
+      "start": 2224,
+      "end": 2440,
+      "confidence": 0.9886,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "Audio",
+      "start": 2480,
+      "end": 3032,
+      "confidence": 0.70913,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "Transkript",
+      "start": 3096,
+      "end": 3816,
+      "confidence": 0.57271,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 3848,
+      "end": 3944,
+      "confidence": 0.99921,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "ob",
+      "start": 3952,
+      "end": 4120,
+      "confidence": 0.99956,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "die",
+      "start": 4160,
+      "end": 4312,
+      "confidence": 0.99985,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "Textdatei",
+      "start": 4336,
+      "end": 5096,
+      "confidence": 0.99644,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "korrekt",
+      "start": 5128,
+      "end": 5512,
+      "confidence": 0.98574,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "angelegt",
+      "start": 5576,
+      "end": 6312,
+      "confidence": 0.4935,
+      "speaker": "A",
+      "channel": null
+    },
+    {
+      "text": "wird.",
+      "start": 6376,
+      "end": 6480,
+      "confidence": 0.99962,
+      "speaker": "A",
+      "channel": null
+    }
+  ],
+  "utterances": [
+    {
+      "text": "Wir testen nun das Audio Transkript und ob die Textdatei korrekt angelegt wird.",
+      "start": 1120,
+      "end": 6480,
+      "confidence": 0.90318924,
+      "speaker": "A",
+      "channel": null,
+      "words": [
+        {
+          "text": "Wir",
+          "start": 1120,
+          "end": 1280,
+          "confidence": 0.99992,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "testen",
+          "start": 1280,
+          "end": 1864,
+          "confidence": 0.99993,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "nun",
+          "start": 1912,
+          "end": 2168,
+          "confidence": 0.99725,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "das",
+          "start": 2224,
+          "end": 2440,
+          "confidence": 0.9886,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "Audio",
+          "start": 2480,
+          "end": 3032,
+          "confidence": 0.70913,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "Transkript",
+          "start": 3096,
+          "end": 3816,
+          "confidence": 0.57271,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "und",
+          "start": 3848,
+          "end": 3944,
+          "confidence": 0.99921,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "ob",
+          "start": 3952,
+          "end": 4120,
+          "confidence": 0.99956,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "die",
+          "start": 4160,
+          "end": 4312,
+          "confidence": 0.99985,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "Textdatei",
+          "start": 4336,
+          "end": 5096,
+          "confidence": 0.99644,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "korrekt",
+          "start": 5128,
+          "end": 5512,
+          "confidence": 0.98574,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "angelegt",
+          "start": 5576,
+          "end": 6312,
+          "confidence": 0.4935,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "wird.",
+          "start": 6376,
+          "end": 6480,
+          "confidence": 0.99962,
+          "speaker": "A",
+          "channel": null
+        }
+      ]
+    }
+  ],
+  "confidence": 0.90318924,
+  "audio_duration": 9,
+  "webhook_status_code": null,
+  "webhook_auth": false,
+  "summary": null,
+  "auto_highlights_result": null,
+  "content_safety_labels": null,
+  "iab_categories_result": null,
+  "chapters": null,
+  "sentiment_analysis_results": null,
+  "entities": null,
+  "api_name": "assemblyai"
+}

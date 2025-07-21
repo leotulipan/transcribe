@@ -1,0 +1,117 @@
+{
+  "text": " Wir testen nun das Audio Transkript und ob die Textdatei korrekt angelegt wird.",
+  "task": "transcribe",
+  "language": "German",
+  "duration": 8.81,
+  "words": [
+    {
+      "word": "Wir",
+      "start": 1.1,
+      "end": 1.24
+    },
+    {
+      "word": "testen",
+      "start": 1.24,
+      "end": 1.84
+    },
+    {
+      "word": "nun",
+      "start": 1.84,
+      "end": 2.1
+    },
+    {
+      "word": "das",
+      "start": 2.1,
+      "end": 2.52
+    },
+    {
+      "word": "Audio",
+      "start": 2.52,
+      "end": 3.08
+    },
+    {
+      "word": "Transkript",
+      "start": 3.08,
+      "end": 3.74
+    },
+    {
+      "word": "und",
+      "start": 3.74,
+      "end": 3.98
+    },
+    {
+      "word": "ob",
+      "start": 3.98,
+      "end": 4.14
+    },
+    {
+      "word": "die",
+      "start": 4.14,
+      "end": 4.34
+    },
+    {
+      "word": "Textdatei",
+      "start": 4.34,
+      "end": 4.96
+    },
+    {
+      "word": "korrekt",
+      "start": 4.96,
+      "end": 5.5
+    },
+    {
+      "word": "angelegt",
+      "start": 5.5,
+      "end": 6.16
+    },
+    {
+      "word": "wird.",
+      "start": 6.16,
+      "end": 6.5
+    }
+  ],
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 0,
+      "end": 8.82,
+      "text": " Wir testen nun das Audio Transkript und ob die Textdatei korrekt angelegt wird.",
+      "tokens": [
+        50365,
+        4347,
+        1500,
+        268,
+        8905,
+        1482,
+        25706,
+        6531,
+        74,
+        470,
+        662,
+        674,
+        1111,
+        978,
+        18643,
+        17393,
+        72,
+        14784,
+        265,
+        2320,
+        15495,
+        22745,
+        4578,
+        13,
+        50806
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.19697356,
+      "compression_ratio": 1.0533333,
+      "no_speech_prob": 0.0026024086
+    }
+  ],
+  "x_groq": {
+    "id": "req_01k0p33rk7fyyrqq715wev68j0"
+  },
+  "api_name": "groq"
+}

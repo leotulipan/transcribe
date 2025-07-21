@@ -1,0 +1,215 @@
+{
+  "language_code": "deu",
+  "language_probability": 0.9917882084846497,
+  "text": "Wir testen nun das Audio-Transkript und ob die Textdatei korrekt angelegt wird.",
+  "words": [
+    {
+      "text": "Wir",
+      "start": 1.1,
+      "end": 1.339,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 1.339,
+      "end": 1.339,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "testen",
+      "start": 1.339,
+      "end": 1.919,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 1.919,
+      "end": 1.919,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "nun",
+      "start": 1.919,
+      "end": 2.22,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 2.22,
+      "end": 2.22,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "das",
+      "start": 2.22,
+      "end": 2.659,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 2.659,
+      "end": 2.659,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "Audio-Transkript",
+      "start": 2.659,
+      "end": 3.819,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 3.819,
+      "end": 3.819,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "und",
+      "start": 3.819,
+      "end": 4.039,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 4.039,
+      "end": 4.039,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "ob",
+      "start": 4.039,
+      "end": 4.239,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 4.239,
+      "end": 4.239,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "die",
+      "start": 4.239,
+      "end": 4.379,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 4.379,
+      "end": 4.4,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "Textdatei",
+      "start": 4.4,
+      "end": 5.059,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 5.059,
+      "end": 5.059,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "korrekt",
+      "start": 5.059,
+      "end": 5.659,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 5.659,
+      "end": 5.719,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "angelegt",
+      "start": 5.719,
+      "end": 6.239,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": " ",
+      "start": 6.239,
+      "end": 6.239,
+      "type": "spacing",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    },
+    {
+      "text": "wird.",
+      "start": 6.239,
+      "end": 6.719,
+      "type": "word",
+      "speaker_id": null,
+      "logprob": 0.0,
+      "characters": null
+    }
+  ],
+  "additional_formats": null
+}

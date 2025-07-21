@@ -1,0 +1,96 @@
+{
+  "value": [
+    {
+      "text": "Wir",
+      "start": 0.000,
+      "end": 0.500,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "testen",
+      "start": 0.500,
+      "end": 1.000,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "nun",
+      "start": 1.000,
+      "end": 1.500,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "das",
+      "start": 1.500,
+      "end": 2.000,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "Audio",
+      "start": 2.000,
+      "end": 2.500,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "Transkript",
+      "start": 2.500,
+      "end": 3.000,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "und",
+      "start": 3.000,
+      "end": 3.500,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "ob",
+      "start": 3.500,
+      "end": 4.000,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "die",
+      "start": 4.000,
+      "end": 4.500,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "Textdatei",
+      "start": 4.500,
+      "end": 5.000,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "korrekt",
+      "start": 5.000,
+      "end": 5.500,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "angelegt",
+      "start": 5.500,
+      "end": 6.000,
+      "confidence": 0.9,
+      "type": "word"
+    },
+    {
+      "text": "wird.",
+      "start": 6.000,
+      "end": 6.500,
+      "confidence": 0.9,
+      "type": "word"
+    }
+  ],
+  "Count": 13
+}

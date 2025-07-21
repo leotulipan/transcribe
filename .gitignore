@@ -197,4 +197,3 @@ intermarket_bmd/class_PlentymarketsAPI.py
 */langchain-tutorials/*
 parser_log.txt
 compare_audio-test.*
-test/audio-test*.json

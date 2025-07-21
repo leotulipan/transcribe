@@ -169,22 +169,27 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] Updated text joining logic in create_standard_srt, process_davinci_block, convert_to_srt, and create_text_file functions
   - [x] Applied fix to both transcribe_helpers/output_formatters.py and audio_transcribe/transcribe_helpers/output_formatters.py
   - [x] Updated format_transcript_with_speakers function to use proper spacing
+- [x] When citing the filename in loguru, remove the path utils.transcription_api:make_request:580
+  - [x] Modified file logging in utils/transcription_api.py to truncate paths and show only filename
+  - [x] Updated Files info logging to use os.path.basename() for cleaner log output
+- [x] **File Size Check Integration** (High Priority - Easy)
+  - [x] Add file size check in `process_file()` before API call
+  - [x] Use `get_api_file_size_limit()` to get ElevenLabs limit (1000MB)
+  - [x] Show file size in debug output
+  - [x] Stop processing if file exceeds limit after all compression attempts
+- [x] **Progressive Compression Strategy** (elevenlabs)
+  - [x] **Step 1:** If extracted/to encode audio file > 500MB: Apply FLAC mono compression (16kHz, mono, same as Groq)
+  - [x] **Step 2:** If file still > 1000MB: Apply AAC 128kbps mono with 22.05kHz sample rate
+  - [x] **Step 3:** If still > 1000MB: Error out
+  - [x] Use the smallest resulting file that's under 1000MB
+  - [x] Added cleanup of temporary compressed files after transcription
+
+### join_srt_for_davinci.py
+- [x] Add option to remove all pause markers ('...') from the joined SRT file
+- [x] Add option to remove only pauses when the other person is speaking, with a default 500ms threshold and configurable parameter
+- [x] Document the script usage and options in the README or as a docstring
 
 ## In Progress Tasks
-
-- [ ] When citing the filename in loguru, remove the path utils.transcription_api:make_request:580 - Files info: {'file': {'name': 'G:\\Geteilte Ablagen\\Podcast\\CON-81 - Science Talk Keto Cancer NHANES Studie Debunking\\riverside_julia_tulipan_raw-video-cfr_julia_... > utils.transcription_api:make_request:580 - Files info: {'file': {'name': 'riverside_julia_tulipan_raw-video-cfr_julia_...'
-
-- [ ] **File Size Check Integration** (High Priority - Easy)
-  - [ ] Add file size check in `process_file()` before API call
-  - [ ] Use `get_api_file_size_limit()` to get ElevenLabs limit (1000MB)
-  - [ ] Show file size in debug output
-  - [ ] Stop processing if file exceeds limit after all compression attempts
-
-- [ ] **Progressive Compression Strategy** (elevenlabs)
-  - [ ] **Step 1:** If extracted/to encode audio file > 500MB: Apply FLAC mono compression (16kHz, mono, same as Groq)
-  - [ ] **Step 2:** If file still > 1000MB: Apply AAC 128kbps mono with 22.05kHz sample rate
-  - [ ] **Step 3:** If still > 1000MB: Error out
-  - [ ] Use the smallest resulting file that's under 1000MB
 
 
 ## Future Tasks

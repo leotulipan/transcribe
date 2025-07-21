@@ -544,7 +544,78 @@ class ElevenLabsAPI(TranscriptionAPI):
         else:
             current_audio_path = audio_path
             
-        logger.info(f"Transcribing {current_audio_path} with ElevenLabs (model: {model_id})")
+        # Progressive Compression Strategy for ElevenLabs (1000MB limit)
+        current_size_mb = os.path.getsize(current_audio_path) / (1024 * 1024)
+        logger.debug(f"Current file size: {current_size_mb:.2f}MB")
+        
+        # Step 1: If file > 500MB, apply FLAC mono compression (16kHz, mono, same as Groq)
+        if current_size_mb > 500:
+            logger.info(f"File size ({current_size_mb:.2f}MB) > 500MB, applying FLAC mono compression")
+            try:
+                from pydub import AudioSegment
+                import tempfile
+                
+                # Load and compress to FLAC mono 16kHz
+                audio = AudioSegment.from_file(current_audio_path)
+                compressed_audio = audio.set_channels(1).set_frame_rate(16000)
+                
+                # Save as FLAC
+                with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
+                    flac_path = temp_file.name
+                compressed_audio.export(flac_path, format='flac')
+                
+                flac_size_mb = os.path.getsize(flac_path) / (1024 * 1024)
+                logger.info(f"FLAC compressed size: {flac_size_mb:.2f}MB")
+                
+                # Use FLAC if it's smaller and under 1000MB
+                if flac_size_mb < current_size_mb and flac_size_mb <= 1000:
+                    current_audio_path = flac_path
+                    current_size_mb = flac_size_mb
+                else:
+                    # Clean up temp file if not using it
+                    if os.path.exists(flac_path):
+                        os.unlink(flac_path)
+                        
+            except Exception as e:
+                logger.warning(f"FLAC compression failed: {e}")
+        
+        # Step 2: If file still > 1000MB, apply AAC 128kbps mono with 22.05kHz sample rate
+        if current_size_mb > 1000:
+            logger.info(f"File size ({current_size_mb:.2f}MB) > 1000MB, applying AAC compression")
+            try:
+                from pydub import AudioSegment
+                import tempfile
+                
+                # Load and compress to AAC 128kbps mono 22.05kHz
+                audio = AudioSegment.from_file(current_audio_path)
+                compressed_audio = audio.set_channels(1).set_frame_rate(22050)
+                
+                # Save as AAC with 128kbps
+                with tempfile.NamedTemporaryFile(suffix='.m4a', delete=False) as temp_file:
+                    aac_path = temp_file.name
+                compressed_audio.export(aac_path, format='m4a', bitrate='128k')
+                
+                aac_size_mb = os.path.getsize(aac_path) / (1024 * 1024)
+                logger.info(f"AAC compressed size: {aac_size_mb:.2f}MB")
+                
+                # Use AAC if it's smaller and under 1000MB
+                if aac_size_mb < current_size_mb and aac_size_mb <= 1000:
+                    current_audio_path = aac_path
+                    current_size_mb = aac_size_mb
+                else:
+                    # Clean up temp file if not using it
+                    if os.path.exists(aac_path):
+                        os.unlink(aac_path)
+                        
+            except Exception as e:
+                logger.warning(f"AAC compression failed: {e}")
+        
+        # Step 3: If still > 1000MB, error out
+        if current_size_mb > 1000:
+            logger.error(f"File size ({current_size_mb:.2f}MB) still exceeds 1000MB limit after all compression attempts")
+            raise RuntimeError(f"File size ({current_size_mb:.2f}MB) exceeds 1000MB limit for ElevenLabs API after compression")
+            
+        logger.info(f"Transcribing {current_audio_path} with ElevenLabs (model: {model_id}) - Final size: {current_size_mb:.2f}MB")
         
         # Prepare request
         url = f"{self.base_url}/speech-to-text"
@@ -574,7 +645,9 @@ class ElevenLabsAPI(TranscriptionAPI):
                     file_info = {}
                     for k, v in files.items():
                         if hasattr(v, 'name'):
-                            file_info[k] = {'name': v.name, 'mode': v.mode if hasattr(v, 'mode') else 'unknown'}
+                            # Truncate path to show only filename
+                            filename = os.path.basename(v.name) if v.name else 'unknown'
+                            file_info[k] = {'name': filename, 'mode': v.mode if hasattr(v, 'mode') else 'unknown'}
                         else:
                             file_info[k] = str(type(v))
                     logger.debug(f"Files info: {file_info}")
@@ -619,6 +692,14 @@ class ElevenLabsAPI(TranscriptionAPI):
                 logger.debug(f"Cleaned up extracted audio file: {extracted_audio_path}")
             except Exception as e:
                 logger.warning(f"Failed to clean up extracted audio file: {e}")
+        
+        # Clean up temporary compressed files if they were created
+        if current_audio_path != audio_path and current_audio_path != extracted_audio_path:
+            try:
+                os.unlink(current_audio_path)
+                logger.debug(f"Cleaned up compressed audio file: {current_audio_path}")
+            except Exception as e:
+                logger.warning(f"Failed to clean up compressed audio file: {e}")
         
         return result
 
