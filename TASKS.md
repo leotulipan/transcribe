@@ -189,8 +189,14 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 - [x] Add option to remove only pauses when the other person is speaking, with a default 500ms threshold and configurable parameter
 - [x] Document the script usage and options in the README or as a docstring
 
-## In Progress Tasks
+- [x] Update groq models used
+  DEPRECATIONS NOTICE
+  This is a notice that distil-whisper-large-v3-en will be deprecated from GroqCloud.  
+  We noticed you recently used distil-whisper-large-v3-en, so please be aware that if you continue setting it as your model parameter, requests will start failing August 23, 2025.
+  ACTION
+  migrate to the recommended replacement model,  whisper-large-v3-turbo.
 
+## In Progress Tasks
 
 ## Future Tasks
 

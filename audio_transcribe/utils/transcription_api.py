@@ -372,17 +372,17 @@ class GroqAPI(TranscriptionAPI):
             audio_path: Path to the audio file
             **kwargs: Additional Groq-specific parameters:
                 - language: Language code
-                - model: Model to use (default: whisper-large-v3)
+                - model: Model to use (default: whisper-large-v3-turbo)
                 
         Returns:
             Standardized TranscriptionResult object
         """
         if not self.client:
             raise ValueError("Groq client not initialized")
-            
+        
         # Extract parameters
         language = kwargs.get("language")
-        model = kwargs.get("model", "whisper-large-v3")
+        model = kwargs.get("model", "whisper-large-v3-turbo")
         
         logger.info(f"Transcribing {audio_path} with Groq (model: {model})")
         

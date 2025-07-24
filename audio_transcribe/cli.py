@@ -162,11 +162,11 @@ def process_file(file_path: Union[str, Path], api_name: str, **kwargs) -> bool:
             # Always enable disfluencies for AssemblyAI
         elif api_name == "groq":
             # Validate Groq model
-            valid_groq_models = ["whisper-large-v3", "whisper-medium", "whisper-small"]
-            model = kwargs.get("model", "whisper-large-v3")
+            valid_groq_models = ["whisper-large-v3-turbo", "whisper-large-v3", "whisper-medium", "whisper-small"]
+            model = kwargs.get("model", "whisper-large-v3-turbo")
             if model not in valid_groq_models:
-                logger.warning(f"Invalid Groq model: {model}, falling back to 'whisper-large-v3'")
-                model = "whisper-large-v3"
+                logger.warning(f"Invalid Groq model: {model}, falling back to 'whisper-large-v3-turbo'")
+                model = "whisper-large-v3-turbo"
             api_params["model"] = model
             
             api_params["chunk_length"] = kwargs.get("chunk_length", 600)
@@ -370,8 +370,8 @@ def process_audio_path(audio_path: str, api_name: str, **kwargs) -> Tuple[int, i
 )
 @click.option(
     "--model", "-m",
-    help="Model to use for transcription. API-specific options: groq=[whisper-large-v3, whisper-medium, whisper-small], assemblyai=[best, default, nano, small, medium, large, auto]",
-    default="whisper-large-v3"
+    help="Model to use for transcription. API-specific options: groq=[whisper-large-v3-turbo, whisper-large-v3, whisper-medium, whisper-small], assemblyai=[best, default, nano, small, medium, large, auto]",
+    default="whisper-large-v3-turbo"
 )
 @click.option(
     "--chunk-length",
