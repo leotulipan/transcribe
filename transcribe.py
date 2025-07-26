@@ -244,15 +244,16 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             # The `api_instance.transcribe` methods should internally handle chunking if needed
             # and use current_audio_file_path
 
-            # Add file size check before API call
-            from transcribe_helpers.audio_processing import get_api_file_size_limit
-            max_size_mb = get_api_file_size_limit(api_name)
-            current_size_mb = os.path.getsize(current_audio_file_path) / (1024 * 1024)
-            logger.debug(f"File size: {current_size_mb:.2f}MB, API limit: {max_size_mb}MB")
-            
-            if current_size_mb > max_size_mb:
-                logger.error(f"File size ({current_size_mb:.2f}MB) exceeds {max_size_mb}MB limit for {api_name} API. Aborting")
-                return []
+            # Add file size check before API call (skip for ElevenLabs - it handles compression internally)
+            if api_name.lower() != 'elevenlabs':
+                from transcribe_helpers.audio_processing import get_api_file_size_limit
+                max_size_mb = get_api_file_size_limit(api_name)
+                current_size_mb = os.path.getsize(current_audio_file_path) / (1024 * 1024)
+                logger.debug(f"File size: {current_size_mb:.2f}MB, API limit: {max_size_mb}MB")
+                
+                if current_size_mb > max_size_mb:
+                    logger.error(f"File size ({current_size_mb:.2f}MB) exceeds {max_size_mb}MB limit for {api_name} API. Aborting")
+                    return []
 
             # Pass all kwargs to the API instance's transcribe method
             transcribe_kwargs = kwargs.copy()
