@@ -159,7 +159,8 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0,
                srt_mode: str = "standard", max_words_per_block: int = 0,
                remove_fillers: bool = False, filler_words: Optional[List[str]] = None,
-               show_pauses: bool = False, start_hour: int = 0) -> None:
+               show_pauses: bool = False, start_hour: int = 0,
+               words_per_subtitle: int = 0) -> None:
     """
     Create SRT subtitle file from words.
     
@@ -185,6 +186,8 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
     logger.debug(f"- Output file: {output_file}")
     logger.debug(f"- SRT mode: {srt_mode}")
     logger.debug(f"- Characters per line: {chars_per_line}")
+    if words_per_subtitle and words_per_subtitle > 0:
+        logger.debug(f"- Words per subtitle: {words_per_subtitle}")
     logger.debug(f"- Silent threshold: {silentportions}ms")
     logger.debug(f"- Padding start: {padding_start}ms")
     logger.debug(f"- Padding end: {padding_end}ms")
@@ -245,7 +248,8 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
     else:  # standard
         create_standard_srt(
             words_copy, output_file, chars_per_line=chars_per_line,
-            silentportions=silentportions, fps=fps, padding_start=0, padding_end=0, start_hour=start_hour
+            silentportions=silentportions, fps=fps, padding_start=0, padding_end=0,
+            words_per_subtitle=words_per_subtitle, start_hour=start_hour
         )
     
     logger.info(f"Created SRT file: {output_file}")
@@ -364,6 +368,8 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
     """
     if not block_words:
         return
+    # Ensure timestamp formatting uses a defined start_hour (defaults to 0)
+    start_hour = 0
     
     # Check if we need to split the block
     MAX_DAVINCI_WORDS = 500
@@ -478,7 +484,8 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
 def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Path], 
                        chars_per_line: int = 80, silentportions: int = 0,
                        fps: Optional[float] = None, fps_offset_start: int = -1, 
-                       fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0, start_hour: int = 0) -> None:
+                       fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0,
+                       words_per_subtitle: int = 0, start_hour: int = 0) -> None:
     """Standard SRT format with character limits per line"""
     # Instead of recursively calling create_srt, implement the standard SRT logic directly here
     output_file = Path(output_file)
@@ -543,9 +550,17 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
             # Join text with proper spacing after punctuation
             current_text = join_text_with_proper_spacing(current_text, word.get('text', '').strip())
             
-            # Check if we should break subtitle here based on length or punctuation
-            if (len(current_text) >= chars_per_line and 
-                (current_text[-1] in ".!?,:;" or i == len(words) - 1 or i < len(words) - 1 and words[i+1].get('type') == 'spacing')):
+            # Check if we should break subtitle here based on words_per_subtitle or character length
+            should_break = False
+            if words_per_subtitle and words_per_subtitle > 0:
+                if len(current_subtitle) >= words_per_subtitle:
+                    should_break = True
+            else:
+                if (len(current_text) >= chars_per_line and 
+                    (current_text[-1] in ".!?,:;" or i == len(words) - 1 or (i < len(words) - 1 and words[i+1].get('type') == 'spacing'))):
+                    should_break = True
+
+            if should_break:
                 # Output current subtitle
                 if current_subtitle and current_start is not None and current_end is not None:
                     start_ms = int(current_start * 1000)

@@ -139,7 +139,8 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             remove_fillers=kwargs.get("remove_fillers", False),
             filler_words=kwargs.get("filler_words"),
             show_pauses=show_pauses,
-            start_hour=start_hour
+            start_hour=start_hour,
+            words_per_subtitle=kwargs.get("words_per_subtitle", 0)
         )
     
     logger.info(f"SRT file created: {output_file}")

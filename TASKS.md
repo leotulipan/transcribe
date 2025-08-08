@@ -184,6 +184,8 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] Use the smallest resulting file that's under 1000MB
   - [x] Added cleanup of temporary compressed files after transcription
 
+- [x] Add --words-per-subtitle CLI option to allow grouping by word count (mutually exclusive with chars-per-line). Implemented in `transcribe.py`, `audio_transcribe/cli.py`, `transcribe_helpers/output_formatters.py`, `audio_transcribe/transcribe_helpers/output_formatters.py`, and forwarded via `utils/formatters.py` and `audio_transcribe/utils/formatters.py`.
+
 ### join_srt_for_davinci.py
 - [x] Add option to remove all pause markers ('...') from the joined SRT file
 - [x] Add option to remove only pauses when the other person is speaking, with a default 500ms threshold and configurable parameter
@@ -354,10 +356,10 @@ Output options have been streamlined with sensible defaults while maintaining fl
   - `format_time_ms` — Format ms to SRT time.
   - `retime_subtitles_fps` — Adjust timings for frame-based SRT.
   - `format_timedelta` — Format timedelta for SRT.
-  - `create_srt` — Main SRT creation (standard/word/davinci).
+  - `create_srt` — Main SRT creation (standard/word/davinci). Now supports `words_per_subtitle` for standard mode ✅
   - `apply_intelligent_padding` — Add padding to word timings.
   - `process_davinci_block` — Write DaVinci SRT block.
-  - `create_standard_srt` — Write standard SRT.
+  - `create_standard_srt` — Write standard SRT. Now breaks by `words_per_subtitle` when set, else by `chars_per_line` ✅
   - `create_word_level_srt` — Write word-per-line SRT.
   - `create_davinci_srt` — Write DaVinci-optimized SRT.
   - `create_text_file`

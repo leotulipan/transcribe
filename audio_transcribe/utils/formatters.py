@@ -94,7 +94,8 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             padding_start=kwargs.get("padding_start", 0),
             padding_end=kwargs.get("padding_end", 0),
             remove_fillers=kwargs.get("remove_fillers", False),
-            filler_words=kwargs.get("filler_words")
+            filler_words=kwargs.get("filler_words"),
+            words_per_subtitle=kwargs.get("words_per_subtitle", 0)
         )
     
     logger.info(f"SRT file created: {output_file}")

@@ -592,6 +592,12 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
     help="Maximum characters per line in SRT file (default: 80)"
 )
 @click.option(
+    "--words-per-subtitle", "-w",
+    type=int,
+    default=0,
+    help="Maximum words per subtitle block (default: 0 = disabled). Mutually exclusive with -c."
+)
+@click.option(
     "--word-srt", "-C",
     is_flag=True,
     help="Output SRT with each word as its own subtitle"
@@ -721,6 +727,7 @@ def main(
     language: Optional[str],
     output: List[str],
     chars_per_line: int,
+    words_per_subtitle: int,
     word_srt: bool,
     davinci_srt: bool,
     silent_portions: int,
@@ -761,6 +768,10 @@ def main(
     # Load environment variables
     load_config_from_multiple_locations()
     
+    # Validate mutually exclusive sizing options
+    if words_per_subtitle and words_per_subtitle > 0 and chars_per_line != 80:
+        logger.warning("Both --words-per-subtitle and --chars-per-line provided. Using words-per-subtitle and ignoring chars-per-line.")
+
     # DaVinci SRT defaults
     if davinci_srt:
         if silent_portions == 0:
@@ -787,6 +798,7 @@ def main(
         'language': language,
         'output': output,
         'chars_per_line': chars_per_line,
+        'words_per_subtitle': words_per_subtitle,
         'word_srt': word_srt,
         'davinci_srt': davinci_srt,
         'silent_portions': silent_portions,

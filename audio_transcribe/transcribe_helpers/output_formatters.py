@@ -254,7 +254,8 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                fps: Optional[float] = None, fps_offset_start: int = -1, 
                fps_offset_end: int = 0, padding_start: int = 0, padding_end: int = 0,
                srt_mode: str = "standard", max_words_per_block: int = 0,
-               remove_fillers: bool = False, filler_words: Optional[List[str]] = None) -> None:
+               remove_fillers: bool = False, filler_words: Optional[List[str]] = None,
+               words_per_subtitle: int = 0) -> None:
     """
     Create SRT file from words data.
     
@@ -410,7 +411,7 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                         block_text = ""
                         block_start = None
                         block_end = None
-                    elif len(block_text) > chars_per_line:
+                    elif (words_per_subtitle and len(block_words) >= words_per_subtitle) or len(block_text) > chars_per_line:
                         # Current block exceeds chars_per_line with this word
                         # Output all but current word
                         prev_words = block_words[:-1]
