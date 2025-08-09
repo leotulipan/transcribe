@@ -207,15 +207,15 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
     - [x] Validation: warn and ignore `--num-speakers` when `--diarize` is False; enforce range 1..32
     - [x] Update help text to indicate these map to ElevenLabs `diarize` and `num_speakers`
   - [ ] CLI: language mapping for ElevenLabs
-    - [ ] Ensure `--language/-l` is passed as `language_code` for ElevenLabs (not `language`)
-    - [ ] Keep existing behavior for other APIs
+    - [x] Ensure `--language/-l` is passed as `language_code` for ElevenLabs (not `language`)
+    - [x] Keep existing behavior for other APIs
   - [ ] API request payload (utils/transcription_api.py: ElevenLabsAPI.transcribe)
-    - [ ] Always set `data["tag_audio_events"] = True`
-    - [ ] Set `data["language_code"] = kwargs["language"]` when provided (rename key from current `language`)
-    - [ ] When provided, set `data["diarize"] = bool(kwargs.get("diarize"))`
-    - [ ] When provided, set `data["num_speakers"] = kwargs.get("num_speakers")`
-    - [ ] Optionally set `data["timestamps_granularity"] = "word"` explicitly (default already word)
-    - [ ] Log payload keys (not values) in debug; keep API key masked
+    - [x] Always set `data["tag_audio_events"] = True`
+    - [x] Set `data["language_code"] = kwargs["language"]` when provided (rename key from current `language`)
+    - [x] When provided, set `data["diarize"] = bool(kwargs.get("diarize"))`
+    - [x] When provided, set `data["num_speakers"] = kwargs.get("num_speakers")`
+    - [x] Optionally set `data["timestamps_granularity"] = "word"` explicitly (default already word)
+    - [x] Log payload keys (not values) in debug; keep API key masked
   - [ ] Parser enhancements (utils/parsers.py: parse_elevenlabs_format)
     - [ ] Preserve `speaker_id` (if present) into each word as `speaker`; accumulate unique speakers into `TranscriptionResult.speakers`
     - [ ] Preserve audio events when `tag_audio_events` is True:
