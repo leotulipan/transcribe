@@ -229,19 +229,19 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] Wiring
     - [x] Pass new CLI options through `params` and into ElevenLabsAPI invocation
     - [x] Ensure folder- and file-flow propagate `diarize`, `num_speakers`, `language_code` (via `language`) cleanly
-  - [ ] Validation and errors
-    - [ ] Range-check `num_speakers` (1..32); error on invalid; warn and ignore when diarize is False
-    - [ ] Unit guard: when both `speaker_labels` and diarization not present in data, don’t prefix labels
+  - [x] Validation and errors
+    - [x] Range-check `num_speakers` (1..32); error on invalid; warn and ignore when diarize is False
+    - [x] Unit guard: when both `speaker_labels` and diarization not present in data, don’t prefix labels
   - [ ] Tests
     - [ ] Payload test: mock HTTP to assert payload includes `model_id`, `language_code` (if set), `tag_audio_events: true`, and optional `diarize`/`num_speakers`
     - [ ] Integration smoke: run `uv run -- transcribe.py --api elevenlabs --file ./test/audio-test.mkv -v -d --diarize --num-speakers 2 -l de -o srt` and verify `_elevenlabs.json` saved
     - [ ] Parser test: craft minimal ElevenLabs-like JSON with `speaker_id` and an audio event; assert words contain `speaker` and `audio_event` types preserved; SRT includes event lines
-  - [ ] Docs
-    - [ ] Update `README.md` CLI reference for `--diarize/--no-diarize`, `--num-speakers`, ElevenLabs `language_code` mapping, and that audio events are always tagged
-    - [ ] Note that `--speaker-labels` applies when any API provides speakers
-  - [ ] Housekeeping
-    - [ ] Ensure lints pass after changes
-    - [ ] Brief changelog entry in `TASKS.md` Completed Tasks when finished
+  - [x] Docs
+    - [x] Update `README.md` CLI reference for `--diarize/--no-diarize`, `--num-speakers`, ElevenLabs `language_code` mapping, and that audio events are always tagged
+    - [x] Note that `--speaker-labels` applies when any API provides speakers
+  - [x] Housekeeping
+    - [x] Ensure lints pass after changes
+    - [x] Brief changelog entry in `TASKS.md` Completed Tasks when finished
 
 ## Future Tasks
 

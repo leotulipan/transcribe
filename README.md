@@ -129,6 +129,7 @@ Options:
   -a, --api [assemblyai|elevenlabs|groq|openai]
                                   API to use for transcription (default: groq)
   -l, --language TEXT             Language code (ISO-639-1 or ISO-639-3)
+                                  (maps to language_code for ElevenLabs)
   -o, --output [text|srt|word_srt|davinci_srt|json|all]
                                   Output format(s) to generate (default:
                                   text,srt)
@@ -149,8 +150,12 @@ Options:
                                   Remove filler words like 'äh' and 'ähm' and
                                   treat them as pauses
   --speaker-labels / --no-speaker-labels
-                                  Enable/disable speaker diarization
-                                  (AssemblyAI only)
+                                  Enable/disable speaker labels in SRT when
+                                  diarization data is available
+  --diarize / --no-diarize         Enable diarization (neutral option; maps to
+                                  API-specific diarization, e.g., ElevenLabs)
+  --num-speakers INTEGER           Maximum number of speakers (1..32). Requires
+                                  --diarize
   --fps FLOAT                     Frames per second for frame-based editing
                                   (e.g., 24, 29.97, 30)
   --fps-offset-start INTEGER      Frames to offset from start time (default:
