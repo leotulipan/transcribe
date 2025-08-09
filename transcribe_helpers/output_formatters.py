@@ -192,6 +192,7 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
     logger.debug(f"- Padding start: {padding_start}ms")
     logger.debug(f"- Padding end: {padding_end}ms")
     logger.debug(f"- Show pauses: {show_pauses}")
+    logger.debug(f"- Speaker labels: {True}")
     if fps:
         logger.debug(f"- FPS: {fps}")
         logger.debug(f"- FPS offset start: {fps_offset_start} frames")
@@ -498,6 +499,37 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
         current_end = None
         
         for i, word in enumerate(words):
+            # Handle audio events as their own subtitles
+            if word.get('type') == 'audio_event':
+                # If we were building a text block, flush it first
+                if current_subtitle and current_start is not None and current_end is not None and current_text.strip():
+                    start_ms = int(current_start * 1000)
+                    end_ms = int(current_end * 1000)
+                    text_lines = textwrap.wrap(current_text, width=chars_per_line, break_long_words=False)
+                    if not text_lines:
+                        text_lines = [current_text]
+                    file_obj.write(f"{counter}\n")
+                    file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
+                    file_obj.write("\n".join(text_lines) + "\n\n")
+                    counter += 1
+                    current_subtitle = []
+                    current_text = ""
+                    current_start = None
+                    current_end = None
+
+                # Now output the audio event as its own subtitle
+                ev_text = word.get('text', '').strip()
+                if ev_text:
+                    start_ms = int(word.get('start', 0) * 1000)
+                    end_ms = int(word.get('end', word.get('start', 0) + 0.5) * 1000)
+                    file_obj.write(f"{counter}\n")
+                    file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
+                    # Ensure parentheses around event text
+                    if not (ev_text.startswith('(') and ev_text.endswith(')')):
+                        ev_text = f"({ev_text})"
+                    file_obj.write(ev_text + "\n\n")
+                    counter += 1
+                continue
             if word.get('type') == 'spacing' and silentportions > 0:
                 # Check if this is a meaningful silent portion
                 if len(current_subtitle) > 0 and word.get('text', '').strip() and word.get('end', 0) - word.get('start', 0) >= silentportions / 1000.0:

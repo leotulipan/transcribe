@@ -263,6 +263,8 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             if api_name == "elevenlabs":
                 transcribe_kwargs['model_id'] = kwargs.get('model', 'scribe_v1') # Get model or default
                 logger.debug(f"Using ElevenLabs model_id: {transcribe_kwargs['model_id']}")
+                # Map neutral diarization options to ElevenLabs request in API layer via kwargs
+                # (diarize, num_speakers, language already in kwargs)
             else: # for other APIs, set model with appropriate defaults
                 if api_name == "groq":
                     transcribe_kwargs['model'] = kwargs.get('model', 'whisper-large-v3')

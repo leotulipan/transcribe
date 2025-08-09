@@ -347,6 +347,32 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                     # Add spacing text to block_text
                     block_text += word.get('text', '')
                     continue
+                # Handle audio events as their own subtitles
+                if word.get('type') == 'audio_event':
+                    # Flush any accumulated block first
+                    if block_words:
+                        process_standard_block(f, counter, block_words, block_start, block_end, chars_per_line)
+                        counter += 1
+                        block_words = []
+                        block_text = ""
+                        block_start = None
+                        block_end = None
+
+                    ev_text = (word.get('text', '') or '').strip()
+                    if ev_text:
+                        start_ms = int(word.get('start', 0) * 1000)
+                        end_ms = int(word.get('end', word.get('start', 0) + 0.5) * 1000)
+                        f.write(f"{counter}\n")
+                        # Local helper for ms formatting (this module defines format_time in seconds)
+                        def _fmt_ms(ms: int) -> str:
+                            seconds = ms / 1000.0
+                            return format_time(seconds)
+                        f.write(f"{_fmt_ms(start_ms)} --> { _fmt_ms(end_ms)}\n")
+                        if not (ev_text.startswith('(') and ev_text.endswith(')')):
+                            ev_text = f"({ev_text})"
+                        f.write(ev_text + "\n\n")
+                        counter += 1
+                    continue
                 
                 # Get word text and timing
                 word_text = word.get('word', word.get('text', ''))

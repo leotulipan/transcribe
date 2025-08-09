@@ -222,13 +222,13 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
       - [x] If events arrive as non-word items, map with `type: "audio_event"` and text like `(laughter)` retaining start/end
       - [x] If events are injected in text only, emit as `type: "audio_event"` when bracketed `(event)`
     - [x] Ensure chronological merge of words and events by timestamp
-  - [ ] SRT output behavior (transcribe_helpers/output_formatters.py and audio_transcribe/transcribe_helpers/output_formatters.py)
-    - [ ] Standard mode: skip injecting audio events into `current_text`; if a block contains only an audio event, write a dedicated subtitle line with `(event)` between its timestamps
-    - [ ] DaVinci mode: verify existing `audio_event` handling writes separate lines with parentheses; keep
+  - [x] SRT output behavior (transcribe_helpers/output_formatters.py and audio_transcribe/transcribe_helpers/output_formatters.py)
+    - [x] Standard mode: skip injecting audio events into `current_text`; if a block contains only an audio event, write a dedicated subtitle line with `(event)` between its timestamps
+    - [x] DaVinci mode: verify existing `audio_event` handling writes separate lines with parentheses; keep
     - [ ] Speaker labels: reuse `--speaker-labels` to prefix lines when any API supplies speaker info (generalize comment that it’s not AssemblyAI-only)
-  - [ ] Wiring
-    - [ ] Pass new CLI options through `params` and into ElevenLabsAPI invocation
-    - [ ] Ensure folder- and file-flow propagate `diarize`, `num_speakers`, `language_code` (via `language`) cleanly
+  - [x] Wiring
+    - [x] Pass new CLI options through `params` and into ElevenLabsAPI invocation
+    - [x] Ensure folder- and file-flow propagate `diarize`, `num_speakers`, `language_code` (via `language`) cleanly
   - [ ] Validation and errors
     - [ ] Range-check `num_speakers` (1..32); error on invalid; warn and ignore when diarize is False
     - [ ] Unit guard: when both `speaker_labels` and diarization not present in data, don’t prefix labels
