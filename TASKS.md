@@ -200,6 +200,49 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 
 ## In Progress Tasks
 
+- [ ] ElevenLabs Speech-to-Text parameter integration (see: https://elevenlabs.io/docs/api-reference/speech-to-text/convert)
+  - [ ] CLI: add neutral diarization options
+    - [x] Add `--diarize/--no-diarize` (default: False) to `transcribe.py` and `audio_transcribe/cli.py`
+    - [x] Add `--num-speakers` (int, optional, valid range 1..32) to both CLIs
+    - [x] Validation: warn and ignore `--num-speakers` when `--diarize` is False; enforce range 1..32
+    - [x] Update help text to indicate these map to ElevenLabs `diarize` and `num_speakers`
+  - [ ] CLI: language mapping for ElevenLabs
+    - [ ] Ensure `--language/-l` is passed as `language_code` for ElevenLabs (not `language`)
+    - [ ] Keep existing behavior for other APIs
+  - [ ] API request payload (utils/transcription_api.py: ElevenLabsAPI.transcribe)
+    - [ ] Always set `data["tag_audio_events"] = True`
+    - [ ] Set `data["language_code"] = kwargs["language"]` when provided (rename key from current `language`)
+    - [ ] When provided, set `data["diarize"] = bool(kwargs.get("diarize"))`
+    - [ ] When provided, set `data["num_speakers"] = kwargs.get("num_speakers")`
+    - [ ] Optionally set `data["timestamps_granularity"] = "word"` explicitly (default already word)
+    - [ ] Log payload keys (not values) in debug; keep API key masked
+  - [ ] Parser enhancements (utils/parsers.py: parse_elevenlabs_format)
+    - [ ] Preserve `speaker_id` (if present) into each word as `speaker`; accumulate unique speakers into `TranscriptionResult.speakers`
+    - [ ] Preserve audio events when `tag_audio_events` is True:
+      - [ ] If events arrive as non-word items, map with `type: "audio_event"` and text like `(laughter)` retaining start/end
+      - [ ] If events are injected in text only, consider emitting spacing with `text: "(event)"` and `type: "audio_event"`
+    - [ ] Ensure chronological merge of words and events by timestamp
+  - [ ] SRT output behavior (transcribe_helpers/output_formatters.py and audio_transcribe/transcribe_helpers/output_formatters.py)
+    - [ ] Standard mode: skip injecting audio events into `current_text`; if a block contains only an audio event, write a dedicated subtitle line with `(event)` between its timestamps
+    - [ ] DaVinci mode: verify existing `audio_event` handling writes separate lines with parentheses; keep
+    - [ ] Speaker labels: reuse `--speaker-labels` to prefix lines when any API supplies speaker info (generalize comment that it’s not AssemblyAI-only)
+  - [ ] Wiring
+    - [ ] Pass new CLI options through `params` and into ElevenLabsAPI invocation
+    - [ ] Ensure folder- and file-flow propagate `diarize`, `num_speakers`, `language_code` (via `language`) cleanly
+  - [ ] Validation and errors
+    - [ ] Range-check `num_speakers` (1..32); error on invalid; warn and ignore when diarize is False
+    - [ ] Unit guard: when both `speaker_labels` and diarization not present in data, don’t prefix labels
+  - [ ] Tests
+    - [ ] Payload test: mock HTTP to assert payload includes `model_id`, `language_code` (if set), `tag_audio_events: true`, and optional `diarize`/`num_speakers`
+    - [ ] Integration smoke: run `uv run -- transcribe.py --api elevenlabs --file ./test/audio-test.mkv -v -d --diarize --num-speakers 2 -l de -o srt` and verify `_elevenlabs.json` saved
+    - [ ] Parser test: craft minimal ElevenLabs-like JSON with `speaker_id` and an audio event; assert words contain `speaker` and `audio_event` types preserved; SRT includes event lines
+  - [ ] Docs
+    - [ ] Update `README.md` CLI reference for `--diarize/--no-diarize`, `--num-speakers`, ElevenLabs `language_code` mapping, and that audio events are always tagged
+    - [ ] Note that `--speaker-labels` applies when any API provides speakers
+  - [ ] Housekeeping
+    - [ ] Ensure lints pass after changes
+    - [ ] Brief changelog entry in `TASKS.md` Completed Tasks when finished
+
 ## Future Tasks
 
 ## API Resilience Enhancement Tasks

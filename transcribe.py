@@ -658,6 +658,17 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
     help="Frames to offset from end time (default: 0, negative=earlier, positive=later)"
 )
 @click.option(
+    "--diarize/--no-diarize",
+    default=False,
+    help="Enable speaker diarization (neutral option; maps to API-specific diarization)"
+)
+@click.option(
+    "--num-speakers",
+    type=int,
+    default=None,
+    help="Maximum number of speakers (1..32). Requires --diarize."
+)
+@click.option(
     "--use-input",
     is_flag=True,
     help="Use original input file without conversion (default is to convert to FLAC)"
@@ -739,6 +750,8 @@ def main(
     fps: Optional[float],
     fps_offset_start: int,
     fps_offset_end: int,
+    diarize: bool,
+    num_speakers: Optional[int],
     use_input: bool,
     use_pcm: bool,
     keep_flac: bool,
@@ -764,6 +777,15 @@ def main(
     
     # Set up logging
     setup_logger(debug=debug, verbose=verbose)
+    # Validate diarization-related CLI options
+    if num_speakers is not None:
+        if num_speakers < 1 or num_speakers > 32:
+            logger.error("--num-speakers must be within 1..32")
+            sys.exit(1)
+        if not diarize:
+            logger.warning("--num-speakers provided without --diarize; ignoring num-speakers")
+            num_speakers = None
+
     
     # Load environment variables
     load_config_from_multiple_locations()
@@ -799,6 +821,8 @@ def main(
         'output': output,
         'chars_per_line': chars_per_line,
         'words_per_subtitle': words_per_subtitle,
+        'diarize': diarize,
+        'num_speakers': num_speakers,
         'word_srt': word_srt,
         'davinci_srt': davinci_srt,
         'silent_portions': silent_portions,

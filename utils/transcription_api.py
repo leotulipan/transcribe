@@ -623,8 +623,18 @@ class ElevenLabsAPI(TranscriptionAPI):
         
         # Prepare optional parameters
         data = {"model_id": model_id}
+        # Always tag audio events
+        data["tag_audio_events"] = True
+        # Language mapping: use language_code for ElevenLabs
         if "language" in kwargs and kwargs["language"]:
-            data["language"] = kwargs["language"]
+            data["language_code"] = kwargs["language"]
+        # Neutral diarization options
+        if "diarize" in kwargs:
+            data["diarize"] = bool(kwargs.get("diarize"))
+        if kwargs.get("num_speakers") is not None and bool(kwargs.get("diarize")):
+            data["num_speakers"] = int(kwargs.get("num_speakers"))
+        # Timestamps granularity (explicitly set to word)
+        data["timestamps_granularity"] = "word"
             
         with open(current_audio_path, "rb") as f:
             files = {"file": f}
@@ -639,7 +649,8 @@ class ElevenLabsAPI(TranscriptionAPI):
                     masked_headers = self.mask_headers(headers)
                     
                     logger.debug(f"Headers: {masked_headers}")
-                    logger.debug(f"Data params: {data}")
+                    # Log only keys for safety
+                    logger.debug(f"Data keys: {list(data.keys())}")
                     
                     # Log file info without reading entire content
                     file_info = {}

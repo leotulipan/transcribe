@@ -360,6 +360,17 @@ def process_audio_path(audio_path: str, api_name: str, **kwargs) -> Tuple[int, i
     help="Frames to offset from end time (default: 0, negative=earlier, positive=later)"
 )
 @click.option(
+    "--diarize/--no-diarize",
+    default=False,
+    help="Enable speaker diarization (neutral option; maps to API-specific diarization)"
+)
+@click.option(
+    "--num-speakers",
+    type=int,
+    default=None,
+    help="Maximum number of speakers (1..32). Requires --diarize."
+)
+@click.option(
     "--use-input",
     is_flag=True,
     help="Use original input file without conversion (default is to convert to FLAC)"
@@ -413,6 +424,8 @@ def main(
     output: List[str],
     chars_per_line: int,
     words_per_subtitle: int,
+    diarize: bool,
+    num_speakers: Optional[int],
     word_srt: bool,
     davinci_srt: bool,
     silent_portions: int,
@@ -469,11 +482,21 @@ def main(
     if words_per_subtitle and words_per_subtitle > 0 and chars_per_line != 80:
         logger.warning("Both --words-per-subtitle and --chars-per-line provided. Using words-per-subtitle and ignoring chars-per-line.")
 
+    # Validate diarization options
+    if num_speakers is not None:
+        if num_speakers < 1 or num_speakers > 32:
+            raise click.BadParameter("--num-speakers must be within 1..32")
+        if not diarize:
+            logger.warning("--num-speakers provided without --diarize; ignoring num-speakers")
+            num_speakers = None
+
     params = {
         "language": language,
         "output_formats": output_formats,
         "chars_per_line": chars_per_line,
         "words_per_subtitle": words_per_subtitle,
+        "diarize": diarize,
+        "num_speakers": num_speakers,
         "word_srt": word_srt,
         "davinci_srt": davinci_srt,
         "silentportions": silent_portions,
