@@ -441,7 +441,7 @@ def parse_elevenlabs_format(data: Dict[str, Any]) -> TranscriptionResult:
     
     # Extract text and basic metadata
     text = data.get("text", "")
-    language = data.get("language", "")
+    language = data.get("language", data.get("language_code", ""))
     
     words = []
     words_data = None
@@ -457,13 +457,37 @@ def parse_elevenlabs_format(data: Dict[str, Any]) -> TranscriptionResult:
     
     if words_data:
         for word_data in words_data:
-            if isinstance(word_data, dict) and "text" in word_data:
-                words.append({
-                    "text": word_data.get("text", ""),
-                    "start": word_data.get("start", 0),
-                    "end": word_data.get("end", 0),
-                    "type": word_data.get("type", "word")
-                })
+            if not isinstance(word_data, dict):
+                continue
+            text_val = word_data.get("text", "")
+            start_val = word_data.get("start", 0)
+            end_val = word_data.get("end", 0)
+            raw_type = word_data.get("type")
+
+            # Normalize type: word | spacing | audio_event
+            normalized_type = "word"
+            txt_stripped = (text_val or "").strip()
+            if raw_type == "spacing" or txt_stripped == "":
+                normalized_type = "spacing"
+            elif raw_type in ("audio_event", "event"):
+                normalized_type = "audio_event"
+            elif txt_stripped.startswith("(") and txt_stripped.endswith(")"):
+                # Heuristic: bracketed token is likely an audio event
+                normalized_type = "audio_event"
+
+            word_entry = {
+                "text": text_val,
+                "start": float(start_val) if isinstance(start_val, (int, float)) else 0.0,
+                "end": float(end_val) if isinstance(end_val, (int, float)) else 0.0,
+                "type": normalized_type,
+            }
+            # Preserve speaker identifiers if present
+            speaker_id = word_data.get("speaker_id") or word_data.get("speaker")
+            if speaker_id:
+                word_entry["speaker_id"] = speaker_id
+                word_entry["speaker"] = speaker_id
+
+            words.append(word_entry)
     else:
         # If no words data but text is available, generate simple word objects
         if text:
@@ -472,8 +496,19 @@ def parse_elevenlabs_format(data: Dict[str, Any]) -> TranscriptionResult:
         else:
             logger.warning("No words data found in ElevenLabs format and no text available")
     
-    # ElevenLabs doesn't provide speaker data
+    # Sort words chronologically to ensure proper order of words and audio events
+    words = sorted(words, key=lambda w: (w.get("start", 0), 0 if w.get("type") != "spacing" else 1))
+
+    # Aggregate speakers if present
     speakers = []
+    unique_speakers = []
+    seen = set()
+    for w in words:
+        spk = w.get("speaker") or w.get("speaker_id")
+        if spk and spk not in seen:
+            seen.add(spk)
+            unique_speakers.append({"id": spk})
+    speakers = unique_speakers
     
     return TranscriptionResult(
         text=text,

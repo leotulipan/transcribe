@@ -217,11 +217,11 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
     - [x] Optionally set `data["timestamps_granularity"] = "word"` explicitly (default already word)
     - [x] Log payload keys (not values) in debug; keep API key masked
   - [ ] Parser enhancements (utils/parsers.py: parse_elevenlabs_format)
-    - [ ] Preserve `speaker_id` (if present) into each word as `speaker`; accumulate unique speakers into `TranscriptionResult.speakers`
-    - [ ] Preserve audio events when `tag_audio_events` is True:
-      - [ ] If events arrive as non-word items, map with `type: "audio_event"` and text like `(laughter)` retaining start/end
-      - [ ] If events are injected in text only, consider emitting spacing with `text: "(event)"` and `type: "audio_event"`
-    - [ ] Ensure chronological merge of words and events by timestamp
+    - [x] Preserve `speaker_id` (if present) into each word as `speaker`; accumulate unique speakers into `TranscriptionResult.speakers`
+    - [x] Preserve audio events when `tag_audio_events` is True:
+      - [x] If events arrive as non-word items, map with `type: "audio_event"` and text like `(laughter)` retaining start/end
+      - [x] If events are injected in text only, emit as `type: "audio_event"` when bracketed `(event)`
+    - [x] Ensure chronological merge of words and events by timestamp
   - [ ] SRT output behavior (transcribe_helpers/output_formatters.py and audio_transcribe/transcribe_helpers/output_formatters.py)
     - [ ] Standard mode: skip injecting audio events into `current_text`; if a block contains only an audio event, write a dedicated subtitle line with `(event)` between its timestamps
     - [ ] DaVinci mode: verify existing `audio_event` handling writes separate lines with parentheses; keep
