@@ -633,6 +633,16 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
     help="Add (...) text for pauses longer than silent-portions value"
 )
 @click.option(
+    "--filler-lines",
+    is_flag=True,
+    help="Output filler words as their own subtitle lines (uppercased)"
+)
+@click.option(
+    "--filler-words",
+    multiple=True,
+    help="Custom filler words to detect (repeat flag). Defaults include: äh, ähm, ah, uh, er, hm, hmm"
+)
+@click.option(
     "--remove-fillers/--no-remove-fillers",
     default=False,
     help="Remove filler words like 'äh' and 'ähm' and treat them as pauses"
@@ -747,6 +757,8 @@ def main(
     padding_start: int,
     padding_end: int,
     show_pauses: bool,
+    filler_lines: bool,
+    filler_words: Optional[List[str]],
     remove_fillers: bool,
     speaker_labels: bool,
     fps: Optional[float],
@@ -815,6 +827,17 @@ def main(
             logger.debug("Using davinci-srt default for start-hour: 1")
     if start_hour is None:
         start_hour = 0
+
+    # Filler-lines behavior: enforce 350ms true pauses and uppercase fillers on their own lines
+    if filler_lines:
+        if silent_portions == 0:
+            silent_portions = 350
+            logger.debug("Using filler-lines default for silent-portions: 350ms")
+        show_pauses = True
+        # Do not remove fillers if we want to output them
+        if remove_fillers:
+            logger.debug("--remove-fillers ignored because --filler-lines is enabled")
+            remove_fillers = False
     
     # Create dictionary of parameters
     params = {
@@ -831,6 +854,8 @@ def main(
         'padding_start': padding_start,
         'padding_end': padding_end,
         'show_pauses': show_pauses,
+        'filler_lines': filler_lines,
+        'filler_words': list(filler_words) if filler_words else None,
         'remove_fillers': remove_fillers,
         'speaker_labels': speaker_labels,
         'fps': fps,

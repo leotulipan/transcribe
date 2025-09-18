@@ -100,6 +100,10 @@ def standardize_word_format(basic_words: List[Dict[str, Any]],
         # Add spacing element *after* this word if there is a next word
         if i < len(words) - 1:
             next_word = words[i+1]
+            # If the next element is a spacing block that begins before the current word ends,
+            # clamp its start to the current word end to avoid false overlap noise.
+            if next_word.get('type') == 'spacing' and next_word.get('start', 0) < word.get('end', 0):
+                next_word['start'] = word.get('end', 0)
             gap = next_word['start'] - word['end']
             
             if gap > start_threshold:
@@ -117,7 +121,9 @@ def standardize_word_format(basic_words: List[Dict[str, Any]],
                     'speaker_id': word.get('speaker_id', '') 
                 })
             elif gap < -start_threshold:
-                 logger.warning(f"Overlap detected between word {i} ({word.get('text')}) and word {i+1} ({next_word.get('text')}). Start/End: {word['end']} / {next_word['start']}")
+                 # Only warn when two word elements overlap meaningfully; ignore spacing artifacts
+                 if word.get('type') == 'word' and next_word.get('type') == 'word':
+                     logger.warning(f"Overlap detected between word {i} ({word.get('text')}) and word {i+1} ({next_word.get('text')}). Start/End: {word['end']} / {next_word['start']}")
 
     # Check and convert existing spacing elements to pauses if they exceed threshold 
     if show_pauses and silence_threshold > 0:

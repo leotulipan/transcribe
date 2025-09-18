@@ -71,6 +71,8 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
     
     # Apply any needed modifications to words
     words = result.words
+    filler_lines = kwargs.get("filler_lines", False)
+    filler_words = kwargs.get("filler_words", None)
     
     # Debug the silentportions/silent_portions parameter
     silent_portions = kwargs.get("silent_portions", kwargs.get("silentportions", 0))
@@ -88,7 +90,8 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             logger.debug(f"Found pause marker: {word}")
     logger.debug(f"Found {pause_count} pause markers in input words")
     
-    # Create SRT file using the appropriate format - always pass show_pauses
+    # If filler_lines is requested, ensure we do not strip fillers earlier
+    # and pass control flags down to the low-level create_srt
     start_hour = kwargs.get("start_hour", 0)
     if format_type == "word":
         create_srt(
@@ -118,11 +121,12 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             fps_offset_end=kwargs.get("fps_offset_end", 0),
             padding_start=kwargs.get("padding_start", -125),
             padding_end=kwargs.get("padding_end", 0),
-            remove_fillers=kwargs.get("remove_fillers", True),
-            filler_words=kwargs.get("filler_words"),
+            remove_fillers=False if filler_lines else kwargs.get("remove_fillers", True),
+            filler_words=filler_words,
             max_words_per_block=kwargs.get("max_words_per_block", 500),
             show_pauses=show_pauses,
-            start_hour=start_hour
+            start_hour=start_hour,
+            filler_lines=filler_lines
         )
     else:  # standard
         create_srt(
@@ -136,11 +140,12 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
             fps_offset_end=kwargs.get("fps_offset_end", 0),
             padding_start=kwargs.get("padding_start", 0),
             padding_end=kwargs.get("padding_end", 0),
-            remove_fillers=kwargs.get("remove_fillers", False),
-            filler_words=kwargs.get("filler_words"),
+            remove_fillers=False if filler_lines else kwargs.get("remove_fillers", False),
+            filler_words=filler_words,
             show_pauses=show_pauses,
             start_hour=start_hour,
-            words_per_subtitle=kwargs.get("words_per_subtitle", 0)
+            words_per_subtitle=kwargs.get("words_per_subtitle", 0),
+            filler_lines=filler_lines
         )
     
     logger.info(f"SRT file created: {output_file}")

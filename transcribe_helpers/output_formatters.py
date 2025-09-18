@@ -160,7 +160,7 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
                srt_mode: str = "standard", max_words_per_block: int = 0,
                remove_fillers: bool = False, filler_words: Optional[List[str]] = None,
                show_pauses: bool = False, start_hour: int = 0,
-               words_per_subtitle: int = 0) -> None:
+               words_per_subtitle: int = 0, filler_lines: bool = False) -> None:
     """
     Create SRT subtitle file from words.
     
@@ -198,6 +198,7 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
         logger.debug(f"- FPS offset start: {fps_offset_start} frames")
         logger.debug(f"- FPS offset end: {fps_offset_end} frames")
     logger.debug(f"- Remove fillers: {remove_fillers}")
+    logger.debug(f"- Filler lines: {filler_lines}")
     
     # Count pause markers in input
     pause_marker_count = sum(1 for w in words if w.get('type') == 'spacing' and '(...)' in w.get('text', ''))
@@ -210,12 +211,35 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
     # Make a copy of the words list to avoid modifying the original
     words_copy = copy.deepcopy(words)
     
-    # Process filler words if needed
+    # Process filler words if needed (disabled when filler_lines is True)
     if remove_fillers:
         if filler_words is None:
-            filler_words = ["äh", "ähm", "uh", "um", "ah", "er", "hm", "hmm"]
+            filler_words = ["äh", "ähm", "ah", "ahm", "uh", "er", "hm", "hmm"]
             
         words_copy = process_filler_words(words_copy, silentportions, filler_words)
+    
+    # If filler_lines requested, transform filler words into standalone entries and uppercase them
+    if filler_lines:
+        if filler_words is None:
+            filler_words = ["äh", "ähm", "ah", "ahm", "uh", "er", "hm", "hmm"]
+        filler_set = {fw.lower() for fw in filler_words}
+        transformed: List[Dict[str, Any]] = []
+        for i, word in enumerate(words_copy):
+            if word and word.get('type') == 'word':
+                raw_text = word.get('text', '')
+                normalized = re.sub(r"\W+", "", raw_text, flags=re.UNICODE).lower()
+                if normalized in filler_set and raw_text.strip():
+                    # Output filler as its own word-level subtitle later by marking as audio_event-like
+                    # Convert to an audio_event to force separate subtitle lines downstream
+                    filler_entry = word.copy()
+                    filler_entry['text'] = raw_text.upper()
+                    filler_entry['type'] = 'audio_event'
+                    filler_entry['is_filler'] = True
+                    transformed.append(filler_entry)
+                    # Surrounding spacings remain as-is; we do not remove word from flow
+                    continue
+            transformed.append(word)
+        words_copy = transformed
         
     # Make sure pauses are properly detected and marked (only if not already done)
     if show_pauses and silentportions > 0 and pause_marker_count == 0:
@@ -430,7 +454,10 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
                     
                     file_obj.write(f"{current_counter}\n")
                     file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
-                    file_obj.write(f"({event['text']})\n\n")
+                    if event.get('is_filler'):
+                        file_obj.write(f"{event['text'].upper()}\n\n")
+                    else:
+                        file_obj.write(f"({event['text']})\n\n")
                     current_counter += 1
             else:
                 # No audio events, write text normally
@@ -469,7 +496,10 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
                 
                 file_obj.write(f"{counter + counter_offset}\n")
                 file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
-                file_obj.write(f"({event['text']})\n\n")
+                if event.get('is_filler'):
+                    file_obj.write(f"{event['text'].upper()}\n\n")
+                else:
+                    file_obj.write(f"({event['text']})\n\n")
                 counter_offset += 1
         elif audio_events:
             # Only audio events, no regular words
@@ -479,7 +509,10 @@ def process_davinci_block(file_obj, counter: int, block_words: List[Dict[str, An
                 
                 file_obj.write(f"{counter + i}\n")
                 file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
-                file_obj.write(f"({event['text']})\n\n")
+                if event.get('is_filler'):
+                    file_obj.write(f"{event['text'].upper()}\n\n")
+                else:
+                    file_obj.write(f"({event['text']})\n\n")
 
 
 def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Path], 
@@ -659,22 +692,56 @@ def create_davinci_srt(words: List[Dict[str, Any]], output_file: Union[str, Path
                       fps: Optional[float] = None, fps_offset_start: int = -1, 
                       fps_offset_end: int = 0, remove_fillers: bool = True,
                       filler_words: Optional[List[str]] = None, start_hour: int = 0) -> None:
-    """Create SRT file optimized for Davinci Resolve Studio"""
-    create_srt(
-        words=words,
-        output_file=output_file,
-        silentportions=silentportions,
-        padding_start=padding_start,
-        padding_end=padding_end,
-        fps=fps,
-        fps_offset_start=fps_offset_start,
-        fps_offset_end=fps_offset_end,
-        srt_mode="davinci",
-        max_words_per_block=500,
-        remove_fillers=remove_fillers,
-        filler_words=filler_words,
-        start_hour=start_hour
-    )
+    """Create SRT file optimized for Davinci Resolve Studio.
+
+    Writes contiguous word sequences as blocks and places audio events (including fillers when flagged) on their own lines.
+    """
+    output_file = Path(output_file)
+    counter = 1
+    with open(output_file, 'w', encoding='utf-8') as f:
+        block_words: List[Dict[str, Any]] = []
+        block_start: Optional[float] = None
+        block_end: Optional[float] = None
+
+        def flush_block():
+            nonlocal counter, block_words, block_start, block_end
+            if block_words:
+                process_davinci_block(f, counter, block_words, block_start if block_start is not None else 0.0, block_end if block_end is not None else (block_start or 0.0) + 0.5)
+                # Increment counter by number of entries written. Approximate: 1 for text block plus audio events inside
+                audio_events_in_block = sum(1 for w in block_words if w.get('type') == 'audio_event')
+                counter += 1 + audio_events_in_block
+                block_words = []
+                block_start = None
+                block_end = None
+
+        for w in words:
+            if not w:
+                continue
+            if w.get('type') == 'spacing':
+                # If spacing is a significant pause or explicit marker, break the block and optionally write a pause entry
+                is_pause = '(...)' in (w.get('text') or '')
+                duration = (w.get('end', 0) - w.get('start', 0))
+                duration_ms = int(round(duration * 1000)) if isinstance(duration, float) else int(duration)
+                if block_words:
+                    flush_block()
+                if is_pause and silentportions and duration_ms >= silentportions:
+                    start_ms = int((w.get('start', 0)) * 1000)
+                    end_ms = int((w.get('end', w.get('start', 0) + 0.5)) * 1000)
+                    f.write(f"{counter}\n")
+                    f.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
+                    f.write("(...)\n\n")
+                    counter += 1
+                continue
+
+            # word or audio_event
+            if block_start is None and 'start' in w:
+                block_start = w.get('start', 0)
+            if 'end' in w:
+                block_end = w.get('end', block_start or 0)
+            block_words.append(w)
+
+        # flush remaining
+        flush_block()
 
 
 def create_text_file(words: List[Dict[str, Any]], output_file: Union[str, Path]) -> None:
