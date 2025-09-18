@@ -705,43 +705,83 @@ def create_davinci_srt(words: List[Dict[str, Any]], output_file: Union[str, Path
 
         def flush_block():
             nonlocal counter, block_words, block_start, block_end
-            if block_words:
-                process_davinci_block(f, counter, block_words, block_start if block_start is not None else 0.0, block_end if block_end is not None else (block_start or 0.0) + 0.5)
-                # Increment counter by number of entries written. Approximate: 1 for text block plus audio events inside
-                audio_events_in_block = sum(1 for w in block_words if w.get('type') == 'audio_event')
-                counter += 1 + audio_events_in_block
+            # Build a single large subtitle from all non-audio_event words in the block
+            regular_words = [w for w in block_words if w and w.get('type') != 'audio_event']
+            if not regular_words:
                 block_words = []
                 block_start = None
                 block_end = None
+                return
+            start_time = block_start if block_start is not None else regular_words[0].get('start', 0)
+            end_time = block_end if block_end is not None else regular_words[-1].get('end', start_time + 0.5)
+            start_ms = int(start_time * 1000)
+            end_ms = int(end_time * 1000)
+            text = ""
+            for word in regular_words:
+                if word.get('type') == 'word':
+                    text = join_text_with_proper_spacing(text, word.get('text', ''))
+            f.write(f"{counter}\n")
+            f.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
+            f.write(f"{text}\n\n")
+            counter += 1
+            block_words = []
+            block_start = None
+            block_end = None
 
         for w in words:
             if not w:
                 continue
-            if w.get('type') == 'spacing':
-                # If spacing is a significant pause or explicit marker, break the block and optionally write a pause entry
+            wtype = w.get('type')
+            if wtype == 'spacing':
+                # Only break on a true pause marker meeting threshold
                 is_pause = '(...)' in (w.get('text') or '')
                 duration = (w.get('end', 0) - w.get('start', 0))
                 duration_ms = int(round(duration * 1000)) if isinstance(duration, float) else int(duration)
-                if block_words:
-                    flush_block()
                 if is_pause and silentportions and duration_ms >= silentportions:
-                    start_ms = int((w.get('start', 0)) * 1000)
-                    end_ms = int((w.get('end', w.get('start', 0) + 0.5)) * 1000)
+                    # Close current text block (trim end to pause start to avoid overlaps)
+                    if block_words:
+                        if block_end is not None and w.get('start') is not None and block_end > w['start']:
+                            block_end = w['start']
+                        flush_block()
+                    # Write pause as its own subtitle, ensure start is not before previous block end
+                    pause_start = w.get('start', 0)
+                    pause_end = w.get('end', pause_start + 0.5)
+                    if block_end is not None and pause_start < block_end:
+                        pause_start = block_end
+                    start_ms = int(pause_start * 1000)
+                    end_ms = int(pause_end * 1000)
                     f.write(f"{counter}\n")
                     f.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
                     f.write("(...)\n\n")
                     counter += 1
+                # Ignore non-pause spacing entirely (do not break blocks)
                 continue
 
-            # word or audio_event
+            if wtype == 'audio_event':
+                # Filler or other audio event splits blocks, audio event goes on its own line
+                if block_words:
+                    flush_block()
+                start_ms = int(w.get('start', 0) * 1000)
+                end_ms = int(w.get('end', w.get('start', 0) + 0.5) * 1000)
+                f.write(f"{counter}\n")
+                f.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
+                if w.get('is_filler'):
+                    f.write(f"{w.get('text', '').upper()}\n\n")
+                else:
+                    f.write(f"({w.get('text', '')})\n\n")
+                counter += 1
+                continue
+
+            # word: accumulate into large block
             if block_start is None and 'start' in w:
                 block_start = w.get('start', 0)
             if 'end' in w:
                 block_end = w.get('end', block_start or 0)
             block_words.append(w)
 
-        # flush remaining
-        flush_block()
+        # flush remaining text
+        if block_words:
+            flush_block()
 
 
 def create_text_file(words: List[Dict[str, Any]], output_file: Union[str, Path]) -> None:

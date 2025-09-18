@@ -93,6 +93,28 @@ transcribe --file path/to/audio.wav --api elevenlabs --output text --output srt 
 transcribe --file path/to/audio.wav --api groq --davinci-srt
 ```
 
+### Filler words as their own lines (UPPERCASE) and true pauses
+
+Emit filler words as standalone subtitle lines in uppercase, and only mark pauses of ≥350ms with (...):
+
+```bash
+transcribe --file path/to/audio.wav --api elevenlabs --output davinci_srt --davinci-srt --filler-lines --silent-portions 350
+```
+
+Use custom filler list (repeat --filler-words):
+
+```bash
+transcribe --file path/to/audio.wav --api elevenlabs --output srt --filler-lines \
+  --filler-words ähm --filler-words äh --filler-words hm --filler-words uh
+```
+
+With an existing ElevenLabs JSON transcript:
+
+```bash
+uv run transcribe.py --file "G:\Geteilte Ablagen\Podcast\CON-43 - Dr. Eva Ornella\interview-combined-audio_elevenlabs.json" \
+  --use-json-input --api elevenlabs --output davinci_srt --davinci-srt --filler-lines --silent-portions 350
+```
+
 ### Using Different AssemblyAI Models
 
 AssemblyAI offers several models with different speed/accuracy tradeoffs:
@@ -135,6 +157,9 @@ Options:
                                   text,srt)
   -c, --chars-per-line INTEGER    Maximum characters per line in SRT file
                                   (default: 80)
+  -w, --words-per-subtitle INTEGER
+                                  Maximum words per subtitle block (default: 0 =
+                                  disabled). Mutually exclusive with -c.
   -C, --word-srt                  Output SRT with each word as its own
                                   subtitle
   -D, --davinci-srt               Output SRT optimized for DaVinci Resolve
@@ -146,6 +171,11 @@ Options:
                                   (negative=earlier, positive=later)
   --show-pauses                   Add (...) text for pauses longer than
                                   silent-portions value
+  --filler-lines                  Output filler words as their own subtitle
+                                  lines (uppercased). Auto-enables --show-pauses
+                                  and defaults --silent-portions=350 if not set
+  --filler-words TEXT             Custom filler words to detect. Repeat the flag
+                                  to add more (e.g., --filler-words ähm --filler-words äh)
   --remove-fillers / --no-remove-fillers
                                   Remove filler words like 'äh' and 'ähm' and
                                   treat them as pauses
@@ -162,6 +192,8 @@ Options:
                                   -1, negative=earlier, positive=later)
   --fps-offset-end INTEGER        Frames to offset from end time (default: 0,
                                   negative=earlier, positive=later)
+  --start-hour INTEGER            Hour offset for SRT timestamps (default: 0;
+                                  with --davinci-srt default is 1)
   --use-input                     Use original input file without conversion
                                   (default is to convert to FLAC)
   --use-pcm                       Convert to PCM WAV format instead of FLAC
