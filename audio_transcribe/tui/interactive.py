@@ -48,13 +48,25 @@ def run_interactive_mode(file_path: str = None) -> Dict[str, Any]:
         options["folder"] = None
         
     # 2. API Selection
-    api_choices = ["assemblyai", "elevenlabs", "groq", "openai"]
+    api_choices = []
+    available_apis = ["assemblyai", "elevenlabs", "groq", "openai"]
     default_api = config.get("default_api", "groq")
     
+    for api in available_apis:
+        key = config.get_api_key(api)
+        if key:
+            api_choices.append(questionary.Choice(api, value=api))
+        else:
+            api_choices.append(questionary.Choice(f"{api} (not configured)", value=api, disabled="No API key found"))
+            
+    if not any(not choice.disabled for choice in api_choices):
+        console.print("[red]No APIs configured. Please run 'transcribe setup' first.[/red]")
+        return None
+
     selected_api = questionary.select(
         "Select Transcription API:",
         choices=api_choices,
-        default=default_api
+        default=default_api if config.get_api_key(default_api) else None
     ).ask()
     
     if not selected_api:
@@ -67,8 +79,29 @@ def run_interactive_mode(file_path: str = None) -> Dict[str, Any]:
         config.set("default_api", selected_api)
         
     # 3. Model Selection
-    models = get_available_models(selected_api)
-    default_model = get_default_model(selected_api)
+    # Try to fetch models dynamically first
+    dynamic_models = []
+    try:
+        # Get API key from config to initialize instance
+        api_key = config.get_api_key(selected_api)
+        if api_key:
+            from audio_transcribe.utils.api import get_api_instance
+            api_instance = get_api_instance(selected_api, api_key=api_key)
+            with console.status(f"[bold green]Fetching available models for {selected_api}...[/bold green]"):
+                dynamic_models = api_instance.list_models()
+    except Exception as e:
+        console.print(f"[yellow]Could not fetch models dynamically: {e}[/yellow]")
+    
+    # Use dynamic models if available, otherwise fallback to registry
+    if dynamic_models:
+        models = dynamic_models
+        # If default model is not in the list, use the first one
+        default_model = get_default_model(selected_api)
+        if default_model not in models:
+            default_model = models[0]
+    else:
+        models = get_available_models(selected_api)
+        default_model = get_default_model(selected_api)
     
     if models:
         selected_model = questionary.select(
@@ -77,6 +110,14 @@ def run_interactive_mode(file_path: str = None) -> Dict[str, Any]:
             default=default_model
         ).ask()
         options["model"] = selected_model
+    else:
+        # If no models found (e.g. API error and no static models), let user type it
+        selected_model = questionary.text(
+            "Enter Model ID:",
+            default=default_model or ""
+        ).ask()
+        if selected_model:
+            options["model"] = selected_model
     
     # 4. Language
     language = questionary.text("Language code (leave empty for auto-detect):").ask()

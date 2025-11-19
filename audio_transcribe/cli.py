@@ -356,10 +356,26 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
         logger.info(f"Found {len(unique_files)} unique audio/video files to process")
         
         successful = 0
-        for i, file in enumerate(unique_files):
-            logger.info(f"[PROCESSING] File {i+1}/{len(unique_files)}: {file}")
-            if process_file(file, **kwargs):
-                successful += 1
+        
+        from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TimeRemainingColumn(),
+            transient=True
+        ) as progress:
+            task = progress.add_task("[cyan]Processing files...", total=len(unique_files))
+            
+            for i, file in enumerate(unique_files):
+                progress.update(task, description=f"[cyan]Processing {file.name} ({i+1}/{len(unique_files)})...")
+                
+                if process_file(file, **kwargs):
+                    successful += 1
+                
+                progress.advance(task)
         
         return (successful, len(unique_files))
     

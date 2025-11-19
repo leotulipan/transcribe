@@ -29,23 +29,30 @@ def setup_logger(debug: bool = False, verbose: bool = False) -> None:
     )
     
     # Configure console logging based on verbosity
+    # Configure console logging based on verbosity
+    from rich.logging import RichHandler
+    
     if debug:
         # Show all messages in debug mode
-        logger.add(lambda msg: print(msg), level="DEBUG")
+        logger.add(RichHandler(rich_tracebacks=True, markup=True), level="DEBUG", format="{message}")
     elif verbose:
         # Show info level and above in verbose mode
-        logger.add(lambda msg: print(msg), level="INFO")
+        logger.add(RichHandler(rich_tracebacks=True, markup=True), level="INFO", format="{message}")
     else:
         # In normal mode, filter logs:
         # - Always show file/folder processing messages (tagged with [PROCESSING])
         # - Always show errors
         # - Hide other INFO/DEBUG messages
+        def log_filter(record):
+            msg = record["message"]
+            return "[PROCESSING]" in msg or record["level"].name in ("ERROR", "CRITICAL", "WARNING")
+            
         logger.add(
-            lambda msg: print(msg) if "[PROCESSING]" in msg or msg.startswith(("ERROR", "ERROR:")) else None, 
-            level="INFO"
+            RichHandler(rich_tracebacks=True, markup=True, show_time=False, show_path=False), 
+            level="INFO", 
+            format="{message}",
+            filter=log_filter
         )
-        # Also show warnings and critical messages
-        logger.add(lambda msg: print(msg), level="WARNING")
 
 
 def in_debug_mode(debug_flag: bool = False) -> bool:

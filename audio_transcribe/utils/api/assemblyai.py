@@ -35,12 +35,12 @@ class AssemblyAIAPI(TranscriptionAPI):
             # Log masked API key for debugging
             if self.api_key:
                 masked_key = self.mask_api_key(self.api_key)
-                logger.debug(f"Initializing AssemblyAI client with API key: {masked_key}")
+                logger.debug(f"Initializing AssemblyAI with API key: {masked_key}")
+                aai.settings.api_key = self.api_key
                 
-            self.client = aai.Client(api_key=self.api_key) if self.api_key else None
         except ImportError:
             logger.error("AssemblyAI package not found. Please install it: uv add assemblyai")
-            self.client = None
+            self.aai = None
             
     def list_models(self) -> List[str]:
         """
@@ -58,27 +58,14 @@ class AssemblyAIAPI(TranscriptionAPI):
             logger.error("No AssemblyAI API key provided")
             return False
             
-        if not self.client:
-            logger.error("AssemblyAI client not initialized")
+        if not self.aai:
+            logger.error("AssemblyAI package not loaded")
             return False
             
-        try:
-            # Try to transcribe a tiny audio file or just rely on client init
-            # AssemblyAI doesn't have a cheap "check key" endpoint other than trying to use it
-            # But we can try to create a transcript for a non-existent URL which should fail with 
-            # a specific error if key is valid vs invalid, or just assume valid if no immediate error.
-            # Actually, the best way is to try to list transcripts if possible.
-            # self.client.transcripts.list(limit=1)
-            # Let's try that if the SDK supports it.
-            
-            # For now, we'll return True if client exists, as a real check requires making a request
-            # that might cost money or be complex.
-            # However, if we want to be sure, we could try to list transcripts.
-            # Let's stick to the simple check for now to avoid issues.
-            return True
-        except Exception as e:
-            logger.error(f"Failed to validate AssemblyAI API key: {str(e)}")
-            return False
+        # The AssemblyAI SDK doesn't have a lightweight 'validate' method without transcribing.
+        # We assume if the key is set, it's potentially valid. 
+        # Real validation happens during transcription.
+        return True
             
     def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
         """
@@ -95,8 +82,8 @@ class AssemblyAIAPI(TranscriptionAPI):
         Returns:
             Standardized TranscriptionResult object
         """
-        if not self.client:
-            raise ValueError("AssemblyAI client not initialized")
+        if not self.aai:
+            raise ValueError("AssemblyAI package not loaded")
             
         # Convert Path to string if needed
         if isinstance(audio_path, Path):
@@ -130,42 +117,28 @@ class AssemblyAIAPI(TranscriptionAPI):
             raise ValueError(f"File size exceeds AssemblyAI limit of {limit_mb}MB")
             
         # Prepare transcription config
-        # Map 'model' to 'speech_model' if it's one of the nano/best options
         model = kwargs.get("model", "best")
-        
-        # Handle language detection vs explicit language
         language_code = kwargs.get("language")
-        # If language is provided, use it. If not, default to None (which might imply detection or default en)
-        # Original code had logic: if language provided, language_detection=False.
         
         config_params = {
             "speaker_labels": kwargs.get("speaker_labels", True),
             "dual_channel": kwargs.get("dual_channel", False),
             "speech_model": model if model in ["best", "nano"] else "best" 
-            # Note: 'best' and 'nano' are valid speech_models. 'default' might be mapped to None or 'best'.
         }
         
         if language_code:
             config_params["language_code"] = language_code
         else:
-            # Enable language detection if no language specified
             config_params["language_detection"] = True
             
-        # Always enable disfluencies (filler words) as per user preference in other parts
-        # But make it configurable if needed. For now, let's include it if the SDK supports it easily
-        # config_params["disfluencies"] = True # check if supported
-        
         config = self.aai.TranscriptionConfig(**config_params)
         
         logger.info(f"Transcribing {processing_path} with AssemblyAI (model: {model})")
         
         # Submit and wait for completion
         try:
-            transcript = self.with_retry(
-                self.client.transcribe, 
-                processing_path, 
-                config=config
-            )
+            transcriber = self.aai.Transcriber()
+            transcript = transcriber.transcribe(processing_path, config=config)
             
             if transcript.status == self.aai.TranscriptStatus.error:
                 raise ValueError(f"AssemblyAI transcription failed: {transcript.error}")
