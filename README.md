@@ -4,50 +4,27 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 
 ## Features
 
-- Support for multiple transcription APIs:
+- **Support for multiple transcription APIs:**
   - AssemblyAI (with speaker diarization)
   - ElevenLabs 
   - Groq (AI model-based)
   - OpenAI (Whisper)
-- Various output formats:
+- **Various output formats:**
   - Standard text output
   - SRT subtitles
   - Word-level SRT (each word as its own subtitle)
   - DaVinci Resolve optimized SRT
-- Extensive configuration options:
+- **Extensive configuration options:**
   - Language selection
   - Silent portion detection
   - Timing adjustments (paddings and FPS-based)
   - Filler word removal
-  - Multiple model options per API (from fast/lightweight to accurate/comprehensive)
-- File and directory processing:
+  - Multiple model options per API
+- **Robust Processing:**
   - Process single files or entire directories
   - Intelligent file selection when multiple formats exist
-  - Automatic chunking for large files
-
-## Flow Diagram
-
-```mermaidjs
-flowchart TD
-    A["transcribe.py"] -->|args: api, debug, verbose, language, etc.| B["main"]
-    B -->|file_path| C["process_audio_path(file_path)"]
-    C -->|file_path, file_name| D["check_json_exists(file_path, file_name)"]
-    D -->|json_path| E["process_file(file_path, api_name, **kwargs)"]
-    E -->|json_path| F["load_and_parse_json(file_path, api_name)"]
-    F -->|data: dict| G["parse_assemblyai_format(data)"]
-    G -->|words, api_type, show_pauses, silence_threshold| H["standardize_word_format(words, api_type, show_pauses, silence_threshold)"]
-    H -->|words| I["process_filler_words(words, pause_threshold, filler_words)"]
-    I -->|words| J["standardize_word_format(words, api_type, show_pauses, silence_threshold)"]
-    J -->|words| K["TranscriptionResult.save(file_path)"]
-    K -->|output_path| L["create_text_file(result, output_file)"]
-    E -->|result| M["create_srt_file(result, output_file, format_type, **kwargs)"]
-    M -->|words, padding_start, padding_end| N["apply_intelligent_padding(words, padding_start, padding_end)"]
-    N -->|words| O["process_filler_words(words, pause_threshold, filler_words)"]
-    O -->|words| P["SRT file created"]
-    L --> Q["Text file created"]
-    P --> Q["Process complete"] 
-```
-
+  - Automatic chunking for large files (Groq, OpenAI)
+  - Audio extraction from video files to minimize upload size
 
 ## Installation
 
@@ -62,7 +39,7 @@ flowchart TD
 2. Create a virtual environment and install with uv:
    ```bash
    uv venv
-   uv pip install -e .
+   uv sync
    ```
 
 ### Building Executable
@@ -135,7 +112,7 @@ transcribe --file path/to/audio.wav --api elevenlabs --output srt --filler-lines
 With an existing ElevenLabs JSON transcript:
 
 ```bash
-uv run transcribe.py --file "G:\Geteilte Ablagen\Podcast\CON-43 - Dr. Eva Ornella\interview-combined-audio_elevenlabs.json" \
+uv run transcribe.py --file "path/to/audio_elevenlabs.json" \
   --use-json-input --api elevenlabs --output davinci_srt --davinci-srt --filler-lines --silent-portions 350
 ```
 
@@ -149,17 +126,12 @@ transcribe --file path/to/short_meeting.mp3 --api assemblyai --model nano
 
 # Default model for high-quality transcription (recommended for most uses)
 transcribe --file path/to/important_interview.mp3 --api assemblyai --model best
-
-# Medium-sized model (balanced speed and accuracy)
-transcribe --file path/to/conference_call.mp3 --api assemblyai --model medium
 ```
 
 Model options:
-- `best` (default): Highest quality transcription, recommended for most use cases
-- `nano`: Fastest processing, good for short/simple audio with minimal background noise
-- `small`, `medium`, `large`: Different size models with increasing accuracy but longer processing time
-- `auto`: Automatic model selection based on audio characteristics
-- `default`: Original AssemblyAI model (not recommended for new projects)
+- `best` (default): Highest quality transcription
+- `nano`: Fastest processing
+- `auto`: Automatic model selection
 
 ### All Options
 
@@ -175,7 +147,6 @@ Options:
   -a, --api [assemblyai|elevenlabs|groq|openai]
                                   API to use for transcription (default: groq)
   -l, --language TEXT             Language code (ISO-639-1 or ISO-639-3)
-                                  (maps to language_code for ElevenLabs)
   -o, --output [text|srt|word_srt|davinci_srt|json|all]
                                   Output format(s) to generate (default:
                                   text,srt)
@@ -256,30 +227,13 @@ GROQ_API_KEY=your_groq_key
 OPENAI_API_KEY=your_openai_key
 ```
 
-### AssemblyAI Specific Features
-
-- **Filler words (disfluencies)** like "um", "uh", etc. are always transcribed
-- **Language detection** is enabled by default unless a specific language is provided
-- **Speaker diarization** can be enabled/disabled with the `--speaker-labels/--no-speaker-labels` option
-
 ## License
 
 MIT
 
 ## File Size limits
 
-Google Gemini
-Maximum File Size: 50 MB per file when using Gemini 1.5 Flash or other supported versions.
-
-Maximum Audio Duration: 9.5 hours combined across all files in a single request.
-
-OpenAI (Whisper and GPT-4 Audio)
-Whisper: 25 MB per file.
-
-GPT-4 Audio: No specific size limit mentioned in the provided results.
-
-Groq
-Maximum File Size: 25 MB per file (~30 minutes of audio).
-
-AssemblyAI
-File Uploads: Up to 200 MB per file for direct uploads.
+- **Google Gemini**: 50 MB per file (Gemini 1.5 Flash).
+- **OpenAI (Whisper)**: 25 MB per file.
+- **Groq**: 25 MB per file (~30 minutes of audio).
+- **AssemblyAI**: Up to 200 MB per file for direct uploads.
