@@ -19,107 +19,133 @@ except ImportError:
     from loguru_patch import logger
 
 
-def standardize_word_format(words: List[Dict[str, Any]], api_type: str, 
-                          show_pauses: bool = False, silence_threshold: int = 250) -> List[Dict[str, Any]]:
+def standardize_word_format(basic_words: List[Dict[str, Any]], 
+                            show_pauses: bool = False, silence_threshold: int = 250) -> List[Dict[str, Any]]:
     """
-    Standardize word format from different APIs and add spacing elements.
+    Takes a basic list of word dicts (with integer ms times or float second times) and adds 
+    spacing elements between words and at the start if necessary.
+    Also identifies words that are just spaces.
     
     Args:
-        words: List of word dictionaries from API
-        api_type: 'assemblyai' or 'elevenlabs'
-        show_pauses: Whether to add "(...)" text for significant pauses
-        silence_threshold: Minimum ms to mark as pause with "(...)"
+        basic_words: List of word dictionaries from a basic parser (int ms or float second times).
+        show_pauses: Whether to add "(...)" text for significant pauses.
+        silence_threshold: Minimum ms duration for a gap to be marked as a pause.
         
     Returns:
-        Standardized list of words with consistent spacing elements
+        Standardized list including word and spacing elements with preserved timestamps.
     """
     standardized = []
     
-    if not words:
+    if not basic_words:
         return standardized
-    
-    logger.debug(f"Standardizing word format from {api_type} API")
-    
-    # Handle AssemblyAI format conversion
-    if api_type == 'assemblyai':
-        # Convert milliseconds to seconds
-        converted_words = []
-        for word in words:
-            converted_words.append({
-                'text': word['text'],
-                'start': word['start'] / 1000.0,  # Convert ms to seconds
-                'end': word['end'] / 1000.0,      # Convert ms to seconds
-                'type': 'word',
-                'speaker_id': word.get('speaker', 'Unknown')
-            })
         
-        # Add initial spacing if first word doesn't start at 0
-        if converted_words and converted_words[0]['start'] > 0:
-            pause_text = " "
-            if show_pauses and converted_words[0]['start'] * 1000 > silence_threshold:
-                pause_text = " (...) "
-                
-            standardized.append({
-                'text': pause_text,
-                'start': 0,
-                'end': converted_words[0]['start'],
-                'type': 'spacing',
-                'speaker_id': converted_words[0].get('speaker_id', 'Unknown')
-            })
+    logger.debug(f"Standardizing {len(basic_words)} basic words into intermediary format.")
+
+    # Check if we're dealing with decimal seconds (Groq format) or ms integers
+    is_decimal_format = False
+    if basic_words and len(basic_words) > 0:
+        # Check first few words to see if they use decimal seconds format
+        for w in basic_words[:3]:
+            start_val = w.get('start', 0)
+            end_val = w.get('end', 0)
+            # If values are floats with decimal parts, likely using seconds format
+            if (isinstance(start_val, float) and start_val != int(start_val)) or \
+               (isinstance(end_val, float) and end_val != int(end_val)):
+                is_decimal_format = True
+                break
+
+    # Process words based on format
+    words = []
+    for w in basic_words:
+        w_copy = w.copy()
         
-        # Add words and spacings between them
-        for i, word in enumerate(converted_words):
-            standardized.append(word)
+        if is_decimal_format:
+            # For decimal seconds format (Groq), preserve exact float values
+            w_copy['start'] = float(w_copy.get('start', 0))
+            w_copy['end'] = float(w_copy.get('end', 0))
+        else:
+            # For integer ms format (AssemblyAI, ElevenLabs), round to integers
+            w_copy['start'] = int(round(w_copy.get('start', 0)))
+            w_copy['end'] = int(round(w_copy.get('end', 0)))
             
-            # Add spacing between words
-            if i < len(converted_words) - 1:
-                gap = converted_words[i+1]['start'] - word['end']
-                if gap > 0:
-                    pause_text = " "
-                    if show_pauses and gap * 1000 > silence_threshold:
-                        pause_text = " (...) "
-                    
-                    standardized.append({
-                        'text': pause_text,
-                        'start': word['end'],
-                        'end': converted_words[i+1]['start'],
-                        'type': 'spacing',
-                        'speaker_id': word.get('speaker_id', 'Unknown')
-                    })
+        # Mark words that are actually spaces
+        if w_copy.get('text', "").strip() == "":
+            w_copy['type'] = "spacing"
+        else:
+             w_copy['type'] = "word" # Ensure type is set
+        words.append(w_copy)
+        
+    # Add initial spacing if the first element isn't spacing and doesn't start at 0
+    start_threshold = 0.01 if is_decimal_format else 1  # 10ms for decimal seconds, 1ms for integers
+    silence_threshold_adj = silence_threshold / 1000 if is_decimal_format else silence_threshold  # Convert to seconds if needed
     
-    # Handle ElevenLabs (already has spacing elements)
-    elif api_type == 'elevenlabs':
-        # Check existing spacing elements and update pause text if needed
-        for i, word in enumerate(words):
-            # Clone the word object to avoid modifying the original
-            word_copy = word.copy()
+    if words[0]['type'] != 'spacing' and words[0]['start'] > start_threshold:
+        pause_text = " "
+        if show_pauses and words[0]['start'] > silence_threshold_adj:
+            pause_text = " (...) "
+            logger.debug(f"Added initial pause marker: duration={words[0]['start']}, threshold={silence_threshold_adj}")
             
-            if word.get('type') == 'spacing' and show_pauses:
-                # Calculate gap duration in ms
-                gap_ms = (word['end'] - word['start']) * 1000
-                
-                # Update spacing text for significant pauses
-                if gap_ms > silence_threshold:
-                    word_copy['text'] = " (...) "
+        standardized.append({
+            'text': pause_text,
+            'start': 0.0 if is_decimal_format else 0,
+            'end': words[0]['start'],
+            'type': 'spacing',
+            'speaker_id': words[0].get('speaker_id', '')
+        })
+        
+    # Add words and spacings between them
+    for i, word in enumerate(words):
+        standardized.append(word) # Add the word itself (or space if type changed)
+        
+        # Add spacing element *after* this word if there is a next word
+        if i < len(words) - 1:
+            next_word = words[i+1]
+            # If the next element is a spacing block that begins before the current word ends,
+            # clamp its start to the current word end to avoid false overlap noise.
+            if next_word.get('type') == 'spacing' and next_word.get('start', 0) < word.get('end', 0):
+                next_word['start'] = word.get('end', 0)
+            gap = next_word['start'] - word['end']
             
-            standardized.append(word_copy)
+            if gap > start_threshold:
+                pause_text = " "
+                if show_pauses and gap > silence_threshold_adj:
+                    pause_text = " (...) "
+                    logger.debug(f"Added pause marker: index={i}, gap={gap}, threshold={silence_threshold_adj}")
                 
-        # Check if we need to add initial spacing
-        if standardized and standardized[0].get('type') != 'spacing' and standardized[0]['start'] > 0:
-            pause_text = " "
-            if show_pauses and standardized[0]['start'] * 1000 > silence_threshold:
-                pause_text = " (...) "
-                
-            initial_spacing = {
-                'text': pause_text,
-                'start': 0,
-                'end': standardized[0]['start'],
-                'type': 'spacing',
-                'speaker_id': standardized[0].get('speaker_id', 'Unknown')
-            }
-            standardized.insert(0, initial_spacing)
-    
-    logger.debug(f"Standardized {len(words)} words to {len(standardized)} elements")
+                standardized.append({
+                    'text': pause_text,
+                    'start': word['end'],
+                    'end': next_word['start'],
+                    'type': 'spacing',
+                    # Inherit speaker from the preceding word for the gap
+                    'speaker_id': word.get('speaker_id', '') 
+                })
+            elif gap < -start_threshold:
+                 # Only warn when two word elements overlap meaningfully; ignore spacing artifacts
+                 if word.get('type') == 'word' and next_word.get('type') == 'word':
+                     logger.warning(f"Overlap detected between word {i} ({word.get('text')}) and word {i+1} ({next_word.get('text')}). Start/End: {word['end']} / {next_word['start']}")
+
+    # Check and convert existing spacing elements to pauses if they exceed threshold 
+    if show_pauses and silence_threshold > 0:
+        logger.debug(f"Looking for existing spacing elements that exceed threshold {silence_threshold}ms")
+        pause_count = 0
+        for i, item in enumerate(standardized):
+            if item.get('type') == 'spacing' and '(...)' not in item.get('text', ''):
+                duration = item['end'] - item['start']
+                duration_ms = duration * 1000 if is_decimal_format else duration
+                if duration_ms >= silence_threshold:
+                    item['text'] = ' (...) '
+                    pause_count += 1
+                    logger.debug(f"Converted spacing to pause: index={i}, duration={duration_ms}ms")
+        logger.debug(f"Converted {pause_count} spacings to pause markers")
+
+    logger.debug(f"Standardized to {len(standardized)} elements (words and spaces)")
+    if len(standardized) > 1:
+        # Use index 1 if it exists, otherwise index 0
+        idx_to_log = 1 if len(standardized) > 1 else 0
+        w = standardized[idx_to_log]
+        logger.debug(f"Word/Space at index {idx_to_log}: text='{w.get('text')}', type={w.get('type')}, start={w.get('start')}, end={w.get('end')}")
+        
     return standardized
 
 
@@ -167,7 +193,7 @@ def process_filler_words(words: List[Dict[str, Any]], pause_threshold: int,
                     'start': words[i-1]['start'],
                     'end': words[i+1]['end'],
                     'text': ' ',
-                    'speaker_id': words[i].get('speaker_id', 'Unknown')
+                    'speaker_id': words[i].get('speaker_id', '')
                 }
                 processed_words.append(merged_pause)
                 # Skip the audio event and the next spacing
@@ -190,7 +216,7 @@ def process_filler_words(words: List[Dict[str, Any]], pause_threshold: int,
                     'start': words[i-1]['start'],
                     'end': words[i+1]['end'],
                     'text': ' ',
-                    'speaker_id': words[i].get('speaker_id', 'Unknown')
+                    'speaker_id': words[i].get('speaker_id', '')
                 }
                 processed_words.append(merged_pause)
                 # Skip the parenthesized word and the next spacing
@@ -202,43 +228,54 @@ def process_filler_words(words: List[Dict[str, Any]], pause_threshold: int,
         
         # Check if current item is a word with text that could be a filler word
         if words[i].get('type') == 'word':
-            word_text = words[i].get('text', '').lower()
+            word_text = words[i].get('text', '')
             
-            # If the word is a filler word
-            if word_text in filler_words:
-                # Check if we have both previous and next spacing
-                prev_spacing = i > 0 and words[i-1].get('type') == 'spacing'
-                next_spacing = i < len(words) - 1 and words[i+1].get('type') == 'spacing'
-                
-                if prev_spacing and next_spacing:
-                    # Create a new spacing element replacing previous spacing + filler + next spacing
-                    filler_pause = {
-                        'type': 'spacing',
-                        'start': words[i-1]['start'],
-                        'end': words[i+1]['end'],
-                        'text': ' ',
-                        'speaker_id': words[i].get('speaker_id', 'Unknown')
-                    }
+            # Create a regex pattern for case-insensitive matching of filler words
+            # with any punctuation before or after
+            for filler in filler_words:
+                # Create pattern that matches the filler word with optional punctuation
+                # around it (non-word characters like ,;.-!? etc)
+                pattern = re.compile(rf'^(\W*){filler}(\W*)$', re.IGNORECASE)
+                if pattern.match(word_text):
+                    logger.debug(f"Matched filler word: '{word_text}' with pattern '{filler}'")
+                    # Check if we have both previous and next spacing
+                    prev_spacing = i > 0 and words[i-1].get('type') == 'spacing'
+                    next_spacing = i < len(words) - 1 and words[i+1].get('type') == 'spacing'
                     
-                    # Apply padding to the preceding word if it exists
-                    if len(processed_words) > 0 and processed_words[-1].get('type') == 'word':
-                        # Record the original end time
-                        orig_end = processed_words[-1]['end']
-                        # Add padding (convert to seconds)
-                        padding = 30  # Default padding in ms
-                        processed_words[-1]['end'] += padding / 1000.0
+                    if prev_spacing and next_spacing:
+                        # Create a new spacing element replacing previous spacing + filler + next spacing
+                        filler_pause = {
+                            'type': 'spacing',
+                            'start': words[i-1]['start'],
+                            'end': words[i+1]['end'],
+                            'text': ' ',
+                            'speaker_id': words[i].get('speaker_id', '')
+                        }
                         
-                        logger.debug(f"Added {padding}ms padding to word ending at {orig_end}")
-                    
-                    # Add the filler pause
-                    processed_words.append(filler_pause)
-                    
-                    # Skip the filler word and the next spacing
-                    i += 2
-                    continue
-            
-            # Not a filler word or not surrounded by spacings, add as-is
-            processed_words.append(words[i])
+                        # Apply padding to the preceding word if it exists
+                        if len(processed_words) > 0 and processed_words[-1].get('type') == 'word':
+                            # Record the original end time
+                            orig_end = processed_words[-1]['end']
+                            # Add padding (convert to seconds)
+                            padding = 30  # Default padding in ms
+                            processed_words[-1]['end'] += padding / 1000.0
+                            
+                            logger.debug(f"Added {padding}ms padding to word ending at {orig_end}")
+                        
+                        # Add the filler pause
+                        processed_words.append(filler_pause)
+                        
+                        # Skip the filler word and the next spacing
+                        i += 2
+                        break  # Exit the filler word loop
+                    else:
+                        # No spacing on both sides - still remove the filler word
+                        # but don't add it to processed_words
+                        i += 1
+                        break  # Exit the filler word loop
+            else:
+                # Not a filler word, add as-is (we didn't break out of the loop)
+                processed_words.append(words[i])
         else:
             # Not a word, add as-is
             processed_words.append(words[i])
@@ -449,7 +486,7 @@ def segments_to_words(segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 'start': word_start,
                 'end': word_end,
                 'text': word_text,
-                'speaker_id': segment.get('speaker', segment.get('speaker_id', 'Unknown'))
+                'speaker_id': segment.get('speaker', segment.get('speaker_id', ''))
             }
             
             words.append(word_entry)
@@ -462,7 +499,7 @@ def segments_to_words(segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                     'start': word_end,
                     'end': word_end + spacing_duration,
                     'text': ' ',
-                    'speaker_id': segment.get('speaker', segment.get('speaker_id', 'Unknown'))
+                    'speaker_id': segment.get('speaker', segment.get('speaker_id', ''))
                 }
                 words.append(spacing_entry)
     

@@ -1,10 +1,11 @@
 """
-Transcription helper modules for audio processing, text processing, and output formatting.
-
-This package provides utilities for:
-- Audio processing (file format conversion, chunking)
-- Text processing (standardization, formatting)
-- Output formatting (SRT, TXT, etc.)
+Transcribe Helpers - Utilities for audio transcription
 """
 
-from audio_transcribe.transcribe_helpers.utils import setup_logger 
+from .audio_processing import *
+from .output_formatters import *
+from .text_processing import *
+from .chunking import *
+from .utils import *
+
+__version__ = "0.1.0"

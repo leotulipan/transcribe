@@ -6,8 +6,9 @@ import tempfile
 import subprocess
 import base64
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union, Optional, List, Dict, Any, Tuple
 from pydub import AudioSegment
+from loguru import logger
 
 # Try to import loguru, fallback to our mock implementation
 try:
@@ -48,50 +49,114 @@ def check_audio_format(audio: AudioSegment, file_extension: str = None) -> bool:
     Check if audio meets requirements (mono, 16kHz, 16-bit).
     
     Args:
-        audio: AudioSegment object to check
-        file_extension: Optional file extension to determine if format checks should be bypassed
+        audio: AudioSegment to check
+        file_extension: File extension for format-specific checks
         
     Returns:
-        True if audio meets requirements or is FLAC (bypass), False otherwise
+        True if audio meets requirements, False otherwise
     
-    From: elevenlabs - Verify audio has correct specifications
+    From: elevenlabs - Check audio format requirements
     """
-    # Always return True for FLAC files to bypass format checks
-    if file_extension is not None and file_extension.lower() == '.flac':
-        return True
-        
-    return (audio.channels == 1 and 
-            audio.frame_rate == 16000 and 
-            audio.sample_width == 2)
+    # Check basic requirements
+    if audio.channels != 1:
+        return False
+    if audio.frame_rate != 16000:
+        return False
+    if audio.sample_width != 2:  # 16-bit
+        return False
+    return True
 
 
-def convert_to_flac(input_file: Union[str, Path]) -> Path:
+def extract_audio_from_mp4(input_path: Union[str, Path]) -> Optional[str]:
     """
-    Convert audio/video file to FLAC format (mono, 16-bit, 16kHz).
+    Extract audio stream from MP4 file without re-encoding.
     
     Args:
-        input_file: Path to input audio/video file
+        input_path: Path to MP4 file
         
     Returns:
-        Path to converted FLAC file
-    
-    From: elevenlabs - Convert audio to mono FLAC
+        Path to extracted audio file (M4A) or None if extraction failed
     """
-    logger.info(f"Converting {input_file} to FLAC format...")
-    audio = AudioSegment.from_file(input_file)
-    # Convert to mono
-    audio = audio.set_channels(1)
-    # Set sample rate to 16kHz
-    audio = audio.set_frame_rate(16000)
-    # Set sample width to 2 bytes (16-bit)
-    audio = audio.set_sample_width(2)
+    if isinstance(input_path, str):
+        input_path = Path(input_path)
+        
+    # Only process MP4 files
+    if input_path.suffix.lower() != '.mp4':
+        logger.debug(f"File is not MP4, skipping extraction: {input_path}")
+        return None
+        
+    logger.info(f"Extracting audio from MP4: {input_path}")
     
-    # Create output filename
-    output_file = os.path.splitext(input_file)[0] + "_converted.flac"
-    # Export as FLAC
-    audio.export(output_file, format="flac")
-    logger.info(f"FLAC conversion completed: {output_file}")
-    return Path(output_file)
+    try:
+        # Load the video file
+        audio = AudioSegment.from_file(str(input_path))
+        
+        # Create output path with M4A extension
+        output_path = input_path.with_suffix('.m4a')
+        
+        # Export audio without re-encoding (copy audio stream)
+        audio.export(str(output_path), format="mp4", codec="aac")
+        
+        # Check if extraction was successful and resulted in smaller file
+        original_size_mb = os.path.getsize(input_path) / (1024 * 1024)
+        extracted_size_mb = os.path.getsize(output_path) / (1024 * 1024)
+        
+        logger.info(f"Extracted audio: {extracted_size_mb:.1f}MB (original: {original_size_mb:.1f}MB)")
+        
+        if extracted_size_mb < original_size_mb:
+            logger.info(f"Audio extraction successful, file size reduced by {original_size_mb - extracted_size_mb:.1f}MB")
+            return str(output_path)
+        else:
+            logger.warning(f"Extracted audio is not smaller than original, removing extracted file")
+            os.unlink(output_path)
+            return None
+            
+    except Exception as e:
+        logger.error(f"Audio extraction failed: {str(e)}")
+        return None
+
+
+def convert_to_flac(input_path: Union[str, Path], sample_rate: int = 16000) -> Optional[str]:
+    """
+    Convert audio file to 16kHz mono FLAC format for API processing.
+    
+    Args:
+        input_path: Path to input audio/video file
+        sample_rate: Target sample rate (16kHz for most speech APIs)
+        
+    Returns:
+        Path to converted FLAC file or None if conversion failed
+    """
+    if isinstance(input_path, str):
+        input_path = Path(input_path)
+        
+    # If already a FLAC file, just return the path
+    if input_path.suffix.lower() == '.flac':
+        logger.info(f"File is already in FLAC format: {input_path}")
+        return str(input_path)
+        
+    # Create a temporary file with .flac extension
+    with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
+        output_path = temp_file.name
+        
+    logger.info(f"Converting {input_path} to 16kHz mono FLAC...")
+    
+    try:
+        # Use pydub for conversion instead of FFmpeg
+        audio = AudioSegment.from_file(str(input_path))
+        # Set frame rate to specified sample rate and channels to mono
+        audio = audio.set_frame_rate(sample_rate).set_channels(1)
+        # Export as FLAC
+        audio.export(output_path, format="flac")
+        
+        logger.info(f"Converted to FLAC: {output_path}")
+        return output_path
+        
+    except Exception as e:
+        logger.error(f"Audio conversion failed: {str(e)}")
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+        return None
 
 
 def convert_to_pcm(input_file: Union[str, Path]) -> Path:
@@ -161,23 +226,27 @@ def preprocess_audio(input_path: Union[str, Path]) -> Path:
     with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
         output_path = Path(temp_file.name)
         
-    logger.info("Converting audio to 16kHz mono FLAC...")
+    logger.info(f"Converting {input_path} to 16kHz mono FLAC using pydub...")
     try:
         # Load audio file
-        audio = AudioSegment.from_file(input_path)
+        audio = AudioSegment.from_file(str(input_path))
         # Set frame rate to 16kHz and channels to mono
         audio = audio.set_frame_rate(16000).set_channels(1)
         # Export as FLAC
-        audio.export(output_path, format="flac")
+        audio.export(str(output_path), format="flac")
+        logger.info(f"Converted successfully to: {output_path}")
         return output_path
     except Exception as e:
-        output_path.unlink(missing_ok=True)
+        if output_path.exists():
+            output_path.unlink(missing_ok=True)
+        logger.error(f"Audio conversion failed: {e}")
         raise RuntimeError(f"Audio conversion failed: {e}")
 
 
 def preprocess_audio_with_ffmpeg(input_path: Union[str, Path]) -> Path:
     """
-    Preprocess audio file to 16kHz mono FLAC using ffmpeg.
+    Preprocess audio file to 16kHz mono FLAC using pydub.
+    This function is kept for backward compatibility but now uses the pydub implementation.
     
     Args:
         input_path: Path to input audio file
@@ -185,32 +254,10 @@ def preprocess_audio_with_ffmpeg(input_path: Union[str, Path]) -> Path:
     Returns:
         Path to preprocessed audio file
     
-    From: groq - Preprocess audio with ffmpeg
+    From: groq - Preprocess audio with ffmpeg (now using pydub)
     """
-    input_path = Path(input_path)
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
-    
-    with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
-        output_path = Path(temp_file.name)
-        
-    logger.info("Converting audio to 16kHz mono FLAC using ffmpeg...")
-    try:
-        subprocess.run([
-            'ffmpeg',
-            '-hide_banner',
-            '-loglevel', 'error',
-            '-i', str(input_path),
-            '-ar', '16000',
-            '-ac', '1',
-            '-c:a', 'flac',
-            '-y',
-            str(output_path)
-        ], check=True) 
-        return output_path
-    except subprocess.CalledProcessError as e:
-        output_path.unlink(missing_ok=True)
-        raise RuntimeError(f"FFmpeg conversion failed: {e.stderr}")
+    logger.info("Using pydub-based audio preprocessing (FFmpeg no longer used directly)...")
+    return preprocess_audio(input_path)
 
 
 def audio_to_base64(file_path: Union[str, Path]) -> str:
@@ -230,3 +277,20 @@ def audio_to_base64(file_path: Union[str, Path]) -> str:
             return base64.b64encode(audio_file.read()).decode('utf-8')
     except Exception as e:
         raise RuntimeError(f"Failed to convert audio to base64: {e}")
+
+
+def get_api_file_size_limit(api_name: str) -> int:
+    """
+    Return the max file size in MB for the given API.
+    """
+    api_name = api_name.lower()
+    if api_name == "assemblyai":
+        return 200
+    if api_name == "groq":
+        return 25
+    if api_name == "openai":
+        return 25
+    if api_name == "elevenlabs":
+        # https://elevenlabs.io/docs/api-reference/speech-to-text/convert 1GB
+        return 1000
+    return 25  # fallback
