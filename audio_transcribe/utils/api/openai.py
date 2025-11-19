@@ -52,6 +52,25 @@ class OpenAIAPI(TranscriptionAPI):
             logger.error("OpenAI package not found. Please install it: uv add openai")
             self.client = None
             
+    def list_models(self) -> List[str]:
+        """
+        List available models for OpenAI API.
+        
+        Returns:
+            List of model IDs available for use
+        """
+        if not self.client:
+            return []
+            
+        try:
+            models = self.client.models.list()
+            # Extract model IDs
+            model_ids = [model.id for model in models.data]
+            return model_ids
+        except Exception as e:
+            logger.error(f"Failed to list OpenAI models: {e}")
+            return []
+
     def check_api_key(self) -> bool:
         """Check if OpenAI API key is valid."""
         if not self.api_key:
@@ -63,10 +82,12 @@ class OpenAIAPI(TranscriptionAPI):
             return False
             
         try:
-            # Simple check - try to list models without limit parameter
-            self.client.models.list()
-            logger.info("OpenAI API key is valid")
-            return True
+            # Use list_models to validate API key
+            models = self.list_models()
+            if models:
+                logger.debug(f"OpenAI API key valid. Available models: {len(models)}")
+                return True
+            return False
         except Exception as e:
             if hasattr(self, 'AuthenticationError') and isinstance(e, self.AuthenticationError):
                 logger.error("Invalid OpenAI API key")

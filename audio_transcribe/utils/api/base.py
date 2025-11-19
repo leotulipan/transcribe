@@ -49,6 +49,15 @@ class TranscriptionAPI(ABC):
         """
         pass
         
+    def list_models(self) -> List[str]:
+        """
+        List available models for this API.
+        
+        Returns:
+            List of model IDs available for use
+        """
+        return []
+        
     def save_result(self, result: Union[TranscriptionResult, Dict[str, Any]], audio_path: Union[str, Path]) -> str:
         """
         Save transcription result to a JSON file.

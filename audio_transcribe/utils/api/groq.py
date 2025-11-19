@@ -45,6 +45,25 @@ class GroqAPI(TranscriptionAPI):
             logger.error("Groq package not found. Please install it: uv add groq")
             self.client = None
             
+    def list_models(self) -> List[str]:
+        """
+        List available models for Groq API.
+        
+        Returns:
+            List of model IDs available for use
+        """
+        if not self.client:
+            return []
+            
+        try:
+            models = self.client.models.list()
+            # Extract model IDs
+            model_ids = [model.id for model in models.data]
+            return model_ids
+        except Exception as e:
+            logger.error(f"Failed to list Groq models: {e}")
+            return []
+
     def check_api_key(self) -> bool:
         """Check if Groq API key is valid."""
         if not self.api_key:
@@ -56,23 +75,15 @@ class GroqAPI(TranscriptionAPI):
             return False
             
         try:
-            # Simple check - try to list models
-            # This is lighter than a completion request
-            self.client.models.list()
-            return True
-        except Exception as e:
-            # Fallback to chat completion if models list fails or isn't supported
-            try:
-                self.client.chat.completions.create(
-                    model="llama3-8b-8192",
-                    messages=[{"role": "user", "content": "Hello"}],
-                    max_tokens=1
-                )
+            # Use list_models to validate API key
+            models = self.list_models()
+            if models:
+                logger.debug(f"Groq API key valid. Available models: {len(models)}")
                 return True
-            except Exception as e2:
-                logger.error(f"Failed to validate Groq API key: {str(e)}")
-                logger.debug(f"Secondary validation error: {str(e2)}")
-                return False
+            return False
+        except Exception as e:
+            logger.error(f"Failed to validate Groq API key: {str(e)}")
+            return False
             
     def transcribe_chunk(self, audio_chunk_path: Union[str, Path], 
                         chunk_start_ms: int = 0, model: str = "whisper-large-v3", 

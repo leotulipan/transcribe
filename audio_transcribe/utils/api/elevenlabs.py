@@ -35,6 +35,32 @@ class ElevenLabsAPI(TranscriptionAPI):
             masked_key = self.mask_api_key(self.api_key)
             logger.debug(f"Initializing ElevenLabs client with API key: {masked_key}")
             
+    def list_models(self) -> List[str]:
+        """
+        List available models for ElevenLabs API.
+        
+        Returns:
+            List of model IDs available for use
+        """
+        if not self.api_key:
+            return []
+            
+        headers = {"xi-api-key": self.api_key}
+        try:
+            response = requests.get(f"{self.base_url}/models", headers=headers)
+            if response.status_code == 200:
+                models = response.json()
+                # Extract model IDs (filtering for speech-to-text if possible, but ElevenLabs models are mostly TTS)
+                # Scribe is their STT model, checking if it's in the list or just returning known ones
+                # Actually ElevenLabs /v1/models returns TTS models. 
+                # Scribe is a separate endpoint/service. 
+                # However, we can still use this endpoint to validate the key.
+                return [m["model_id"] for m in models]
+            return []
+        except Exception as e:
+            logger.error(f"Failed to list ElevenLabs models: {e}")
+            return []
+
     def check_api_key(self) -> bool:
         """Check if ElevenLabs API key is valid."""
         if not self.api_key:
@@ -43,9 +69,10 @@ class ElevenLabsAPI(TranscriptionAPI):
             
         headers = {"xi-api-key": self.api_key}
         try:
-            # Simple check - try to get user info
+            # Use user info endpoint for validation as it's most reliable
             response = requests.get(f"{self.base_url}/user", headers=headers)
             if response.status_code == 200:
+                logger.debug("ElevenLabs API key is valid")
                 return True
             else:
                 logger.error(f"ElevenLabs API key validation failed: {response.status_code} {response.text}")

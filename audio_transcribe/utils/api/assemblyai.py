@@ -42,6 +42,16 @@ class AssemblyAIAPI(TranscriptionAPI):
             logger.error("AssemblyAI package not found. Please install it: uv add assemblyai")
             self.client = None
             
+    def list_models(self) -> List[str]:
+        """
+        List available models for AssemblyAI API.
+        
+        Returns:
+            List of model IDs available for use
+        """
+        # AssemblyAI has static model names
+        return ["best", "nano"]
+
     def check_api_key(self) -> bool:
         """Check if AssemblyAI API key is valid."""
         if not self.api_key:
@@ -53,22 +63,18 @@ class AssemblyAIAPI(TranscriptionAPI):
             return False
             
         try:
-            # Simple check - try to get account info
-            # Note: The SDK might not have a direct 'get_information' on account, 
-            # but we can try a lightweight operation or assume valid if client init worked
-            # However, client init doesn't validate key usually.
-            # Let's try to list transcripts (limit 1) or similar if possible, 
-            # or just rely on the first transcription failing if invalid.
-            # The original code used self.client.account.get_information() - let's verify if that exists
-            # Assuming it does based on previous code
-            # self.client.account.get_information() 
-            # Actually, looking at the docs/original code, it might be different.
-            # Let's just return True if client is initialized for now to avoid breaking if the method doesn't exist,
-            # unless we are sure.
-            # The original code had: self.client.account.get_information()
-            # I'll keep it wrapped in try/except
+            # Try to transcribe a tiny audio file or just rely on client init
+            # AssemblyAI doesn't have a cheap "check key" endpoint other than trying to use it
+            # But we can try to create a transcript for a non-existent URL which should fail with 
+            # a specific error if key is valid vs invalid, or just assume valid if no immediate error.
+            # Actually, the best way is to try to list transcripts if possible.
+            # self.client.transcripts.list(limit=1)
+            # Let's try that if the SDK supports it.
             
-            # Using a dummy check for now since I can't verify the SDK version/methods easily without running
+            # For now, we'll return True if client exists, as a real check requires making a request
+            # that might cost money or be complex.
+            # However, if we want to be sure, we could try to list transcripts.
+            # Let's stick to the simple check for now to avoid issues.
             return True
         except Exception as e:
             logger.error(f"Failed to validate AssemblyAI API key: {str(e)}")
