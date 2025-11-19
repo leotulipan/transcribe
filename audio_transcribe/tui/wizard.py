@@ -21,8 +21,8 @@ def run_setup_wizard():
         choices = []
         for api in apis:
             key = config.get_api_key(api)
-            status = "[green]Configured[/green]" if key else "[red]Not Configured[/red]"
-            choices.append(questionary.Choice(f"Configure {api} ({status})", value=api))
+            status = "(Configured)" if key else "(Not Configured)"
+            choices.append(questionary.Choice(f"Configure {api} {status}", value=api))
         
         choices.append(questionary.Choice("Exit", value="exit"))
         
