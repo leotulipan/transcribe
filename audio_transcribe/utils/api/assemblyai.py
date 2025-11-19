@@ -1,6 +1,7 @@
 """
 AssemblyAI API implementation.
 """
+import os
 import json
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union, Tuple
@@ -8,6 +9,7 @@ from loguru import logger
 
 from audio_transcribe.utils.parsers import TranscriptionResult, parse_assemblyai_format
 from audio_transcribe.utils.api.base import TranscriptionAPI
+from audio_transcribe.transcribe_helpers.audio_processing import extract_audio_from_mp4, check_file_size, get_api_file_size_limit
 
 class AssemblyAIAPI(TranscriptionAPI):
     """AssemblyAI API implementation."""
@@ -94,6 +96,33 @@ class AssemblyAIAPI(TranscriptionAPI):
         if isinstance(audio_path, Path):
             audio_path = str(audio_path)
             
+        # Check if input is MP4/Video and extract audio if needed
+        temp_audio_path = None
+        processing_path = audio_path
+        
+        if audio_path.lower().endswith(('.mp4', '.mkv', '.mov', '.avi')):
+            logger.info(f"Input is video file: {audio_path}")
+            logger.info("Extracting audio for AssemblyAI API...")
+            
+            extracted_path = extract_audio_from_mp4(audio_path)
+            if extracted_path:
+                processing_path = extracted_path
+                temp_audio_path = extracted_path
+                logger.info(f"Successfully extracted audio to: {processing_path}")
+                
+                # Check file size of extracted audio
+                file_size_mb = os.path.getsize(processing_path) / (1024 * 1024)
+                logger.info(f"Extracted audio size: {file_size_mb:.2f} MB")
+            else:
+                logger.warning("Failed to extract audio, attempting to upload original file")
+        
+        # Check file size limit
+        limit_mb = get_api_file_size_limit("assemblyai")
+        if not check_file_size(processing_path, limit_mb):
+            if temp_audio_path and os.path.exists(temp_audio_path):
+                os.unlink(temp_audio_path)
+            raise ValueError(f"File size exceeds AssemblyAI limit of {limit_mb}MB")
+            
         # Prepare transcription config
         # Map 'model' to 'speech_model' if it's one of the nano/best options
         model = kwargs.get("model", "best")
@@ -122,13 +151,13 @@ class AssemblyAIAPI(TranscriptionAPI):
         
         config = self.aai.TranscriptionConfig(**config_params)
         
-        logger.info(f"Transcribing {audio_path} with AssemblyAI (model: {model})")
+        logger.info(f"Transcribing {processing_path} with AssemblyAI (model: {model})")
         
         # Submit and wait for completion
         try:
             transcript = self.with_retry(
                 self.client.transcribe, 
-                audio_path, 
+                processing_path, 
                 config=config
             )
             
@@ -141,7 +170,7 @@ class AssemblyAIAPI(TranscriptionAPI):
             result_dict = transcript.json_response
             result_dict["api_name"] = self.api_name
             
-            # Save raw JSON response
+            # Save raw JSON response (using original audio path for naming)
             self.save_result(result_dict, audio_path)
             
             # Parse result
@@ -152,3 +181,11 @@ class AssemblyAIAPI(TranscriptionAPI):
         except Exception as e:
             logger.error(f"AssemblyAI transcription failed: {str(e)}")
             raise
+        finally:
+            # Clean up temporary file if created
+            if temp_audio_path and os.path.exists(temp_audio_path):
+                try:
+                    os.unlink(temp_audio_path)
+                    logger.info(f"Deleted temporary audio file: {temp_audio_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete temporary file {temp_audio_path}: {e}")
