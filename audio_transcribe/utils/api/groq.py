@@ -11,7 +11,7 @@ import tempfile
 
 from audio_transcribe.utils.parsers import TranscriptionResult, parse_groq_format
 from audio_transcribe.utils.api.base import TranscriptionAPI
-from audio_transcribe.transcribe_helpers.audio_processing import convert_to_flac
+from audio_transcribe.transcribe_helpers.audio_processing import convert_to_flac, get_api_file_size_limit
 from audio_transcribe.transcribe_helpers.chunking import split_audio
 
 class GroqAPI(TranscriptionAPI):
@@ -201,8 +201,11 @@ class GroqAPI(TranscriptionAPI):
             duration = len(audio)  # Duration in milliseconds
             logger.info(f"Audio duration: {duration/1000:.2f} seconds")
             
-            # If audio is short enough, transcribe in a single request
-            if duration <= chunk_length * 1000:
+            # If audio is short enough and under size limit, transcribe in a single request
+            limit_mb = get_api_file_size_limit("groq")
+            file_size_mb = os.path.getsize(flac_path) / (1024 * 1024)
+            
+            if duration <= chunk_length * 1000 and file_size_mb <= limit_mb:
                 logger.info("Audio is short enough for single transcription request")
                 result_dict, _ = self.transcribe_chunk(flac_path, 0, model, language)
                 

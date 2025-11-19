@@ -10,7 +10,7 @@ from loguru import logger
 
 from audio_transcribe.utils.parsers import TranscriptionResult, parse_openai_format, generate_words_from_text
 from audio_transcribe.utils.api.base import TranscriptionAPI
-from audio_transcribe.transcribe_helpers.audio_processing import convert_to_flac
+from audio_transcribe.transcribe_helpers.audio_processing import convert_to_flac, get_api_file_size_limit
 from audio_transcribe.transcribe_helpers.chunking import split_audio, merge_transcripts
 
 class OpenAIAPI(TranscriptionAPI):
@@ -183,9 +183,10 @@ class OpenAIAPI(TranscriptionAPI):
             chunk_length = kwargs.get("chunk_length", 500)  # Default 500 seconds (just under 25MB for most audio)
             overlap = kwargs.get("overlap", 5)             # Default 5 seconds overlap
             
-            # Step 3: If FLAC file size exceeds 25MB, use chunking
-            if file_size_mb > 25:
-                logger.info(f"FLAC file size ({file_size_mb:.2f}MB) exceeds OpenAI's 25MB limit, using chunking")
+            # Step 3: If FLAC file size exceeds limit, use chunking
+            limit_mb = get_api_file_size_limit("openai")
+            if file_size_mb > limit_mb:
+                logger.info(f"FLAC file size ({file_size_mb:.2f}MB) exceeds OpenAI's {limit_mb}MB limit, using chunking")
                 
                 chunks = split_audio(flac_path, chunk_length=chunk_length, overlap=overlap)
                 results = []
