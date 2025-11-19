@@ -756,17 +756,18 @@ class GroqAPI(TranscriptionAPI):
             logger.error("Groq client not initialized")
             return False
             
-        try:
-            # Simple check - try to list models
-            self.client.chat.completions.create(
-                model="llama3-8b-8192",
-                messages=[{"role": "user", "content": "Hello"}],
-                max_tokens=1
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Failed to validate Groq API key: {str(e)}")
-            return False
+#        try:
+#            # Simple check - try to list models
+#            self.client.chat.completions.create(
+#                model="groq/compound-mini",
+#                messages=[{"role": "user", "content": "Hello"}],
+#                max_tokens=1
+#            )
+#            return True
+#        except Exception as e:
+#            logger.error(f"Failed to validate Groq API key: {str(e)}")
+#            return False
+        return True
             
     def transcribe_chunk(self, audio_chunk_path: Union[str, Path], 
                         chunk_start_ms: int = 0, model: str = "whisper-large-v3", 

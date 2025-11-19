@@ -25,6 +25,30 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - Intelligent file selection when multiple formats exist
   - Automatic chunking for large files
 
+## Flow Diagram
+
+```mermaidjs
+flowchart TD
+    A["transcribe.py"] -->|args: api, debug, verbose, language, etc.| B["main"]
+    B -->|file_path| C["process_audio_path(file_path)"]
+    C -->|file_path, file_name| D["check_json_exists(file_path, file_name)"]
+    D -->|json_path| E["process_file(file_path, api_name, **kwargs)"]
+    E -->|json_path| F["load_and_parse_json(file_path, api_name)"]
+    F -->|data: dict| G["parse_assemblyai_format(data)"]
+    G -->|words, api_type, show_pauses, silence_threshold| H["standardize_word_format(words, api_type, show_pauses, silence_threshold)"]
+    H -->|words| I["process_filler_words(words, pause_threshold, filler_words)"]
+    I -->|words| J["standardize_word_format(words, api_type, show_pauses, silence_threshold)"]
+    J -->|words| K["TranscriptionResult.save(file_path)"]
+    K -->|output_path| L["create_text_file(result, output_file)"]
+    E -->|result| M["create_srt_file(result, output_file, format_type, **kwargs)"]
+    M -->|words, padding_start, padding_end| N["apply_intelligent_padding(words, padding_start, padding_end)"]
+    N -->|words| O["process_filler_words(words, pause_threshold, filler_words)"]
+    O -->|words| P["SRT file created"]
+    L --> Q["Text file created"]
+    P --> Q["Process complete"] 
+```
+
+
 ## Installation
 
 ### From Source (Development)
