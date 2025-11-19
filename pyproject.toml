@@ -20,6 +20,8 @@ dependencies = [
     "assemblyai",
     "groq",
     "openai>=1.78.0",
+    "questionary>=2.1.0",
+    "rich>=14.2.0",
 ]
 readme = "README.md"
 

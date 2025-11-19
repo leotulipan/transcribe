@@ -28,6 +28,10 @@ from audio_transcribe.utils.parsers import TranscriptionResult, load_json_data, 
 from audio_transcribe.utils import parsers as all_parsers
 from audio_transcribe.utils.formatters import create_output_files
 from audio_transcribe.utils.api import get_api_instance
+from audio_transcribe.utils.config import ConfigManager
+
+# Import TUI modules
+from audio_transcribe.tui import run_setup_wizard, run_interactive_mode
 
 def check_json_exists(file_dir: Union[str, Path], file_name: str, api_name: str) -> Tuple[bool, Optional[Path]]:
     """
@@ -198,11 +202,13 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                 return []
 
             # File size checks
-            if api_name.lower() != 'elevenlabs':
-                max_size_mb = get_api_file_size_limit(api_name)
-                current_size_mb = os.path.getsize(current_audio_file_path) / (1024 * 1024)
-                logger.debug(f"File size: {current_size_mb:.2f}MB, API limit: {max_size_mb}MB")
-                
+            max_size_mb = get_api_file_size_limit(api_name)
+            current_size_mb = os.path.getsize(current_audio_file_path) / (1024 * 1024)
+            logger.debug(f"File size: {current_size_mb:.2f}MB, API limit: {max_size_mb}MB")
+            
+            # For APIs that don't support chunking internally (like AssemblyAI/ElevenLabs), fail if too large
+            # OpenAI and Groq handle chunking internally in their transcribe methods
+            if api_name.lower() in ['assemblyai', 'elevenlabs']:
                 if current_size_mb > max_size_mb:
                     logger.error(f"File size ({current_size_mb:.2f}MB) exceeds {max_size_mb}MB limit for {api_name} API. Aborting")
                     return []
@@ -377,9 +383,9 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
 @click.group(invoke_without_command=True)
 @click.option("--file", "-f", type=click.Path(exists=True), help="Audio/video file to transcribe")
 @click.option("--folder", "-F", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="Folder containing audio/video files to transcribe")
-@click.option("--api", "-a", type=click.Choice(["assemblyai", "elevenlabs", "groq", "openai"], case_sensitive=False), default="groq", help="API to use for transcription (default: groq)")
+@click.option("--api", "-a", type=click.Choice(["assemblyai", "elevenlabs", "groq", "openai"], case_sensitive=False), help="API to use for transcription (default: groq)")
 @click.option("--language", "-l", help="Language code (ISO-639-1 or ISO-639-3)", default=None)
-@click.option("--output", "-o", type=click.Choice(["text", "srt", "word_srt", "davinci_srt", "json", "all"], case_sensitive=False), multiple=True, default=["text", "srt"], help="Output format(s) to generate (default: text,srt)")
+@click.option("--output", "-o", type=click.Choice(["text", "srt", "word_srt", "davinci_srt", "json", "all"], case_sensitive=False), multiple=True, help="Output format(s) to generate (default: text,srt)")
 @click.option("--chars-per-line", "-c", type=int, default=80, help="Maximum characters per line in SRT file (default: 80)")
 @click.option("--words-per-subtitle", "-w", type=int, default=0, help="Maximum words per subtitle block (default: 0 = disabled). Mutually exclusive with -c.")
 @click.option("--word-srt", "-C", is_flag=True, help="Output SRT with each word as its own subtitle")
@@ -421,20 +427,76 @@ def main(ctx, file, folder, api, language, output, chars_per_line, words_per_sub
     if ctx.invoked_subcommand is not None:
         return
 
-    # Validate input parameters for default action
-    if not file and not folder:
-        click.echo(ctx.get_help())
-        sys.exit(0)
-    
-    if file and folder:
-        click.echo("Error: Cannot specify both --file and --folder. Choose one option.")
-        sys.exit(1)
-    
     # Set up logging
     setup_logger(debug=debug, verbose=verbose)
     
     # Load environment variables
     load_dotenv()
+    
+    # Initialize ConfigManager
+    config = ConfigManager()
+
+    # Determine if we should run in interactive mode
+    # 1. No arguments provided at all
+    # 2. Only file/folder provided (e.g. drag-and-drop)
+    should_run_interactive = False
+    
+    # Check if any flags were explicitly set (excluding defaults)
+    # This is a bit tricky with Click, but we can check if file/folder is set but no other critical options
+    # Or simply if file/folder is set but API is not explicitly set (using default)
+    
+    # If no file/folder provided, show help OR interactive mode?
+    # Let's say if no args -> interactive mode asking for file
+    if not file and not folder:
+        should_run_interactive = True
+    
+    # If file provided but no API specified (and we want to confirm settings)
+    # We removed the default="groq" from the click option to detect if user specified it
+    # If api is None, we definitely need interactive mode or fallback to config default
+    if (file or folder) and not api:
+        should_run_interactive = True
+        
+    if should_run_interactive:
+        logger.info("Entering interactive mode...")
+        # Pass the file/folder if we have it
+        initial_path = file or folder
+        
+        # Run interactive wizard
+        options = run_interactive_mode(initial_path)
+        
+        if not options:
+            sys.exit(0)
+            
+        # Update local variables with options from wizard
+        file = options.get("file")
+        folder = options.get("folder")
+        api = options.get("api")
+        
+        # Update other params if they exist in options
+        if "model" in options: model = options["model"]
+        if "language" in options: language = options["language"]
+        if "output" in options: output = options["output"]
+        if "remove_fillers" in options: remove_fillers = options["remove_fillers"]
+        if "speaker_labels" in options: speaker_labels = options["speaker_labels"]
+        if "diarize" in options: diarize = options["diarize"]
+        if "num_speakers" in options: num_speakers = options["num_speakers"]
+        if "davinci_srt" in options: davinci_srt = options["davinci_srt"]
+        if "filler_lines" in options: filler_lines = options["filler_lines"]
+        if "silent_portions" in options: silent_portions = options["silent_portions"]
+        
+    # If still no API set (and not interactive), load from config or default to groq
+    if not api:
+        api = config.get("default_api", "groq")
+        logger.info(f"Using default API: {api}")
+
+    # Validate input parameters for default action
+    if not file and not folder:
+        click.echo("Error: No file or folder specified.")
+        sys.exit(1)
+    
+    if file and folder:
+        click.echo("Error: Cannot specify both --file and --folder. Choose one option.")
+        sys.exit(1)
     
     # Process DaVinci mode defaults
     if davinci_srt:
@@ -446,6 +508,9 @@ def main(ctx, file, folder, api, language, output, chars_per_line, words_per_sub
     
     # Handle "all" output format
     output_formats = list(output)
+    if not output_formats: # If empty (e.g. from interactive mode default)
+        output_formats = ["text", "srt"]
+        
     if "all" in output_formats:
         output_formats = ["text", "srt", "word_srt", "davinci_srt", "json"]
     
@@ -494,7 +559,7 @@ def main(ctx, file, folder, api, language, output, chars_per_line, words_per_sub
 @main.command()
 def setup():
     """Setup API keys and configuration."""
-    click.echo("Setup wizard not implemented yet.")
+    run_setup_wizard()
 
 @main.group()
 def tools():
