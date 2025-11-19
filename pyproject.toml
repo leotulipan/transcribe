@@ -33,8 +33,9 @@ dev = [
 [project.scripts]
 transcribe = "audio_transcribe.cli:main"
 
-[tool.setuptools]
-packages = ["audio_transcribe", "audio_transcribe.utils", "audio_transcribe.transcribe_helpers"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["audio_transcribe*"]
 
 [tool.pyinstaller]
 hiddenimports = [

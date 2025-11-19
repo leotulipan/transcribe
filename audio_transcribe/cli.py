@@ -16,6 +16,10 @@ from typing import List, Dict, Any, Optional, Union, Tuple
 import click
 from loguru import logger
 from dotenv import load_dotenv
+import warnings
+
+# Suppress pydub SyntaxWarnings (invalid escape sequence)
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
 
 # Import helpers from the package
 from audio_transcribe.transcribe_helpers.audio_processing import (
