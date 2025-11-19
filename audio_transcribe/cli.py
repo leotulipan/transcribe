@@ -435,6 +435,7 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
 @click.option("--debug", "-d", is_flag=True, help="Enable debug logging")
 @click.option("--verbose", "-v", is_flag=True, help="Show all log messages in console")
 @click.option("--start-hour", type=int, default=None, help="Hour offset for SRT timestamps")
+@click.version_option(version="0.1.1", prog_name="Audio Transcribe")
 @click.pass_context
 def main(ctx, file, folder, api, language, output, chars_per_line, words_per_subtitle, 
          word_srt, davinci_srt, silent_portions, padding_start, padding_end, show_pauses, 
