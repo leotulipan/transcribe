@@ -207,57 +207,7 @@ def check_file_size(file_path: Union[str, Path], max_size_mb: int = 1000) -> boo
     return True
 
 
-def preprocess_audio(input_path: Union[str, Path]) -> Path:
-    """
-    Preprocess audio file to 16kHz mono FLAC using pydub.
-    
-    Args:
-        input_path: Path to input audio file
-        
-    Returns:
-        Path to preprocessed audio file
-    
-    From: groq - Convert audio to optimal format
-    """
-    input_path = Path(input_path)
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
-    
-    with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
-        output_path = Path(temp_file.name)
-        
-    logger.info(f"Converting {input_path} to 16kHz mono FLAC using pydub...")
-    try:
-        # Load audio file
-        audio = AudioSegment.from_file(str(input_path))
-        # Set frame rate to 16kHz and channels to mono
-        audio = audio.set_frame_rate(16000).set_channels(1)
-        # Export as FLAC
-        audio.export(str(output_path), format="flac")
-        logger.info(f"Converted successfully to: {output_path}")
-        return output_path
-    except Exception as e:
-        if output_path.exists():
-            output_path.unlink(missing_ok=True)
-        logger.error(f"Audio conversion failed: {e}")
-        raise RuntimeError(f"Audio conversion failed: {e}")
 
-
-def preprocess_audio_with_ffmpeg(input_path: Union[str, Path]) -> Path:
-    """
-    Preprocess audio file to 16kHz mono FLAC using pydub.
-    This function is kept for backward compatibility but now uses the pydub implementation.
-    
-    Args:
-        input_path: Path to input audio file
-        
-    Returns:
-        Path to preprocessed audio file
-    
-    From: groq - Preprocess audio with ffmpeg (now using pydub)
-    """
-    logger.info("Using pydub-based audio preprocessing (FFmpeg no longer used directly)...")
-    return preprocess_audio(input_path)
 
 
 def audio_to_base64(file_path: Union[str, Path]) -> str:

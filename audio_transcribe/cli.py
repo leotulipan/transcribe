@@ -33,6 +33,7 @@ from audio_transcribe.utils import parsers as all_parsers
 from audio_transcribe.utils.formatters import create_output_files
 from audio_transcribe.utils.api import get_api_instance
 from audio_transcribe.utils.config import ConfigManager
+from audio_transcribe.utils.defaults import DefaultsManager
 
 # Import TUI modules
 from audio_transcribe.tui import run_setup_wizard, run_interactive_mode
@@ -225,18 +226,12 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             transcribe_kwargs['original_path'] = original_input_path # Pass original path for metadata
             
             # Handle model parameters
-            if api_name == "elevenlabs":
-                transcribe_kwargs['model_id'] = kwargs.get('model', 'scribe_v1')
-            else:
-                if api_name == "groq":
-                    transcribe_kwargs['model'] = kwargs.get('model', 'whisper-large-v3')
-                elif api_name == "openai":
-                    transcribe_kwargs['model'] = kwargs.get('model', 'whisper-1')
-                elif api_name == "assemblyai":
-                    transcribe_kwargs['model'] = kwargs.get('model', 'best')
+            # DefaultsManager should have already populated 'model' with default if needed
+            if 'model' in kwargs and kwargs['model']:
+                if api_name == "elevenlabs":
+                    transcribe_kwargs['model_id'] = kwargs['model']
                 else:
-                    if 'model' in kwargs and kwargs['model'] is not None:
-                        transcribe_kwargs['model'] = kwargs['model']
+                    transcribe_kwargs['model'] = kwargs['model']
             
             # Perform transcription
             api_call_response = api_instance.transcribe(current_audio_file_path, **transcribe_kwargs)
@@ -264,176 +259,80 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
         logger.success(f"Successfully obtained transcription. Words count: {len(transcription_result.words)}")
         
         # Output generation
-        output_format_types = kwargs.get("output", ["text", "srt"])
-        if "all" in output_format_types:
-            output_format_types = ["text", "srt", "word_srt", "davinci_srt", "json"]
+        output_files = create_output_files(transcription_result, original_input_path, kwargs)
         
-        created_files_dict = create_output_files(
-            result=transcription_result,
-            audio_path=original_input_path,
-            format_types=output_format_types,
-            **kwargs
-        )
-        output_files = list(created_files_dict.values())
-        
+        # Save cleaned JSON if requested
         if save_cleaned_json:
             cleaned_json_path = file_dir / f"{file_name_stem}_{api_name}_cleaned.json"
-            transcription_result.save(cleaned_json_path)
-            logger.info(f"Saved cleaned (parsed) JSON to: {cleaned_json_path}")
-            output_files.append(str(cleaned_json_path))
+            try:
+                with open(cleaned_json_path, 'w', encoding='utf-8') as f:
+                    json.dump(transcription_result.to_dict(), f, indent=2, ensure_ascii=False)
+                logger.info(f"Saved cleaned JSON to: {cleaned_json_path}")
+                output_files.append(str(cleaned_json_path))
+            except Exception as e:
+                logger.error(f"Failed to save cleaned JSON: {e}")
 
-        total_time = time.time() - start_time
-        logger.success(f"Completed processing {original_input_path} in {total_time:.2f} seconds. Output files: {output_files}")
+        elapsed_time = time.time() - start_time
+        logger.success(f"Processing completed in {elapsed_time:.2f}s")
         return output_files
-        
+
     except Exception as e:
-        logger.error(f"Unhandled error processing file {file_path}: {str(e)}")
-        if debug:
-            import traceback
-            logger.debug(traceback.format_exc())
+        logger.exception(f"An error occurred while processing {file_path}: {e}")
         return []
     finally:
         # Cleanup temporary files
         if not keep_optimized:
             for temp_file in temp_files_to_cleanup:
                 if temp_file.exists():
-                    logger.info(f"Cleaning up temporary file: {temp_file}")
                     try:
                         temp_file.unlink()
+                        logger.debug(f"Cleaned up temporary file: {temp_file}")
                     except Exception as e:
                         logger.warning(f"Failed to delete temporary file {temp_file}: {e}")
-        elif temp_files_to_cleanup:
-            logger.info(f"Keeping temporary files: {temp_files_to_cleanup}")
 
-def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
+def process_audio_path(path: Union[str, Path], **kwargs) -> None:
     """
-    Process an audio file or directory of audio files.
-    
-    Args:
-        audio_path: Path to audio file or directory containing audio files
-        **kwargs: Additional parameters for processing, including api_name
-        
-    Returns:
-        Tuple of (successful_files, total_files)
+    Process a file or directory of audio files.
     """
-    path = Path(audio_path)
-    api_name = kwargs.get('api_name')
-    
-    # Handle directory processing
-    if path.is_dir():
-        logger.info(f"[PROCESSING] Directory: {path}")
+    path_obj = Path(path)
+    if path_obj.is_file():
+        process_file(path_obj, **kwargs)
+    elif path_obj.is_dir():
+        # Recursive search for audio/video files
+        extensions = ['.mp3', '.wav', '.m4a', '.mp4', '.mkv', '.flac', '.ogg', '.webm']
+        files = []
+        for ext in extensions:
+            files.extend(path_obj.rglob(f"*{ext}"))
         
-        audio_extensions = ['.mp3', '.wav', '.flac', '.m4a', '.ogg', '.opus']
-        video_extensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm']
-        all_media_extensions = audio_extensions + video_extensions
-        
-        media_files = []
-        for ext in all_media_extensions:
-            media_files.extend(list(path.glob(f"*{ext}")))
-        
-        if not media_files:
-            for ext in all_media_extensions:
-                media_files.extend(list(path.glob(f"*{ext.upper()}")))
-        
-        if not media_files:
-            logger.error(f"No audio or video files found in directory: {path}")
-            return (0, 0)
-        
-        # Group files by basename
-        basename_groups = {}
-        for file in media_files:
-            basename = file.stem
-            if basename in basename_groups:
-                basename_groups[basename].append(file)
-            else:
-                basename_groups[basename] = [file]
-        
-        unique_files = []
-        for basename, files in basename_groups.items():
-            if len(files) == 1:
-                unique_files.append(files[0])
-            else:
-                # Prioritize video > flac > wav > others
-                video_files = [f for f in files if f.suffix.lower() in video_extensions]
-                if video_files:
-                    unique_files.append(max(video_files, key=lambda f: f.stat().st_size))
-                else:
-                    flac_files = [f for f in files if f.suffix.lower() == '.flac']
-                    if flac_files:
-                        unique_files.append(flac_files[0])
-                    else:
-                        wav_files = [f for f in files if f.suffix.lower() == '.wav']
-                        if wav_files:
-                            unique_files.append(wav_files[0])
-                        else:
-                            unique_files.append(max(files, key=lambda f: f.stat().st_size))
-        
-        logger.info(f"Found {len(unique_files)} unique audio/video files to process")
-        
-        successful = 0
-        
-        from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn
-        
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            TimeRemainingColumn(),
-            transient=True
-        ) as progress:
-            task = progress.add_task("[cyan]Processing files...", total=len(unique_files))
+        if not files:
+            logger.warning(f"No audio/video files found in {path}")
+            return
             
-            for i, file in enumerate(unique_files):
-                progress.update(task, description=f"[cyan]Processing {file.name} ({i+1}/{len(unique_files)})...")
-                
-                if process_file(file, **kwargs):
-                    successful += 1
-                
-                progress.advance(task)
-        
-        return (successful, len(unique_files))
-    
-    # Process single file
-    if path.is_file():
-        # Auto-apply --use-json-input if file is a JSON file
-        if path.suffix.lower() == '.json':
-            logger.info(f"Auto-enabling JSON input mode for file: {path}")
-            kwargs['use_json_input'] = True
-            
-            if api_name == "auto" or not api_name:
-                filename = path.stem
-                if "_assemblyai" in filename: kwargs['api_name'] = "assemblyai"
-                elif "_elevenlabs" in filename: kwargs['api_name'] = "elevenlabs"
-                elif "_groq" in filename: kwargs['api_name'] = "groq"
-                elif "_openai" in filename: kwargs['api_name'] = "openai"
-        
-        if process_file(path, **kwargs):
-            return (1, 1)
-        return (0, 1)
-    
-    logger.error(f"Path not found or invalid: {path}")
-    return (0, 0)
+        logger.info(f"Found {len(files)} files to process in {path}")
+        for file in files:
+            process_file(file, **kwargs)
+    else:
+        logger.error(f"Path not found: {path}")
 
 @click.group(invoke_without_command=True)
 @click.argument("input_path", required=False, type=click.Path(exists=True))
-@click.option("--file", "-f", type=click.Path(exists=True), help="[Deprecated] Audio/video file to transcribe")
-@click.option("--folder", "-F", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="[Deprecated] Folder containing audio/video files to transcribe")
-@click.option("--api", "-a", type=click.Choice(["assemblyai", "elevenlabs", "groq", "openai"], case_sensitive=False), help="API to use for transcription (default: groq)")
-@click.option("--language", "-l", help="Language code (ISO-639-1 or ISO-639-3)", default=None)
+@click.option("--file", "-f", help="Input audio/video file (legacy)")
+@click.option("--folder", "-F", help="Input folder containing audio/video files (legacy)")
+@click.option("--api", "-a", help="API to use (groq, openai, assemblyai, elevenlabs)")
+@click.option("--language", "-l", help="Language code (e.g., en, de, fr)")
 @click.option("--output", "-o", type=click.Choice(["text", "srt", "word_srt", "davinci_srt", "json", "all"], case_sensitive=False), multiple=True, help="Output format(s) to generate (default: text,srt)")
-@click.option("--chars-per-line", "-c", type=int, default=80, help="Maximum characters per line in SRT file (default: 80)")
-@click.option("--words-per-subtitle", "-w", type=int, default=0, help="Maximum words per subtitle block (default: 0 = disabled). Mutually exclusive with -c.")
+@click.option("--chars-per-line", "-c", type=int, default=None, help="Maximum characters per line in SRT file (default: 80)")
+@click.option("--words-per-subtitle", "-w", type=int, default=None, help="Maximum words per subtitle block (default: 0 = disabled). Mutually exclusive with -c.")
 @click.option("--word-srt", "-C", is_flag=True, help="Output SRT with each word as its own subtitle")
 @click.option("--davinci-srt", "-D", is_flag=True, help="Output SRT optimized for DaVinci Resolve")
-@click.option("--silent-portions", "-p", type=int, default=0, help="Mark pauses longer than X milliseconds with (...)")
-@click.option("--padding-start", type=int, default=0, help="Milliseconds to offset word start times (negative=earlier, positive=later)")
-@click.option("--padding-end", type=int, default=0, help="Milliseconds to offset word end times (negative=earlier, positive=later)")
-@click.option("--show-pauses", is_flag=True, help="Add (...) text for pauses longer than silent-portions value")
+@click.option("--silent-portions", "-p", type=int, default=None, help="Mark pauses longer than X milliseconds with (...)")
+@click.option("--padding-start", type=int, default=None, help="Milliseconds to offset word start times (negative=earlier, positive=later)")
+@click.option("--padding-end", type=int, default=None, help="Milliseconds to offset word end times (negative=earlier, positive=later)")
+@click.option("--show-pauses", is_flag=True, default=None, help="Add (...) text for pauses longer than silent-portions value")
 @click.option("--filler-lines", is_flag=True, help="Output filler words as their own subtitle lines (uppercased)")
 @click.option("--filler-words", multiple=True, help="Custom filler words to detect")
-@click.option("--remove-fillers/--no-remove-fillers", default=False, help="Remove filler words like 'äh' and 'ähm' and treat them as pauses")
-@click.option("--speaker-labels/--no-speaker-labels", default=True, help="Enable/disable speaker diarization (AssemblyAI only)")
+@click.option("--remove-fillers/--no-remove-fillers", default=None, help="Remove filler words like 'äh' and 'ähm' and treat them as pauses")
+@click.option("--speaker-labels/--no-speaker-labels", default=None, help="Enable/disable speaker diarization (AssemblyAI only)")
 @click.option("--fps", type=float, help="Frames per second for frame-based editing")
 @click.option("--fps-offset-start", type=int, default=-1, help="Frames to offset from start time")
 @click.option("--fps-offset-end", type=int, default=0, help="Frames to offset from end time")
@@ -451,8 +350,8 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
 @click.option("--use-json-input", "-j", is_flag=True, help="Accept JSON files as input")
 @click.option("--debug", "-d", is_flag=True, help="Enable debug logging")
 @click.option("--verbose", "-v", is_flag=True, help="Show all log messages in console")
-@click.option("--start-hour", type=int, default=0, help="Hour offset for SRT timestamps")
-@click.version_option(version="0.1.2", prog_name="Audio Transcribe")
+@click.option("--start-hour", type=int, default=None, help="Hour offset for SRT timestamps")
+@click.version_option()
 @click.pass_context
 def main(ctx, input_path, file, folder, api, language, output, chars_per_line, words_per_subtitle, 
          word_srt, davinci_srt, silent_portions, padding_start, padding_end, show_pauses, 
@@ -518,14 +417,6 @@ def main(ctx, input_path, file, folder, api, language, output, chars_per_line, w
         click.echo("Error: No file or folder specified.")
         sys.exit(1)
     
-    # Process DaVinci mode defaults
-    if davinci_srt:
-        if chars_per_line == 80: chars_per_line = 500
-        if silent_portions == 0: silent_portions = 250
-        if padding_start == 0: padding_start = -125
-        if not remove_fillers: remove_fillers = True
-        if not show_pauses: show_pauses = True
-    
     # Handle "all" output format
     output_formats = list(output)
     if not output_formats: # If empty (e.g. from interactive mode default)
@@ -534,8 +425,8 @@ def main(ctx, input_path, file, folder, api, language, output, chars_per_line, w
     if "all" in output_formats:
         output_formats = ["text", "srt", "word_srt", "davinci_srt", "json"]
     
-    # Prepare kwargs
-    kwargs = {
+    # Collect raw user params (only those that are not None)
+    raw_user_params = {
         "api_name": api,
         "language": language,
         "output": output_formats,
@@ -570,6 +461,16 @@ def main(ctx, input_path, file, folder, api, language, output, chars_per_line, w
         "verbose": verbose,
         "start_hour": start_hour
     }
+    
+    # Determine preset
+    preset = "davinci" if davinci_srt else None
+    
+    # Get effective parameters using DefaultsManager
+    kwargs = DefaultsManager.get_effective_params(api, raw_user_params, preset=preset)
+    
+    # Ensure output is a list (DefaultsManager might return it as tuple if it came from defaults)
+    if "output" in kwargs and not isinstance(kwargs["output"], list):
+        kwargs["output"] = list(kwargs["output"])
     
     # Run processing
     # Check if target_path is a directory or file
