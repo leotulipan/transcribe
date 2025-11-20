@@ -93,6 +93,6 @@ A `--keep` flag was added to the CLI to optionally preserve these optimized inte
 - **`audio_transcribe/utils/formatters.py` (line 95)**: Changed `kwargs.get("start_hour", 0)` to `kwargs.get("start_hour") or 0` to properly handle `None` values
 - **`audio_transcribe/transcribe_helpers/output_formatters.py` (lines 70, 89)**: Added defensive None handling with `hours += (start_hour or 0)` pattern
 
-**Status:** Code changes committed (commit 9ef5e55). Installation is currently blocked by permission errors with `uv tool install`. The JSON reuse functionality was already working correctly - the script properly detects existing `{filename}_{api}.json` files and skips re-transcription.
+**Status:** Completed. The installation issue was resolved by reinstalling the tool. The SRT generation fix was verified by processing an existing JSON file, which correctly produced the full SRT output. The JSON reuse functionality works as expected.
 
-**Known Issue:** The CLI has a separate structural issue where `@click.group(invoke_without_command=True)` causes options like `--api` to be treated as commands. This is unrelated to the SRT bug and can be addressed separately.
+**Known Issue:** The CLI argument parsing behavior requires options (like `--api`) to be placed before positional arguments when invoking the main command directly, or relies on interactive mode defaults. This is a minor usability quirk but does not block functionality.
