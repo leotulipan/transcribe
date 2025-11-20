@@ -93,28 +93,11 @@ class AssemblyAIAPI(TranscriptionAPI):
         temp_audio_path = None
         processing_path = audio_path
         
-        if audio_path.lower().endswith(('.mp4', '.mkv', '.mov', '.avi')):
-            logger.info(f"Input is video file: {audio_path}")
-            logger.info("Extracting audio for AssemblyAI API...")
-            
-            extracted_path = extract_audio_from_mp4(audio_path)
-            if extracted_path:
-                processing_path = extracted_path
-                temp_audio_path = extracted_path
-                logger.info(f"Successfully extracted audio to: {processing_path}")
-                
-                # Check file size of extracted audio
-                file_size_mb = os.path.getsize(processing_path) / (1024 * 1024)
-                logger.info(f"Extracted audio size: {file_size_mb:.2f} MB")
-            else:
-                logger.warning("Failed to extract audio, attempting to upload original file")
-        
-        # Check file size limit
-        limit_mb = get_api_file_size_limit("assemblyai")
-        if not check_file_size(processing_path, limit_mb):
-            if temp_audio_path and os.path.exists(temp_audio_path):
-                os.unlink(temp_audio_path)
-            raise ValueError(f"File size exceeds AssemblyAI limit of {limit_mb}MB")
+        # Check if input is MP4/Video and extract audio if needed
+        # NOTE: Audio optimization and extraction is now handled in cli.py before calling transcribe
+        # We just log the file being used
+        logger.info(f"Transcribing file: {audio_path}")
+        processing_path = audio_path
             
         # Prepare transcription config
         model = kwargs.get("model", "best")

@@ -355,61 +355,116 @@ def optimize_audio_for_api(input_path: Union[str, Path], api_name: str) -> Tuple
     
     logger.info(f"Optimizing {input_path.name} for {api_name} (Limit: {max_size_mb}MB)...")
     
-    # 1. Check original file
-    current_size_mb = os.path.getsize(input_path) / (1024 * 1024)
-    if current_size_mb <= max_size_mb:
-        logger.info(f"Original file fits ({current_size_mb:.2f}MB <= {max_size_mb}MB). No conversion needed.")
-        return input_path, False
+    # Track intermediate files to clean up
+    intermediate_files = []
+    
+    current_path = input_path
+    is_current_temp = False
+    
+    try:
+        # 1. Check original file
+        current_size_mb = os.path.getsize(current_path) / (1024 * 1024)
+        if current_size_mb <= max_size_mb:
+            logger.info(f"Original file fits ({current_size_mb:.2f}MB <= {max_size_mb}MB). No conversion needed.")
+            return current_path, False
+            
+        logger.info(f"File too large ({current_size_mb:.2f}MB). Attempting optimization...")
         
-    logger.info(f"File too large ({current_size_mb:.2f}MB). Attempting optimization...")
-    
-    # 2. If video, extract audio
-    # Check if it's a video file by extension
-    video_extensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm']
-    if input_path.suffix.lower() in video_extensions:
-        extracted_path = extract_audio_from_mp4(input_path)
-        if extracted_path:
-            extracted_path = Path(extracted_path)
-            size_mb = os.path.getsize(extracted_path) / (1024 * 1024)
+        # 2. If video, extract audio
+        video_extensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm']
+        if current_path.suffix.lower() in video_extensions:
+            logger.info("Strategy 1: Extracting audio from video...")
+            extracted_path = extract_audio_from_mp4(current_path)
+            if extracted_path:
+                extracted_path = Path(extracted_path)
+                size_mb = os.path.getsize(extracted_path) / (1024 * 1024)
+                
+                # Update current path to the new file
+                if is_current_temp:
+                    intermediate_files.append(current_path)
+                current_path = extracted_path
+                is_current_temp = True
+                
+                if size_mb <= max_size_mb:
+                    logger.success(f"Audio extraction successful. New size: {size_mb:.2f}MB")
+                    _cleanup_intermediates(intermediate_files)
+                    return current_path, True
+                else:
+                    logger.info(f"Extracted audio still too large ({size_mb:.2f}MB). Continuing to next strategy...")
+        
+        # 3. Convert to FLAC
+        logger.info("Strategy 2: Converting to FLAC...")
+        flac_path = convert_to_flac(current_path)
+        if flac_path:
+            flac_path = Path(flac_path)
+            size_mb = os.path.getsize(flac_path) / (1024 * 1024)
+            
+            # Update current path
+            if is_current_temp:
+                intermediate_files.append(current_path)
+            current_path = flac_path
+            is_current_temp = True
+            
             if size_mb <= max_size_mb:
-                logger.success(f"Audio extraction successful. New size: {size_mb:.2f}MB")
-                return extracted_path, True
+                logger.success(f"FLAC conversion successful. New size: {size_mb:.2f}MB")
+                _cleanup_intermediates(intermediate_files)
+                return current_path, True
             else:
-                logger.info(f"Extracted audio still too large ({size_mb:.2f}MB). Continuing...")
-                # We can continue optimizing the extracted file instead of the original video
-                # But let's stick to the original input for simplicity in the next steps 
-                # or use the extracted one as the new base? 
-                # Using extracted one is better as it's already audio-only.
-                # However, extract_audio_from_mp4 returns a temp file only if we manage it? 
-                # Actually extract_audio_from_mp4 creates a file next to the original. 
-                # Let's use it for the next steps to save processing time, but mark it for deletion later if we convert further?
-                # For now, let's just delete it if it didn't solve the problem and move to next step with original
-                # OR keep it and convert IT to flac.
-                # Let's keep it simple: if extraction didn't help enough, delete it and try next strategy on original.
-                os.unlink(extracted_path)
-    
-    # 3. Convert to FLAC
-    flac_path = convert_to_flac(input_path)
-    if flac_path:
-        flac_path = Path(flac_path)
-        size_mb = os.path.getsize(flac_path) / (1024 * 1024)
-        if size_mb <= max_size_mb:
-            logger.success(f"FLAC conversion successful. New size: {size_mb:.2f}MB")
-            return flac_path, True
-        else:
-            logger.info(f"FLAC file still too large ({size_mb:.2f}MB). Deleting and trying MP3...")
-            os.unlink(flac_path)
+                logger.info(f"FLAC file still too large ({size_mb:.2f}MB). Continuing to next strategy...")
+                
+        # 4. Convert to MP3 128kbps mono
+        logger.info("Strategy 3: Converting to MP3 (128k mono)...")
+        mp3_path = convert_to_mp3(current_path, bitrate="128k")
+        if mp3_path:
+            mp3_path = Path(mp3_path)
+            size_mb = os.path.getsize(mp3_path) / (1024 * 1024)
             
-    # 4. Convert to MP3 128kbps mono
-    mp3_path = convert_to_mp3(input_path, bitrate="128k")
-    if mp3_path:
-        mp3_path = Path(mp3_path)
-        size_mb = os.path.getsize(mp3_path) / (1024 * 1024)
-        if size_mb <= max_size_mb:
-            logger.success(f"MP3 conversion successful. New size: {size_mb:.2f}MB")
-            return mp3_path, True
-        else:
-            logger.error(f"MP3 file still too large ({size_mb:.2f}MB). Optimization failed.")
-            os.unlink(mp3_path)
+            # Update current path
+            if is_current_temp:
+                intermediate_files.append(current_path)
+            current_path = mp3_path
+            is_current_temp = True
             
-    raise RuntimeError(f"Could not optimize file to under {max_size_mb}MB. Please split the file manually.")
+            if size_mb <= max_size_mb:
+                logger.success(f"MP3 conversion successful. New size: {size_mb:.2f}MB")
+                _cleanup_intermediates(intermediate_files)
+                return current_path, True
+            else:
+                logger.error(f"MP3 file still too large ({size_mb:.2f}MB). Optimization failed.")
+                # If this failed, we might as well return this one or fail completely?
+                # But the function contract implies we return something usable or raise.
+                # Let's clean up this last attempt since it failed.
+                if mp3_path.exists():
+                    os.unlink(mp3_path)
+                # Revert current_path to previous valid one (though previous ones were also too big)
+                # We will fall through to raise RuntimeError
+                
+        # Clean up all intermediates if we failed entirely
+        _cleanup_intermediates(intermediate_files)
+        if is_current_temp and current_path.exists():
+             # If we ended up with a temp file that is still too big, and we are giving up
+             try:
+                 os.unlink(current_path)
+             except:
+                 pass
+
+        raise RuntimeError(f"Could not optimize file to under {max_size_mb}MB. Please split the file manually.")
+        
+    except Exception as e:
+        # Clean up on error
+        _cleanup_intermediates(intermediate_files)
+        if is_current_temp and current_path.exists():
+            try:
+                os.unlink(current_path)
+            except:
+                pass
+        raise e
+
+def _cleanup_intermediates(files: List[Path]):
+    """Helper to clean up intermediate files."""
+    for f in files:
+        if f.exists():
+            try:
+                os.unlink(f)
+            except Exception as e:
+                logger.warning(f"Failed to delete intermediate file {f}: {e}")

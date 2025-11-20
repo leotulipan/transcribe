@@ -21,7 +21,12 @@ def run_setup_wizard():
         choices = []
         for api in apis:
             key = config.get_api_key(api)
-            status = "(Configured)" if key else "(Not Configured)"
+            # Use ANSI escape codes for colors since questionary supports them in strings
+            if key:
+                status = "\033[32m(Configured)\033[0m" # Green
+            else:
+                status = "\033[31m(Not Configured)\033[0m" # Red
+                
             choices.append(questionary.Choice(f"Configure {api} {status}", value=api))
         
         choices.append(questionary.Choice("Configure Defaults", value="defaults"))
