@@ -67,7 +67,7 @@ def format_time(seconds: float, start_hour: int = 0) -> str:
     total_milliseconds = int(round(seconds * 1000))
     
     hours, total_milliseconds = divmod(total_milliseconds, 3600000)
-    hours += start_hour
+    hours += (start_hour or 0)
     minutes, total_milliseconds = divmod(total_milliseconds, 60000)
     seconds_part, milliseconds = divmod(total_milliseconds, 1000)
     
@@ -86,7 +86,7 @@ def format_time_ms(milliseconds: int, start_hour: int = 0) -> str:
     
     # Process as normal
     hours, milliseconds = divmod(milliseconds, 3600000)
-    hours += start_hour
+    hours += (start_hour or 0)
     minutes, milliseconds = divmod(milliseconds, 60000)
     seconds_part, milliseconds = divmod(milliseconds, 1000)
     

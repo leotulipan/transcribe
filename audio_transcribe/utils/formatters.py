@@ -92,7 +92,7 @@ def create_srt_file(result: TranscriptionResult, output_file: Union[str, Path],
     
     # If filler_lines is requested, ensure we do not strip fillers earlier
     # and pass control flags down to the low-level create_srt
-    start_hour = kwargs.get("start_hour", 0)
+    start_hour = kwargs.get("start_hour") or 0
     if format_type == "word":
         create_srt(
             words, 
