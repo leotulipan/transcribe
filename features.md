@@ -71,3 +71,28 @@ The TUI (`wizard.py`) was enhanced with a "Configure Defaults" menu, allowing us
 4.  Convert to MP3 128kbps mono (lossy compression).
 
 A `--keep` flag was added to the CLI to optionally preserve these optimized intermediate files; otherwise, they are automatically cleaned up after processing.
+
+## 9. TUI Color Fixes & Optimization Refinements
+**Request:** Fix the display of color instructions in the setup wizard (green for Configured, red for Not Configured) and ensure audio optimization logic is not blocked by redundant API-level checks.
+
+**Implementation:**
+`audio_transcribe/tui/wizard.py` was updated to use standard ANSI escape codes instead of raw Rich tags, ensuring that "Configured" and "Not Configured" statuses are correctly colored in the terminal.
+
+`audio_transcribe/utils/api/assemblyai.py` was refactored to remove redundant file size checks and audio extraction logic. The API class now relies entirely on the centralized `optimize_audio_for_api` workflow in `cli.py`, preventing premature "File too large" errors and allowing the optimization cascade to function correctly.
+
+## 10. SRT Generation Bug Fix (start_hour=None TypeError)
+**Request:** Fix the bug where SRT files contained only "1" instead of full subtitle content, and enable JSON file reuse to avoid wasting API credits.
+
+**Problem:** When running the transcribe tool, SRT files were being created but only contained the first subtitle number ("1"). The error `TypeError: unsupported operand type(s) for +=: 'int' and 'NoneType'` was occurring during timestamp formatting.
+
+**Root Cause:** The `--start-hour` CLI option had `default=None`, which was being passed through kwargs to the SRT generation functions. When the code attempted `hours += start_hour`, it failed because you cannot add `None` to an integer.
+
+**Implementation:**
+- **`audio_transcribe/cli.py` (line 454)**: Changed `--start-hour` option default from `None` to `0`
+- **`audio_transcribe/cli.py` (line 455)**: Updated version from `0.1.1` to `0.1.2`
+- **`audio_transcribe/utils/formatters.py` (line 95)**: Changed `kwargs.get("start_hour", 0)` to `kwargs.get("start_hour") or 0` to properly handle `None` values
+- **`audio_transcribe/transcribe_helpers/output_formatters.py` (lines 70, 89)**: Added defensive None handling with `hours += (start_hour or 0)` pattern
+
+**Status:** Code changes committed (commit 9ef5e55). Installation is currently blocked by permission errors with `uv tool install`. The JSON reuse functionality was already working correctly - the script properly detects existing `{filename}_{api}.json` files and skips re-transcription.
+
+**Known Issue:** The CLI has a separate structural issue where `@click.group(invoke_without_command=True)` causes options like `--api` to be treated as commands. This is unrelated to the SRT bug and can be addressed separately.
