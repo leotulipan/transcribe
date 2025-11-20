@@ -237,3 +237,7 @@ MIT
 - **OpenAI (Whisper)**: 25 MB per file.
 - **Groq**: 25 MB per file (~30 minutes of audio).
 - **AssemblyAI**: Up to 200 MB per file for direct uploads.
+
+## Development
+
+Test scripts, artifacts, and utilities (like `json_to_srt.py`) are located in the `test/` directory to keep the root clean.

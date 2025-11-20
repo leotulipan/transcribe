@@ -96,3 +96,10 @@ A `--keep` flag was added to the CLI to optionally preserve these optimized inte
 **Status:** Completed. The installation issue was resolved by reinstalling the tool. The SRT generation fix was verified by processing an existing JSON file, which correctly produced the full SRT output. The JSON reuse functionality works as expected.
 
 **Known Issue:** The CLI argument parsing behavior requires options (like `--api`) to be placed before positional arguments when invoking the main command directly, or relies on interactive mode defaults. This is a minor usability quirk but does not block functionality.
+
+## 11. Cleanup & Organization
+**Request:** Clean up leftover test scripts and organize them into a dedicated directory.
+
+**Implementation:**
+Moved `json_to_srt.py`, `combine_subtitles.py`, and various `compare_audio-test.*` artifacts to the `test/` directory. This keeps the root directory clean and separates utility/test scripts from the main package code.
+
