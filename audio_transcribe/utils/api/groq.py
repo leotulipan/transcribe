@@ -11,10 +11,10 @@ import tempfile
 
 from audio_transcribe.utils.parsers import TranscriptionResult, parse_groq_format
 from audio_transcribe.utils.api.base import TranscriptionAPI
+from audio_transcribe.utils.api.chunking import ChunkingMixin
 from audio_transcribe.transcribe_helpers.audio_processing import convert_to_flac, get_api_file_size_limit
-from audio_transcribe.transcribe_helpers.chunking import split_audio
 
-class GroqAPI(TranscriptionAPI):
+class GroqAPI(TranscriptionAPI, ChunkingMixin):
     """Groq API implementation for audio transcription."""
     
     def __init__(self, api_key: Optional[str] = None):
@@ -85,17 +85,15 @@ class GroqAPI(TranscriptionAPI):
             logger.error(f"Failed to validate Groq API key: {str(e)}")
             return False
             
-    def transcribe_chunk(self, audio_chunk_path: Union[str, Path], 
-                        chunk_start_ms: int = 0, model: str = "whisper-large-v3", 
-                        language: Optional[str] = None) -> Tuple[Dict[str, Any], int]:
+    def transcribe_chunk(self, chunk_path: Path, chunk_index: int, start_time: float, **kwargs) -> Tuple[Dict[str, Any], int]:
         """
         Transcribe a single audio chunk using Groq's audio transcriptions API.
         
         Args:
-            audio_chunk_path: Path to the audio chunk file
-            chunk_start_ms: Start time of this chunk in milliseconds
-            model: Whisper model to use (default: whisper-large-v3)
-            language: Language code (optional)
+            chunk_path: Path to the audio chunk file
+            chunk_index: Index of the chunk
+            start_time: Start time of this chunk in seconds
+            **kwargs: Additional arguments (model, language, etc.)
             
         Returns:
             Tuple of (chunk_result, chunk_start_ms)
@@ -104,26 +102,27 @@ class GroqAPI(TranscriptionAPI):
             raise ValueError("Groq client not initialized")
             
         # Convert Path to string if needed
-        if isinstance(audio_chunk_path, Path):
-            audio_chunk_path = str(audio_chunk_path)
+        audio_chunk_path = str(chunk_path)
+        chunk_start_ms = int(start_time * 1000)
+        
+        model = kwargs.get("model", "whisper-large-v3")
+        language = kwargs.get("language")
             
         # Ensure model is never None
         if model is None:
             model = "whisper-large-v3"
-            logger.info(f"No model specified for chunk, using default: {model}")
             
-        logger.info(f"Transcribing chunk starting at {chunk_start_ms}ms with Groq (model: {model})")
+        logger.info(f"Transcribing chunk {chunk_index} starting at {chunk_start_ms}ms with Groq (model: {model})")
         
         # Open the file in binary mode
         with open(audio_chunk_path, "rb") as audio_file:
             try:
                 # Use the audio.transcriptions.create endpoint
-                # Pass the file directly as a tuple (filename, fileobj, content_type)
-                start_time = time.time()
+                start_time_perf = time.time()
                 logger.debug(f"Calling Groq API with model={model}, language={language if language else 'None'}")
                 
                 # Prepare arguments
-                kwargs = {
+                api_kwargs = {
                     "file": ("chunk.flac", audio_file, "audio/flac"),
                     "model": model,
                     "response_format": "verbose_json",
@@ -132,11 +131,11 @@ class GroqAPI(TranscriptionAPI):
                 }
                 
                 if language:
-                    kwargs["language"] = language
+                    api_kwargs["language"] = language
                 
-                result = self.client.audio.transcriptions.create(**kwargs)
+                result = self.client.audio.transcriptions.create(**api_kwargs)
                 
-                transcription_time = time.time() - start_time
+                transcription_time = time.time() - start_time_perf
                 logger.info(f"Chunk processed in {transcription_time:.2f}s")
                 
                 # Extract data from the result
@@ -163,20 +162,92 @@ class GroqAPI(TranscriptionAPI):
                 logger.error(f"Error transcribing chunk with Groq: {str(e)}")
                 raise ValueError(f"Groq transcription failed: {str(e)}")
             
+    def merge_chunk_results(self, results: List[Tuple[Dict[str, Any], int]]) -> Dict[str, Any]:
+        """
+        Merge transcription chunks, handling word-level timestamps.
+        
+        Args:
+            results: List of (result, start_time_ms) tuples
+            
+        Returns:
+            Merged transcription result dict
+        """
+        logger.info("Merging transcription chunks")
+        
+        # Initialize merged result
+        merged_segments = []
+        all_words = []
+        
+        # We need overlap to adjust timestamps correctly if we want to be precise,
+        # but the previous implementation used a fixed overlap passed to _merge_transcripts.
+        # ChunkingMixin doesn't pass overlap to merge_chunk_results.
+        # However, we can infer or just use the start times provided in results.
+        # The previous logic used:
+        # adjusted_segment['start'] = segment.get('start', 0) + chunk_start_sec - (i * overlap_sec)
+        # Wait, the previous logic SUBTRACTED overlap?
+        # "chunk_start_sec" in previous logic was calculated as:
+        # start = i * (chunk_ms - overlap_ms)
+        # So chunk_start_sec ALREADY accounted for overlap in terms of absolute time.
+        # The previous logic:
+        # if i > 0:
+        #    adjusted_segment['start'] = segment.get('start', 0) + chunk_start_sec - (i * overlap_sec)
+        # This looks weird. If chunk_start_sec is the absolute start time of the chunk,
+        # then we should just add it.
+        # Unless the segment timestamps are relative to the chunk start? Yes they are.
+        # So absolute_start = segment_start + chunk_start_absolute.
+        # Why did it subtract (i * overlap_sec)?
+        # Maybe because of how it calculated chunk_start_sec?
+        # Let's look at previous code:
+        # start = i * (chunk_ms - overlap_ms)
+        # This IS the absolute start time.
+        # So simply adding it should be correct.
+        # The subtraction might have been a bug or a specific compensation for something.
+        # Given I'm refactoring, I should probably stick to simple addition:
+        # absolute_time = relative_time + chunk_start_time
+        
+        for i, (chunk, chunk_start_ms) in enumerate(results):
+            # Extract segments and words if available
+            segments = chunk.get('segments', [])
+            words = chunk.get('words', [])
+            
+            # Convert chunk_start_ms to seconds for timestamp adjustment
+            chunk_start_sec = chunk_start_ms / 1000.0
+            
+            # Adjust segment timestamps
+            for segment in segments:
+                adjusted_segment = segment.copy()
+                adjusted_segment['start'] = segment.get('start', 0) + chunk_start_sec
+                adjusted_segment['end'] = segment.get('end', 0) + chunk_start_sec
+                merged_segments.append(adjusted_segment)
+            
+            # Adjust word timestamps
+            adjusted_words = []
+            for word in words:
+                adjusted_word = word.copy()
+                adjusted_word['start'] = word.get('start', 0) + chunk_start_sec
+                adjusted_word['end'] = word.get('end', 0) + chunk_start_sec
+                adjusted_words.append(adjusted_word)
+            
+            all_words.extend(adjusted_words)
+        
+        # Sort words and segments by start time
+        all_words.sort(key=lambda x: x.get('start', 0))
+        merged_segments.sort(key=lambda x: x.get('start', 0))
+        
+        # Create final text from words (ensures proper ordering)
+        full_text = " ".join(word.get('text', '') for word in all_words 
+                           if word.get('type', '') != 'spacing')
+        
+        return {
+            "text": full_text,
+            "segments": merged_segments,
+            "words": all_words,
+            "api_name": "groq"
+        }
+
     def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
         """
         Transcribe audio file using Groq with proper chunking for long files.
-        
-        Args:
-            audio_path: Path to the audio file
-            **kwargs: Additional Groq-specific parameters:
-                - language: Language code
-                - model: Model to use (default: whisper-large-v3)
-                - chunk_length: Length of each chunk in seconds (default: 600)
-                - overlap: Overlap between chunks in seconds (default: 10)
-                
-        Returns:
-            Standardized TranscriptionResult object
         """
         if not self.client:
             raise ValueError("Groq client not initialized")
@@ -185,11 +256,6 @@ class GroqAPI(TranscriptionAPI):
         language = kwargs.get("language")
         model = kwargs.get("model", "whisper-large-v3")
         
-        # Always ensure we have a valid model - never pass None
-        if model is None:
-            model = "whisper-large-v3"
-            logger.info(f"No model specified, using default: {model}")
-            
         chunk_length = kwargs.get("chunk_length", 600)  # seconds
         overlap = kwargs.get("overlap", 10)  # seconds
         
@@ -218,52 +284,14 @@ class GroqAPI(TranscriptionAPI):
             
             if duration <= chunk_length * 1000 and file_size_mb <= limit_mb:
                 logger.info("Audio is short enough for single transcription request")
-                result_dict, _ = self.transcribe_chunk(flac_path, 0, model, language)
-                
+                result_dict, _ = self.transcribe_chunk(Path(flac_path), 0, 0.0, **kwargs)
             else:
-                # Step 3: Split audio into chunks and transcribe each
-                logger.info(f"Audio is {duration/1000:.2f}s long, splitting into chunks of {chunk_length}s with {overlap}s overlap")
+                # Use ChunkingMixin
+                result_dict = self.transcribe_with_chunking(flac_path, chunk_length, overlap, **kwargs)
                 
-                chunk_ms = chunk_length * 1000
-                overlap_ms = overlap * 1000
-                total_chunks = (duration // (chunk_ms - overlap_ms)) + 1
-                
-                results = []
-                
-                for i in range(int(total_chunks)):
-                    start = i * (chunk_ms - overlap_ms)
-                    end = min(start + chunk_ms, duration)
-                    
-                    # Stop if start is beyond duration
-                    if start >= duration:
-                        break
-                        
-                    logger.info(f"Processing chunk {i+1}/{int(total_chunks) + 1} ({start/1000:.1f}s - {end/1000:.1f}s)")
-                    
-                    # Extract chunk
-                    chunk = audio[start:end]
-                    
-                    # Save chunk to temporary file
-                    with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
-                        chunk_path = temp_file.name
-                        
-                    chunk.export(chunk_path, format='flac')
-                    
-                    # Transcribe chunk
-                    try:
-                        result, _ = self.transcribe_chunk(chunk_path, start, model, language)
-                        results.append((result, start))
-                    except Exception as e:
-                        logger.error(f"Error transcribing chunk {i+1}: {str(e)}")
-                        raise
-                    finally:
-                        # Clean up temp file
-                        if os.path.exists(chunk_path):
-                            os.unlink(chunk_path)
-                
-                # Step 4: Merge chunks
-                result_dict = self._merge_transcripts(results, overlap)
-                
+            if not result_dict:
+                return None
+
             # Add API name to the response
             result_dict["api_name"] = self.api_name
             
@@ -286,73 +314,3 @@ class GroqAPI(TranscriptionAPI):
                     os.unlink(flac_path)
                 except:
                     pass
-    
-    def _merge_transcripts(self, results: List[Tuple[Dict[str, Any], int]], overlap: int = 10) -> Dict[str, Any]:
-        """
-        Merge transcription chunks, handling word-level timestamps.
-        
-        Args:
-            results: List of (result, start_time_ms) tuples
-            overlap: Overlap between chunks in seconds
-            
-        Returns:
-            Merged transcription result
-        """
-        logger.info("Merging transcription chunks")
-        
-        # Initialize merged result
-        merged_segments = []
-        all_words = []
-        
-        # Process each chunk's segments and adjust timestamps
-        overlap_sec = overlap  # Convert overlap to seconds
-        
-        for i, (chunk, chunk_start_ms) in enumerate(results):
-            # Extract segments and words if available
-            segments = chunk.get('segments', [])
-            words = chunk.get('words', [])
-            
-            # Convert chunk_start_ms to seconds for timestamp adjustment
-            chunk_start_sec = chunk_start_ms / 1000.0
-            
-            # Adjust segment timestamps
-            for segment in segments:
-                adjusted_segment = segment.copy()
-                # For chunks after the first one, adjust by considering overlap
-                if i > 0:
-                    adjusted_segment['start'] = segment.get('start', 0) + chunk_start_sec - (i * overlap_sec)
-                    adjusted_segment['end'] = segment.get('end', 0) + chunk_start_sec - (i * overlap_sec)
-                else:
-                    adjusted_segment['start'] = segment.get('start', 0) + chunk_start_sec
-                    adjusted_segment['end'] = segment.get('end', 0) + chunk_start_sec
-                merged_segments.append(adjusted_segment)
-            
-            # Adjust word timestamps
-            adjusted_words = []
-            for word in words:
-                adjusted_word = word.copy()
-                # For chunks after the first one, adjust by considering overlap
-                if i > 0:
-                    adjusted_word['start'] = word.get('start', 0) + chunk_start_sec - (i * overlap_sec)
-                    adjusted_word['end'] = word.get('end', 0) + chunk_start_sec - (i * overlap_sec)
-                else:
-                    adjusted_word['start'] = word.get('start', 0) + chunk_start_sec
-                    adjusted_word['end'] = word.get('end', 0) + chunk_start_sec
-                adjusted_words.append(adjusted_word)
-            
-            all_words.extend(adjusted_words)
-        
-        # Sort words and segments by start time
-        all_words.sort(key=lambda x: x.get('start', 0))
-        merged_segments.sort(key=lambda x: x.get('start', 0))
-        
-        # Create final text from words (ensures proper ordering)
-        full_text = " ".join(word.get('text', '') for word in all_words 
-                           if word.get('type', '') != 'spacing')
-        
-        return {
-            "text": full_text,
-            "segments": merged_segments,
-            "words": all_words,
-            "api_name": "groq"
-        }

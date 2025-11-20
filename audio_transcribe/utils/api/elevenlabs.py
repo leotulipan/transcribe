@@ -11,6 +11,7 @@ from loguru import logger
 
 from audio_transcribe.utils.parsers import TranscriptionResult, parse_elevenlabs_format
 from audio_transcribe.utils.api.base import TranscriptionAPI
+from audio_transcribe.utils.adapters import ParameterAdapter
 from audio_transcribe.transcribe_helpers.audio_processing import extract_audio_from_mp4, check_file_size, get_api_file_size_limit
 
 class ElevenLabsAPI(TranscriptionAPI):
@@ -132,6 +133,9 @@ class ElevenLabsAPI(TranscriptionAPI):
             
         url = f"{self.base_url}/speech-to-text"
         
+        # Normalize parameters using ParameterAdapter
+        adapted_params = ParameterAdapter.adapt_for_api("elevenlabs", {"model": model_id, **kwargs})
+        
         # Prepare headers (don't set Content-Type, requests handles it for multipart)
         headers = {
             "xi-api-key": self.api_key
@@ -139,23 +143,21 @@ class ElevenLabsAPI(TranscriptionAPI):
         
         # Prepare form data
         data = {
-            "model_id": model_id,
+            "model_id": adapted_params.get("model_id", model_id),
             "tag_audio_events": "true",  # Always enable audio events
             "timestamps_granularity": "word"  # Explicitly request word timestamps
         }
         
-        # Handle language parameter
-        # Map 'language' kwarg to 'language_code' for ElevenLabs
-        language = kwargs.get("language")
-        if language:
-            data["language_code"] = language
+        # Handle language parameter (already adapted to language_code)
+        if "language_code" in adapted_params:
+            data["language_code"] = adapted_params["language_code"]
             
         # Handle diarization parameters
-        diarize = kwargs.get("diarize", False)
+        diarize = adapted_params.get("diarize", False)
         if diarize:
             data["diarize"] = "true"
             
-            num_speakers = kwargs.get("num_speakers")
+            num_speakers = adapted_params.get("num_speakers")
             if num_speakers:
                 # Validate range 1-32
                 try:

@@ -9,6 +9,7 @@ from loguru import logger
 
 from audio_transcribe.utils.parsers import TranscriptionResult, parse_assemblyai_format
 from audio_transcribe.utils.api.base import TranscriptionAPI
+from audio_transcribe.utils.adapters import ParameterAdapter
 from audio_transcribe.transcribe_helpers.audio_processing import extract_audio_from_mp4, check_file_size, get_api_file_size_limit
 
 class AssemblyAIAPI(TranscriptionAPI):
@@ -99,18 +100,21 @@ class AssemblyAIAPI(TranscriptionAPI):
         logger.info(f"Transcribing file: {audio_path}")
         processing_path = audio_path
             
+        # Normalize parameters using ParameterAdapter
+        adapted_params = ParameterAdapter.adapt_for_api("assemblyai", kwargs)
+        
         # Prepare transcription config
-        model = kwargs.get("model", "best")
-        language_code = kwargs.get("language")
+        model = adapted_params.get("model", "best")
         
         config_params = {
-            "speaker_labels": kwargs.get("speaker_labels", True),
-            "dual_channel": kwargs.get("dual_channel", False),
+            "speaker_labels": adapted_params.get("speaker_labels", True),
+            "dual_channel": adapted_params.get("dual_channel", False),
             "speech_model": model if model in ["best", "nano"] else "best" 
         }
         
-        if language_code:
-            config_params["language_code"] = language_code
+        # Handle language parameter
+        if "language_code" in adapted_params:
+            config_params["language_code"] = adapted_params["language_code"]
         else:
             config_params["language_detection"] = True
             

@@ -10,10 +10,11 @@ from loguru import logger
 
 from audio_transcribe.utils.parsers import TranscriptionResult, parse_openai_format, generate_words_from_text
 from audio_transcribe.utils.api.base import TranscriptionAPI
+from audio_transcribe.utils.api.chunking import ChunkingMixin
 from audio_transcribe.transcribe_helpers.audio_processing import convert_to_flac, get_api_file_size_limit
-from audio_transcribe.transcribe_helpers.chunking import split_audio, merge_transcripts
+from audio_transcribe.transcribe_helpers.chunking import merge_transcripts
 
-class OpenAIAPI(TranscriptionAPI):
+class OpenAIAPI(TranscriptionAPI, ChunkingMixin):
     """OpenAI Whisper API implementation."""
     
     def __init__(self, api_key: Optional[str] = None):
@@ -98,20 +99,21 @@ class OpenAIAPI(TranscriptionAPI):
             return False
     
     def transcribe_chunk(self, audio_chunk_path: Union[str, Path], 
-                       chunk_start_ms: int = 0, model: str = "whisper-1", 
-                       language: Optional[str] = None) -> Tuple[Dict[str, Any], int]:
+                       chunk_start_ms: int = 0, **kwargs) -> Tuple[Dict[str, Any], int]:
         """
         Transcribe a single audio chunk with OpenAI.
         
         Args:
             audio_chunk_path: Path to audio chunk
             chunk_start_ms: Start time of chunk in milliseconds
-            model: OpenAI model to use
-            language: Language code
+            **kwargs: Additional arguments (model, language, etc.)
             
         Returns:
             Tuple of (transcription data, chunk_start_ms)
         """
+        model = kwargs.get("model", "whisper-1")
+        language = kwargs.get("language")
+        
         with open(audio_chunk_path, "rb") as audio_file:
             params = {
                 "model": model,
@@ -144,6 +146,41 @@ class OpenAIAPI(TranscriptionAPI):
                 logger.error(f"Failed to save raw OpenAI chunk response: {e_raw_chunk_save}")
                 
             return raw_data, chunk_start_ms
+
+    def merge_chunk_results(self, results: List[Tuple[Dict[str, Any], int]], **kwargs) -> TranscriptionResult:
+        """
+        Merge results from multiple chunks.
+        
+        Args:
+            results: List of (chunk_result, start_ms) tuples
+            **kwargs: Additional arguments (overlap, etc.)
+            
+        Returns:
+            Merged TranscriptionResult
+        """
+        overlap = kwargs.get("overlap", 10)
+        
+        # Merge results from all chunks using the helper
+        merged_data = merge_transcripts(results, overlap=overlap)
+        
+        # Add API name to merged data
+        merged_data["api_name"] = self.api_name
+        
+        # Parse using our parser
+        try:
+            result = parse_openai_format(merged_data)
+            return result
+        except Exception as parse_err:
+            logger.error(f"Failed to parse merged OpenAI response: {parse_err}")
+            # Fallback to minimal result
+            text = merged_data.get("text", "")
+            words = generate_words_from_text(text)
+            result = TranscriptionResult(
+                text=text,
+                words=words,
+                api_name=self.api_name
+            )
+            return result
             
     def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
         """
@@ -171,8 +208,6 @@ class OpenAIAPI(TranscriptionAPI):
         # Get original path if present (for temporary files)
         original_path = kwargs.get("original_path", audio_path)
         file_path = Path(original_path)
-        file_dir = file_path.parent
-        file_name = file_path.stem
         
         # Prepare parameters
         model = kwargs.get("model", "whisper-1")
@@ -209,120 +244,48 @@ class OpenAIAPI(TranscriptionAPI):
             if file_size_mb > limit_mb:
                 logger.info(f"FLAC file size ({file_size_mb:.2f}MB) exceeds OpenAI's {limit_mb}MB limit, using chunking")
                 
-                chunks = split_audio(flac_path, chunk_length=chunk_length, overlap=overlap)
-                results = []
-                
-                for i, (chunk_path, start_time) in enumerate(chunks):
-                    logger.info(f"Transcribing chunk {i+1}/{len(chunks)}")
-                    
-                    try:
-                        # Transcribe this chunk
-                        chunk_result, _ = self.transcribe_chunk(
-                            chunk_path, 
-                            chunk_start_ms=start_time, 
-                            model=model, 
-                            language=language
-                        )
-                        results.append((chunk_result, start_time))
-                    except Exception as e:
-                        logger.error(f"Error transcribing chunk {i+1}: {str(e)}")
-                        raise
-                    finally:
-                        # Clean up temporary chunk file
-                        try:
-                            if os.path.exists(chunk_path):
-                                os.unlink(chunk_path)
-                        except Exception as e:
-                            logger.warning(f"Failed to delete temporary chunk file: {e}")
-                
-                # Merge results from all chunks
-                merged_data = merge_transcripts(results, overlap=overlap)
-                
-                # Add API name to merged data
-                merged_data["api_name"] = self.api_name
-                
-                # Parse using our parser
-                try:
-                    result = parse_openai_format(merged_data)
-                    return result
-                except Exception as parse_err:
-                    logger.error(f"Failed to parse merged OpenAI response: {parse_err}")
-                    # Fallback to minimal result
-                    text = merged_data.get("text", "")
-                    words = generate_words_from_text(text)
-                    result = TranscriptionResult(
-                        text=text,
-                        words=words,
-                        api_name=self.api_name
-                    )
-                    return result
+                return self.transcribe_with_chunking(
+                    flac_path,
+                    chunk_length=chunk_length,
+                    overlap=overlap,
+                    model=model,
+                    language=language
+                )
                 
             else:
                 # For smaller files, use regular transcription
                 try:
-                    with open(flac_path, "rb") as audio_file:
-                        def make_request():
-                            params = {
-                                "model": model,
-                                "file": audio_file,
-                                "response_format": "verbose_json",
-                                "timestamp_granularities": ["word"]  # Enable word-level timestamps
-                            }
-                            
-                            if language:
-                                params["language"] = language
-                                
-                            return self.client.audio.transcriptions.create(**params)
+                    # Use the same transcribe_chunk method but just once
+                    # This ensures consistent behavior and response handling
+                    raw_data, _ = self.transcribe_chunk(
+                        flac_path, 
+                        chunk_start_ms=0, 
+                        model=model, 
+                        language=language
+                    )
+                    
+                    # Add API name to the data
+                    raw_data["api_name"] = self.api_name
+                    
+                    # Save raw response
+                    self.save_result(raw_data, audio_path)
+                    
+                    # Parse using our parser
+                    try:
+                        result = parse_openai_format(raw_data)
+                        return result
+                    except Exception as parse_err:
+                        logger.error(f"Failed to parse OpenAI response: {parse_err}")
+                        # Create minimal result based on raw data text
+                        text = raw_data.get("text", "")
+                        words = generate_words_from_text(text)
+                        result = TranscriptionResult(
+                            text=text,
+                            words=words,
+                            api_name=self.api_name
+                        )
+                        return result
                         
-                        try:
-                            # Execute the transcription request and get raw response
-                            transcription_response = self.with_retry(make_request)
-                            logger.info("OpenAI transcription API call completed")
-                            
-                            # Extract data from response object
-                            if hasattr(transcription_response, "model_dump"):
-                                data = transcription_response.model_dump()
-                            elif hasattr(transcription_response, "__dict__"):
-                                data = transcription_response.__dict__
-                            else:
-                                # Try direct string representation as fallback
-                                try:
-                                    data = {"text": str(transcription_response)}
-                                except:
-                                    data = {"text": "Failed to extract data from OpenAI response"}
-                            
-                            # Add API name to the data
-                            data["api_name"] = self.api_name
-                            
-                            # Save raw response
-                            self.save_result(data, audio_path)
-                            
-                            # Continue with parsing
-                            try:
-                                result = parse_openai_format(data)
-                                return result
-                            except Exception as parse_err:
-                                logger.error(f"Failed to parse OpenAI response: {parse_err}")
-                                # Create minimal result based on raw data text
-                                text = data.get("text", "")
-                                words = generate_words_from_text(text)
-                                result = TranscriptionResult(
-                                    text=text,
-                                    words=words,
-                                    api_name=self.api_name
-                                )
-                                return result
-                            
-                        except Exception as e:
-                            if hasattr(self, 'AuthenticationError') and isinstance(e, self.AuthenticationError):
-                                logger.error("OpenAI authentication failed: Invalid API key")
-                            elif hasattr(self, 'RateLimitError') and isinstance(e, self.RateLimitError):
-                                logger.error("OpenAI rate limit exceeded. Please try again later.")
-                            elif hasattr(self, 'APIError') and isinstance(e, self.APIError):
-                                logger.error(f"OpenAI API error: {str(e)}")
-                            else:
-                                logger.error(f"OpenAI transcription failed: {str(e)}")
-                            raise
                 except Exception as e:
                     logger.error(f"OpenAI transcription failed: {str(e)}")
                     raise
