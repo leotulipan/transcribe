@@ -120,19 +120,26 @@ def run_interactive_mode(file_path: str = None) -> Dict[str, Any]:
             options["model"] = selected_model
     
     # 4. Language
-    language = questionary.text("Language code (leave empty for auto-detect):").ask()
+    default_lang = config.get("default_language", "")
+    language = questionary.text(
+        "Language code (leave empty for auto-detect):",
+        default=default_lang if default_lang else ""
+    ).ask()
+    
     if language:
         options["language"] = language.strip()
     else:
         options["language"] = None
         
     # 5. Output Formats
+    default_outputs = config.get("default_output_formats", ["text", "srt"])
+    
     format_choices = [
-        questionary.Choice("text", checked=True),
-        questionary.Choice("srt", checked=True),
-        questionary.Choice("word_srt", checked=False),
-        questionary.Choice("davinci_srt", checked=False),
-        questionary.Choice("json", checked=False)
+        questionary.Choice("text", checked="text" in default_outputs),
+        questionary.Choice("srt", checked="srt" in default_outputs),
+        questionary.Choice("word_srt", checked="word_srt" in default_outputs),
+        questionary.Choice("davinci_srt", checked="davinci_srt" in default_outputs),
+        questionary.Choice("json", checked="json" in default_outputs)
     ]
     
     selected_formats = questionary.checkbox(

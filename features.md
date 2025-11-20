@@ -49,3 +49,11 @@ A GitHub Actions workflow (`.github/workflows/release.yml`) was created to autom
 `audio_transcribe/tui/interactive.py` was updated to visually indicate configured vs. unconfigured APIs, preventing users from selecting unusable options. A rich progress bar was added to `cli.py` to provide better feedback during batch processing.
 
 `audio_transcribe/tui/wizard.py` was refined to use clearer status indicators. Additionally, a `--version` flag was added to the CLI via `click.version_option` to allow users to easily check the installed version.
+
+## 7. Centralized Configuration & Defaults
+**Request:** Centralize configuration and environment variables to avoid scattered `.env` files and allow users to save default preferences.
+
+**Implementation:**
+`ConfigManager` in `audio_transcribe/utils/config.py` was updated to store configuration and the `.env` file in a platform-specific user directory (e.g., `%LOCALAPPDATA%/audio_transcribe` on Windows). It now supports loading a local `.env` file from the current working directory as an override.
+
+The TUI (`wizard.py`) was enhanced with a "Configure Defaults" menu, allowing users to set their preferred API, language, and output formats. These defaults are persisted in `config.json` and automatically applied in interactive mode (`interactive.py`) and as fallbacks in the CLI.

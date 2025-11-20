@@ -15,18 +15,30 @@ class ConfigManager:
     def __init__(self):
         """Initialize the configuration manager."""
         self.app_name = "audio_transcribe"
-        self.config_dir = Path.home() / f".{self.app_name}"
+        
+        # Determine configuration directory
+        if os.name == 'nt':
+            app_data = os.getenv('LOCALAPPDATA')
+            if app_data:
+                self.config_dir = Path(app_data) / self.app_name
+            else:
+                self.config_dir = Path.home() / f".{self.app_name}"
+        else:
+            self.config_dir = Path.home() / f".{self.app_name}"
+            
         self.config_file = self.config_dir / "config.json"
-        self.env_file = Path(".env")
+        self.env_file = self.config_dir / ".env"
         
         # Ensure config directory exists
-        self.config_dir.mkdir(exist_ok=True)
+        self.config_dir.mkdir(parents=True, exist_ok=True)
         
         # Load existing config
         self.config = self._load_config()
         
-        # Load environment variables
+        # Load environment variables from central file
+        # We also load from CWD as a fallback/override but don't write there
         load_dotenv(self.env_file)
+        load_dotenv(Path(".env")) # Load local .env if it exists (overrides central)
 
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from JSON file."""
@@ -60,7 +72,7 @@ class ConfigManager:
 
     def set_api_key(self, api_name: str, key: str) -> None:
         """
-        Set an API key in the .env file.
+        Set an API key in the central .env file.
         
         Args:
             api_name: Name of the API (e.g., 'openai', 'groq')
@@ -71,14 +83,14 @@ class ConfigManager:
         # Update current environment
         os.environ[env_var] = key
         
-        # Update .env file
+        # Update central .env file
         try:
             # Create .env if it doesn't exist
             if not self.env_file.exists():
                 self.env_file.touch()
                 
             set_key(self.env_file, env_var, key)
-            logger.info(f"Updated {env_var} in .env file")
+            logger.info(f"Updated {env_var} in {self.env_file}")
         except Exception as e:
             logger.error(f"Failed to update .env file: {e}")
 

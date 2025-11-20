@@ -24,6 +24,7 @@ def run_setup_wizard():
             status = "(Configured)" if key else "(Not Configured)"
             choices.append(questionary.Choice(f"Configure {api} {status}", value=api))
         
+        choices.append(questionary.Choice("Configure Defaults", value="defaults"))
         choices.append(questionary.Choice("Exit", value="exit"))
         
         selected_action = questionary.select(
@@ -35,8 +36,61 @@ def run_setup_wizard():
             console.print("Exiting setup.")
             break
             
-        api_name = selected_action
-        configure_api(api_name, config)
+        if selected_action == "defaults":
+            configure_defaults(config)
+        else:
+            api_name = selected_action
+            configure_api(api_name, config)
+
+def configure_defaults(config: ConfigManager):
+    """Configure default settings."""
+    console.print("\n[bold]Configuring Defaults...[/bold]")
+    
+    while True:
+        current_api = config.get("default_api", "Not set")
+        current_lang = config.get("default_language", "Auto")
+        current_outputs = config.get("default_output_formats", ["text", "srt"])
+        current_outputs_str = ", ".join(current_outputs)
+        
+        action = questionary.select(
+            "Defaults Menu:",
+            choices=[
+                questionary.Choice(f"Default API ({current_api})", value="api"),
+                questionary.Choice(f"Default Language ({current_lang})", value="language"),
+                questionary.Choice(f"Default Outputs ({current_outputs_str})", value="outputs"),
+                questionary.Choice("Back", value="back")
+            ]
+        ).ask()
+        
+        if action == "back" or action is None:
+            break
+            
+        if action == "api":
+            apis = ["assemblyai", "elevenlabs", "groq", "openai"]
+            selected = questionary.select("Select Default API:", choices=apis).ask()
+            if selected:
+                config.set("default_api", selected)
+                console.print(f"[green]Default API set to {selected}[/green]")
+                
+        elif action == "language":
+            lang = questionary.text("Enter Default Language Code (e.g. 'en', 'de') or leave empty for Auto:").ask()
+            if lang is not None:
+                val = lang.strip() if lang.strip() else None
+                config.set("default_language", val)
+                console.print(f"[green]Default Language set to {val if val else 'Auto'}[/green]")
+                
+        elif action == "outputs":
+            choices = [
+                questionary.Choice("text", checked="text" in current_outputs),
+                questionary.Choice("srt", checked="srt" in current_outputs),
+                questionary.Choice("word_srt", checked="word_srt" in current_outputs),
+                questionary.Choice("davinci_srt", checked="davinci_srt" in current_outputs),
+                questionary.Choice("json", checked="json" in current_outputs)
+            ]
+            selected = questionary.checkbox("Select Default Output Formats:", choices=choices).ask()
+            if selected is not None:
+                config.set("default_output_formats", selected)
+                console.print(f"[green]Default Outputs updated[/green]")
 
 def configure_api(api_name: str, config: ConfigManager):
     """Configure a specific API."""

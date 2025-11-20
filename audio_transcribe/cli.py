@@ -451,29 +451,15 @@ def main(ctx, file, folder, api, language, output, chars_per_line, words_per_sub
     # Set up logging
     setup_logger(debug=debug, verbose=verbose)
     
-    # Load environment variables
-    load_dotenv()
-    
     # Initialize ConfigManager
     config = ConfigManager()
 
     # Determine if we should run in interactive mode
-    # 1. No arguments provided at all
-    # 2. Only file/folder provided (e.g. drag-and-drop)
     should_run_interactive = False
     
-    # Check if any flags were explicitly set (excluding defaults)
-    # This is a bit tricky with Click, but we can check if file/folder is set but no other critical options
-    # Or simply if file/folder is set but API is not explicitly set (using default)
-    
-    # If no file/folder provided, show help OR interactive mode?
-    # Let's say if no args -> interactive mode asking for file
     if not file and not folder:
         should_run_interactive = True
     
-    # If file provided but no API specified (and we want to confirm settings)
-    # We removed the default="groq" from the click option to detect if user specified it
-    # If api is None, we definitely need interactive mode or fallback to config default
     if (file or folder) and not api:
         should_run_interactive = True
         
