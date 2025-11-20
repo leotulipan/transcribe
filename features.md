@@ -57,3 +57,17 @@ A GitHub Actions workflow (`.github/workflows/release.yml`) was created to autom
 `ConfigManager` in `audio_transcribe/utils/config.py` was updated to store configuration and the `.env` file in a platform-specific user directory (e.g., `%LOCALAPPDATA%/audio_transcribe` on Windows). It now supports loading a local `.env` file from the current working directory as an override.
 
 The TUI (`wizard.py`) was enhanced with a "Configure Defaults" menu, allowing users to set their preferred API, language, and output formats. These defaults are persisted in `config.json` and automatically applied in interactive mode (`interactive.py`) and as fallbacks in the CLI.
+
+## 8. Audio Optimization & Positional Arguments
+**Request:** Support positional arguments for input files/folders and implement smart audio conversion to handle API file size limits.
+
+**Implementation:**
+`audio_transcribe/cli.py` was updated to accept the input file or folder as a positional argument (e.g., `transcribe my_audio.mp3`), simplifying usage. The legacy `--file` and `--folder` flags remain as optional alternatives.
+
+`audio_transcribe/transcribe_helpers/audio_processing.py` was enhanced with an `optimize_audio_for_api` function. It implements a cascade of strategies to reduce file size:
+1.  Check if the original file fits the API limit.
+2.  If it's a video, extract the audio track (no re-encoding).
+3.  Convert to FLAC (lossless compression).
+4.  Convert to MP3 128kbps mono (lossy compression).
+
+A `--keep` flag was added to the CLI to optionally preserve these optimized intermediate files; otherwise, they are automatically cleaned up after processing.

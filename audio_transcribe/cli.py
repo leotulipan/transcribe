@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
 # Import helpers from the package
 from audio_transcribe.transcribe_helpers.audio_processing import (
     check_audio_length, check_audio_format, convert_to_flac, convert_to_pcm, 
-    get_api_file_size_limit, check_file_size
+    get_api_file_size_limit, check_file_size, optimize_audio_for_api
 )
 from audio_transcribe.transcribe_helpers.utils import setup_logger
 from audio_transcribe.utils.parsers import TranscriptionResult, load_json_data, detect_and_parse_json
@@ -97,9 +97,13 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
     check_existing = not force
     verbose = kwargs.get("verbose", False)
     debug = kwargs.get("debug", False)
+    keep_optimized = kwargs.get("keep", False)
     
     logger.debug(f"Processing file: {file_path}")
     logger.debug(f"API: {api_name}, Force: {force}, Save JSON: {save_cleaned_json}, Use JSON input: {use_json_input}")
+    
+    # Track temporary files for cleanup
+    temp_files_to_cleanup = []
     
     try:
         start_time = time.time()
@@ -193,6 +197,7 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             if not original_input_path.exists():
                 logger.error(f"Audio file for transcription not found: {original_input_path}")
                 return []
+            
             current_audio_file_path = original_input_path 
 
             logger.info(f"Requesting new transcription for: {current_audio_file_path} using API: {api_name}")
@@ -205,21 +210,19 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                 logger.error(f"Invalid or missing API key for {api_name}.")
                 return []
 
-            # File size checks
-            max_size_mb = get_api_file_size_limit(api_name)
-            current_size_mb = os.path.getsize(current_audio_file_path) / (1024 * 1024)
-            logger.debug(f"File size: {current_size_mb:.2f}MB, API limit: {max_size_mb}MB")
-            
-            # For APIs that don't support chunking internally (like AssemblyAI/ElevenLabs), fail if too large
-            # OpenAI and Groq handle chunking internally in their transcribe methods
-            if api_name.lower() in ['assemblyai', 'elevenlabs']:
-                if current_size_mb > max_size_mb:
-                    logger.error(f"File size ({current_size_mb:.2f}MB) exceeds {max_size_mb}MB limit for {api_name} API. Aborting")
-                    return []
+            # Optimize audio file size if needed
+            try:
+                optimized_path, is_temp = optimize_audio_for_api(current_audio_file_path, api_name)
+                current_audio_file_path = optimized_path
+                if is_temp:
+                    temp_files_to_cleanup.append(current_audio_file_path)
+            except RuntimeError as e:
+                logger.error(f"Audio optimization failed: {e}")
+                return []
 
             # Pass all kwargs to the API instance's transcribe method
             transcribe_kwargs = kwargs.copy()
-            transcribe_kwargs['original_path'] = current_audio_file_path
+            transcribe_kwargs['original_path'] = original_input_path # Pass original path for metadata
             
             # Handle model parameters
             if api_name == "elevenlabs":
@@ -289,6 +292,18 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             import traceback
             logger.debug(traceback.format_exc())
         return []
+    finally:
+        # Cleanup temporary files
+        if not keep_optimized:
+            for temp_file in temp_files_to_cleanup:
+                if temp_file.exists():
+                    logger.info(f"Cleaning up temporary file: {temp_file}")
+                    try:
+                        temp_file.unlink()
+                    except Exception as e:
+                        logger.warning(f"Failed to delete temporary file {temp_file}: {e}")
+        elif temp_files_to_cleanup:
+            logger.info(f"Keeping temporary files: {temp_files_to_cleanup}")
 
 def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
     """
@@ -401,8 +416,9 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
     return (0, 0)
 
 @click.group(invoke_without_command=True)
-@click.option("--file", "-f", type=click.Path(exists=True), help="Audio/video file to transcribe")
-@click.option("--folder", "-F", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="Folder containing audio/video files to transcribe")
+@click.argument("input_path", required=False, type=click.Path(exists=True))
+@click.option("--file", "-f", type=click.Path(exists=True), help="[Deprecated] Audio/video file to transcribe")
+@click.option("--folder", "-F", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="[Deprecated] Folder containing audio/video files to transcribe")
 @click.option("--api", "-a", type=click.Choice(["assemblyai", "elevenlabs", "groq", "openai"], case_sensitive=False), help="API to use for transcription (default: groq)")
 @click.option("--language", "-l", help="Language code (ISO-639-1 or ISO-639-3)", default=None)
 @click.option("--output", "-o", type=click.Choice(["text", "srt", "word_srt", "davinci_srt", "json", "all"], case_sensitive=False), multiple=True, help="Output format(s) to generate (default: text,srt)")
@@ -426,6 +442,7 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
 @click.option("--use-input", is_flag=True, help="Use original input file without conversion")
 @click.option("--use-pcm", is_flag=True, help="Convert to PCM WAV format instead of FLAC")
 @click.option("--keep-flac", is_flag=True, help="Keep the generated FLAC file after processing")
+@click.option("--keep", is_flag=True, help="Keep optimized/converted audio files")
 @click.option("--model", "-m", help="Model to use for transcription", default=None)
 @click.option("--chunk-length", type=int, default=600, help="Length of each chunk in seconds for long audio")
 @click.option("--overlap", type=int, default=10, help="Overlap between chunks in seconds")
@@ -437,10 +454,10 @@ def process_audio_path(audio_path: str, **kwargs) -> Tuple[int, int]:
 @click.option("--start-hour", type=int, default=None, help="Hour offset for SRT timestamps")
 @click.version_option(version="0.1.1", prog_name="Audio Transcribe")
 @click.pass_context
-def main(ctx, file, folder, api, language, output, chars_per_line, words_per_subtitle, 
+def main(ctx, input_path, file, folder, api, language, output, chars_per_line, words_per_subtitle, 
          word_srt, davinci_srt, silent_portions, padding_start, padding_end, show_pauses, 
          filler_lines, filler_words, remove_fillers, speaker_labels, fps, fps_offset_start, 
-         fps_offset_end, diarize, num_speakers, use_input, use_pcm, keep_flac, model, 
+         fps_offset_end, diarize, num_speakers, use_input, use_pcm, keep_flac, keep, model, 
          chunk_length, overlap, force, save_cleaned_json, use_json_input, debug, verbose, start_hour):
     """Unified Audio Transcription Tool."""
     
@@ -454,29 +471,29 @@ def main(ctx, file, folder, api, language, output, chars_per_line, words_per_sub
     # Initialize ConfigManager
     config = ConfigManager()
 
+    # Determine target path from positional arg or legacy flags
+    target_path = input_path or file or folder
+
     # Determine if we should run in interactive mode
     should_run_interactive = False
     
-    if not file and not folder:
+    if not target_path:
         should_run_interactive = True
     
-    if (file or folder) and not api:
+    if target_path and not api:
         should_run_interactive = True
         
     if should_run_interactive:
         logger.info("Entering interactive mode...")
-        # Pass the file/folder if we have it
-        initial_path = file or folder
         
         # Run interactive wizard
-        options = run_interactive_mode(initial_path)
+        options = run_interactive_mode(target_path)
         
         if not options:
             sys.exit(0)
             
         # Update local variables with options from wizard
-        file = options.get("file")
-        folder = options.get("folder")
+        target_path = options.get("file") or options.get("folder")
         api = options.get("api")
         
         # Update other params if they exist in options
@@ -497,12 +514,8 @@ def main(ctx, file, folder, api, language, output, chars_per_line, words_per_sub
         logger.info(f"Using default API: {api}")
 
     # Validate input parameters for default action
-    if not file and not folder:
+    if not target_path:
         click.echo("Error: No file or folder specified.")
-        sys.exit(1)
-    
-    if file and folder:
-        click.echo("Error: Cannot specify both --file and --folder. Choose one option.")
         sys.exit(1)
     
     # Process DaVinci mode defaults
@@ -546,6 +559,7 @@ def main(ctx, file, folder, api, language, output, chars_per_line, words_per_sub
         "use_input": use_input,
         "use_pcm": use_pcm,
         "keep_flac": keep_flac,
+        "keep": keep,
         "model": model,
         "chunk_length": chunk_length,
         "overlap": overlap,
@@ -558,10 +572,12 @@ def main(ctx, file, folder, api, language, output, chars_per_line, words_per_sub
     }
     
     # Run processing
-    if folder:
-        process_audio_path(folder, **kwargs)
+    # Check if target_path is a directory or file
+    target_path_obj = Path(target_path)
+    if target_path_obj.is_dir():
+        process_audio_path(target_path, **kwargs)
     else:
-        process_audio_path(file, **kwargs)
+        process_audio_path(target_path, **kwargs)
 
 @main.command()
 def setup():

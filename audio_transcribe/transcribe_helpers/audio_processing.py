@@ -294,3 +294,122 @@ def get_api_file_size_limit(api_name: str) -> int:
         # https://elevenlabs.io/docs/api-reference/speech-to-text/convert 1GB
         return 1000
     return 25  # fallback
+
+
+def convert_to_mp3(input_path: Union[str, Path], bitrate: str = "128k") -> Optional[str]:
+    """
+    Convert audio file to MP3 format with specified bitrate.
+    
+    Args:
+        input_path: Path to input audio/video file
+        bitrate: Target bitrate (e.g., "128k", "64k")
+        
+    Returns:
+        Path to converted MP3 file or None if conversion failed
+    """
+    if isinstance(input_path, str):
+        input_path = Path(input_path)
+        
+    # Create a temporary file with .mp3 extension
+    with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+        output_path = temp_file.name
+        
+    logger.info(f"Converting {input_path} to MP3 ({bitrate})...")
+    
+    try:
+        audio = AudioSegment.from_file(str(input_path))
+        # Set channels to mono for speech optimization
+        audio = audio.set_channels(1)
+        # Export as MP3
+        audio.export(output_path, format="mp3", bitrate=bitrate)
+        
+        logger.info(f"Converted to MP3: {output_path}")
+        return output_path
+        
+    except Exception as e:
+        logger.error(f"Audio conversion to MP3 failed: {str(e)}")
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+        return None
+
+
+def optimize_audio_for_api(input_path: Union[str, Path], api_name: str) -> Tuple[Path, bool]:
+    """
+    Optimize audio file to meet API file size limits using a cascade of strategies.
+    
+    Strategies:
+    1. Check if original file fits.
+    2. If video, extract audio (m4a/aac).
+    3. Convert to FLAC (lossless compression).
+    4. Convert to MP3 128kbps mono (lossy compression).
+    
+    Args:
+        input_path: Path to the input file
+        api_name: Name of the API to check limits for
+        
+    Returns:
+        Tuple of (path_to_optimized_file, is_temporary_file)
+    """
+    input_path = Path(input_path)
+    max_size_mb = get_api_file_size_limit(api_name)
+    
+    logger.info(f"Optimizing {input_path.name} for {api_name} (Limit: {max_size_mb}MB)...")
+    
+    # 1. Check original file
+    current_size_mb = os.path.getsize(input_path) / (1024 * 1024)
+    if current_size_mb <= max_size_mb:
+        logger.info(f"Original file fits ({current_size_mb:.2f}MB <= {max_size_mb}MB). No conversion needed.")
+        return input_path, False
+        
+    logger.info(f"File too large ({current_size_mb:.2f}MB). Attempting optimization...")
+    
+    # 2. If video, extract audio
+    # Check if it's a video file by extension
+    video_extensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm']
+    if input_path.suffix.lower() in video_extensions:
+        extracted_path = extract_audio_from_mp4(input_path)
+        if extracted_path:
+            extracted_path = Path(extracted_path)
+            size_mb = os.path.getsize(extracted_path) / (1024 * 1024)
+            if size_mb <= max_size_mb:
+                logger.success(f"Audio extraction successful. New size: {size_mb:.2f}MB")
+                return extracted_path, True
+            else:
+                logger.info(f"Extracted audio still too large ({size_mb:.2f}MB). Continuing...")
+                # We can continue optimizing the extracted file instead of the original video
+                # But let's stick to the original input for simplicity in the next steps 
+                # or use the extracted one as the new base? 
+                # Using extracted one is better as it's already audio-only.
+                # However, extract_audio_from_mp4 returns a temp file only if we manage it? 
+                # Actually extract_audio_from_mp4 creates a file next to the original. 
+                # Let's use it for the next steps to save processing time, but mark it for deletion later if we convert further?
+                # For now, let's just delete it if it didn't solve the problem and move to next step with original
+                # OR keep it and convert IT to flac.
+                # Let's keep it simple: if extraction didn't help enough, delete it and try next strategy on original.
+                os.unlink(extracted_path)
+    
+    # 3. Convert to FLAC
+    flac_path = convert_to_flac(input_path)
+    if flac_path:
+        flac_path = Path(flac_path)
+        size_mb = os.path.getsize(flac_path) / (1024 * 1024)
+        if size_mb <= max_size_mb:
+            logger.success(f"FLAC conversion successful. New size: {size_mb:.2f}MB")
+            return flac_path, True
+        else:
+            logger.info(f"FLAC file still too large ({size_mb:.2f}MB). Deleting and trying MP3...")
+            os.unlink(flac_path)
+            
+    # 4. Convert to MP3 128kbps mono
+    mp3_path = convert_to_mp3(input_path, bitrate="128k")
+    if mp3_path:
+        mp3_path = Path(mp3_path)
+        size_mb = os.path.getsize(mp3_path) / (1024 * 1024)
+        if size_mb <= max_size_mb:
+            logger.success(f"MP3 conversion successful. New size: {size_mb:.2f}MB")
+            return mp3_path, True
+        else:
+            logger.error(f"MP3 file still too large ({size_mb:.2f}MB). Optimization failed.")
+            os.unlink(mp3_path)
+            
+    raise RuntimeError(f"Could not optimize file to under {max_size_mb}MB. Please split the file manually.")
