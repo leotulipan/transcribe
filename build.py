@@ -6,6 +6,7 @@ Run this script to build the executable:
     python build.py
 
 The executable will be placed in the ./dist directory.
+A zip archive will also be created containing the executable and necessary files.
 """
 
 import os
@@ -13,7 +14,9 @@ import sys
 import shutil
 import subprocess
 import platform
+import zipfile
 from pathlib import Path
+from datetime import datetime
 
 def run_command(cmd, check=True):
     """Run a command with improved error handling."""
@@ -127,9 +130,90 @@ def main():
         print(f"\nBuild successful! Executable created at: {exe_path}")
         print("\nYou can now run the 'transcribe' command using the executable:")
         print(f"\n  {exe_path} --help")
+        
+        # Create zip archive
+        create_release_zip(exe_path, output_name, exe_extension)
     else:
         print("\nBuild failed: Executable not found!")
         sys.exit(1)
+
+def create_release_zip(exe_path: str, output_name: str, exe_extension: str):
+    """Create a zip archive with the executable and necessary files."""
+    print("\nCreating release zip archive...")
+    
+    zip_name = f"{output_name}.zip"
+    zip_path = os.path.abspath(f"dist/{zip_name}")
+    
+    # Remove existing zip if it exists
+    if os.path.exists(zip_path):
+        os.remove(zip_path)
+    
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        # Add the executable
+        zipf.write(exe_path, f"transcribe{exe_extension}")
+        print(f"  Added: transcribe{exe_extension}")
+        
+        # Add LICENSE
+        if os.path.exists("LICENSE"):
+            zipf.write("LICENSE", "LICENSE")
+            print("  Added: LICENSE")
+        
+        # Add README snippet (quick start)
+        readme_snippet = """# Audio Transcribe - Quick Start
+
+## Installation
+
+1. Extract this zip file to a folder of your choice
+2. Run `transcribe.exe setup` to configure your API keys
+3. Run `transcribe.exe --help` to see all options
+
+## Basic Usage
+
+```bash
+transcribe.exe --file "path/to/audio.mp4" --api groq
+```
+
+## API Keys Setup
+
+The first time you run the tool, use the setup wizard:
+
+```bash
+transcribe.exe setup
+```
+
+This will guide you through configuring API keys for:
+- AssemblyAI
+- ElevenLabs
+- Groq
+- OpenAI
+
+API keys are stored securely in your user profile directory.
+
+## Batch File Templates
+
+See the `batch_templates/` directory in the source repository for ready-to-use batch files.
+
+## Full Documentation
+
+For complete documentation, visit: https://github.com/yourusername/audio-transcribe
+
+## License
+
+MIT License - see LICENSE file for details.
+"""
+        zipf.writestr("README.txt", readme_snippet)
+        print("  Added: README.txt")
+        
+        # Add batch templates if they exist
+        batch_templates_dir = Path("batch_templates")
+        if batch_templates_dir.exists():
+            for bat_file in batch_templates_dir.glob("*.bat"):
+                zipf.write(bat_file, f"batch_templates/{bat_file.name}")
+                print(f"  Added: batch_templates/{bat_file.name}")
+    
+    print(f"\nRelease zip created: {zip_path}")
+    file_size_mb = os.path.getsize(zip_path) / (1024 * 1024)
+    print(f"Zip size: {file_size_mb:.2f} MB")
 
 if __name__ == "__main__":
     main()

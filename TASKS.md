@@ -206,6 +206,17 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
 
 ## In Progress Tasks
 
+- [x] **Public Release Preparation**
+  - [x] Move legacy .env files to legacy/ directory
+  - [x] Update TASKS.md with release-prep backlog
+  - [x] Polish PyInstaller build & create zip artifact
+  - [x] Consolidate .bat/.lnk/icon launch assets into batch_templates/
+  - [x] Create GitHub Actions workflow for CI/CD
+  - [ ] Move legacy docs to dedicated branch & clean main (manual step - see docs/release-checklist.md)
+  - [x] Rewrite README for end users
+  - [x] Add CONTRIBUTING/CODE_OF_CONDUCT/SECURITY templates
+  - [x] Add .gitattributes, update .gitignore, create release checklist
+
 - [ ] ElevenLabs Speech-to-Text parameter integration (see: https://elevenlabs.io/docs/api-reference/speech-to-text/convert)
   - [ ] CLI: add neutral diarization options
     - [x] Add `--diarize/--no-diarize` (default: False) to `transcribe.py` and `audio_transcribe/cli.py`

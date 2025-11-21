@@ -5,41 +5,59 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create a GitHub release'
+        required: false
+        default: 'false'
+        type: boolean
 
 jobs:
   build:
-    name: Build for Windows x64
     runs-on: windows-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+    
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        
-    - name: Install uv
-      run: |
-        pip install uv
-        
-    - name: Build Executable
+    
+    - name: Install UV
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+    
+    - name: Cache UV dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+    
+    - name: Build executable
       run: |
         uv run build.py
-        
-    - name: List dist directory
-      run: dir dist
-      
-    - name: Upload Artifact
+    
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: transcribe-windows-amd64
-        path: dist/transcribe-windows-amd64.exe
-        
+        path: |
+          dist/*.exe
+          dist/*.zip
+        retention-days: 30
+    
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == 'true')
       uses: softprops/action-gh-release@v1
       with:
-        files: dist/transcribe-windows-amd64.exe
+        files: dist/*.zip
+        draft: false
+        prerelease: false
         generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
