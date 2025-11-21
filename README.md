@@ -7,7 +7,7 @@ A powerful, easy-to-use tool for transcribing audio and video files using multip
 ### For End Users (No Python Required)
 
 1. **Download the Latest Release**
-   - Go to [Releases](https://github.com/yourusername/audio-transcribe/releases)
+   - Go to [Releases](https://github.com/leotulipan/transcribe/releases)
    - Download `transcribe-windows-amd64.zip`
    - Extract to a folder of your choice
 
@@ -62,14 +62,14 @@ Example batch files:
 
 ### Option 1: Pre-built Executable (Recommended)
 
-Download the latest release from the [Releases page](https://github.com/yourusername/audio-transcribe/releases) and extract the zip file.
+Download the latest release from the [Releases page](https://github.com/leotulipan/transcribe/releases) and extract the zip file.
 
 ### Option 2: From Source (For Developers)
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/audio-transcribe.git
-   cd audio-transcribe
+   git clone https://github.com/leotulipan/transcribe.git
+   cd transcribe
    ```
 
 2. Install dependencies with UV:
@@ -279,7 +279,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/audio-transcribe/issues)
+- **Issues**: [GitHub Issues](https://github.com/leotulipan/transcribe/issues)
 - **Security**: See [SECURITY.md](SECURITY.md) for reporting vulnerabilities
 
 ## Changelog

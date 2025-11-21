@@ -39,6 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Moved from individual API scripts to unified CLI tool
 
-[Unreleased]: https://github.com/yourusername/audio-transcribe/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/yourusername/audio-transcribe/compare/v0.1.4...v0.2.0
+[Unreleased]: https://github.com/leotulipan/transcribe/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/leotulipan/transcribe/compare/v0.1.4...v0.2.0
 

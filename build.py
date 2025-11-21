@@ -195,7 +195,7 @@ See the `batch_templates/` directory in the source repository for ready-to-use b
 
 ## Full Documentation
 
-For complete documentation, visit: https://github.com/yourusername/audio-transcribe
+For complete documentation, visit: https://github.com/leotulipan/transcribe
 
 ## License
 
