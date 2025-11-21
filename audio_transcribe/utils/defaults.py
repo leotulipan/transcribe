@@ -52,7 +52,7 @@ class DefaultsManager:
         """
         # Load from config
         config = ConfigManager()
-        config_defaults = config.get_all()
+        config_defaults = config.config  # Access the config dictionary directly
         
         # Merge in order (lowest precedence first)
         effective = {}
