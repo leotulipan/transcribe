@@ -32,11 +32,11 @@ class ChunkingMixin(ABC):
         logger.info(f"Created {len(chunks)} chunks. Starting transcription...")
         
         try:
-            for i, (chunk_path, start_time) in enumerate(chunks):
-                logger.info(f"Transcribing chunk {i+1}/{len(chunks)}: {chunk_path.name} (start: {start_time}s)")
+            for i, (chunk_path, start_time_seconds) in enumerate(chunks):
+                logger.info(f"Transcribing chunk {i+1}/{len(chunks)}: {chunk_path.name} (start: {start_time_seconds:.1f}s)")
                 
-                # Call abstract method to transcribe single chunk
-                result = self.transcribe_chunk(chunk_path, chunk_index=i, start_time=start_time, **kwargs)
+                # Call abstract method to transcribe single chunk (start_time is in seconds)
+                result = self.transcribe_chunk(chunk_path, chunk_index=i, start_time=start_time_seconds, **kwargs)
                 
                 if result:
                     results.append(result)

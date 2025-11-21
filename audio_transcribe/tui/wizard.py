@@ -4,10 +4,26 @@ Setup wizard for configuring Audio Transcribe.
 import questionary
 from rich.console import Console
 from rich.panel import Panel
+from rich.text import Text
 from audio_transcribe.utils.config import ConfigManager
 from audio_transcribe.utils.api import get_api_instance
 
 console = Console()
+
+def format_api_status(api: str, is_configured: bool) -> str:
+    """
+    Format API status for menu display.
+    Uses plain text to avoid ANSI code rendering issues in questionary.
+    
+    Args:
+        api: API name
+        is_configured: Whether API is configured
+        
+    Returns:
+        Plain text string for menu choice (no ANSI codes)
+    """
+    status = "(Configured)" if is_configured else "(Not Configured)"
+    return f"Configure {api} {status}"
 
 def run_setup_wizard():
     """Run the interactive setup wizard."""
@@ -17,17 +33,13 @@ def run_setup_wizard():
     apis = ["assemblyai", "elevenlabs", "groq", "openai"]
     
     while True:
-        # Build menu choices
+        # Build menu choices with plain text (no ANSI codes to avoid rendering issues)
         choices = []
         for api in apis:
             key = config.get_api_key(api)
-            # Use ANSI escape codes for colors since questionary supports them in strings
-            if key:
-                status = "\033[32m(Configured)\033[0m" # Green
-            else:
-                status = "\033[31m(Not Configured)\033[0m" # Red
-                
-            choices.append(questionary.Choice(f"Configure {api} {status}", value=api))
+            is_configured = bool(key)
+            choice_text = format_api_status(api, is_configured)
+            choices.append(questionary.Choice(choice_text, value=api))
         
         choices.append(questionary.Choice("Configure Defaults", value="defaults"))
         choices.append(questionary.Choice("Exit", value="exit"))

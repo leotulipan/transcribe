@@ -10,7 +10,7 @@ from loguru import logger
 from .text_processing import find_longest_common_sequence
 
 
-def split_audio(audio_path: Union[str, Path], chunk_length: int = 600, overlap: int = 10) -> List[Tuple[Path, int]]:
+def split_audio(audio_path: Union[str, Path], chunk_length: int = 600, overlap: int = 10) -> List[Tuple[Path, float]]:
     """
     Split audio file into chunks with overlap.
     
@@ -20,20 +20,22 @@ def split_audio(audio_path: Union[str, Path], chunk_length: int = 600, overlap: 
         overlap: Overlap between chunks in seconds
         
     Returns:
-        List of (chunk_path, start_time_ms) tuples
+        List of (chunk_path, start_time_seconds) tuples
     
     From: groq - Split audio into processable chunks
     """
     audio_path = Path(audio_path)
     audio = AudioSegment.from_file(audio_path)
-    duration = len(audio)
+    duration_ms = len(audio)
+    duration_seconds = duration_ms / 1000.0
     
-    logger.info(f"Audio duration: {duration/1000:.2f}s")
+    logger.info(f"Audio duration: {duration_seconds:.2f}s")
     
     # Calculate # of chunks
-    chunk_ms = chunk_length * 1000
-    overlap_ms = overlap * 1000
-    total_chunks = (duration // (chunk_ms - overlap_ms)) + 1
+    chunk_seconds = chunk_length
+    overlap_seconds = overlap
+    effective_chunk_length = chunk_seconds - overlap_seconds
+    total_chunks = int((duration_seconds / effective_chunk_length)) + 1 if effective_chunk_length > 0 else 1
     
     logger.info(f"Processing {total_chunks} chunks...")
     
@@ -41,29 +43,33 @@ def split_audio(audio_path: Union[str, Path], chunk_length: int = 600, overlap: 
     
     # Loop through each chunk, extract current chunk from audio
     for i in range(total_chunks):
-        start = i * (chunk_ms - overlap_ms)
-        end = min(start + chunk_ms, duration)
+        start_seconds = i * effective_chunk_length
+        end_seconds = min(start_seconds + chunk_seconds, duration_seconds)
+        
+        # Convert to milliseconds for AudioSegment slicing
+        start_ms = int(start_seconds * 1000)
+        end_ms = int(end_seconds * 1000)
         
         logger.info(f"Processing chunk {i+1}/{total_chunks}")
-        logger.info(f"Time range: {start/1000:.1f}s - {end/1000:.1f}s")
+        logger.info(f"Time range: {start_seconds:.1f}s - {end_seconds:.1f}s")
         
-        chunk = audio[start:end]
+        chunk = audio[start_ms:end_ms]
         
         # Save chunk to temporary file
         with tempfile.NamedTemporaryFile(suffix='.flac', delete=False) as temp_file:
             chunk_path = Path(temp_file.name)
             chunk.export(chunk_path, format='flac')
-            chunks.append((chunk_path, start))
+            chunks.append((chunk_path, start_seconds))
     
     return chunks
 
 
-def merge_transcripts(results: List[Tuple[Dict[str, Any], int]], overlap: int = 10) -> Dict[str, Any]:
+def merge_transcripts(results: List[Tuple[Dict[str, Any], float]], overlap: int = 10) -> Dict[str, Any]:
     """
     Merge transcription chunks and handle overlaps.
     
     Args:
-        results: List of (result, start_time_ms) tuples
+        results: List of (result, start_time_seconds) tuples
         overlap: Overlap between chunks in seconds
         
     Returns:
@@ -76,15 +82,12 @@ def merge_transcripts(results: List[Tuple[Dict[str, Any], int]], overlap: int = 
     
     # Process each chunk's segments and adjust timestamps
     processed_chunks = []
-    overlap_sec = overlap  # Convert overlap to seconds
+    overlap_sec = overlap
     
-    for i, (chunk, chunk_start_ms) in enumerate(results):
+    for i, (chunk, chunk_start_sec) in enumerate(results):
         # Extract full segment data including metadata
         data = chunk.model_dump() if hasattr(chunk, 'model_dump') else chunk
         segments = data['segments']
-        
-        # Convert chunk_start_ms from milliseconds to seconds for timestamp adjustment
-        chunk_start_sec = chunk_start_ms / 1000.0
         
         # Adjust all timestamps in this chunk based on its position in the original audio
         adjusted_segments = []
@@ -102,14 +105,14 @@ def merge_transcripts(results: List[Tuple[Dict[str, Any], int]], overlap: int = 
         
         # If not last chunk, find next chunk start time
         if i < len(results) - 1:
-            next_start = results[i + 1][1]  # in milliseconds
+            next_start_sec = results[i + 1][1]  # in seconds
             
             # Split segments into current and overlap based on next chunk's start time
             current_segments = []
             overlap_segments = []
             
             for segment in adjusted_segments:
-                if segment['end'] * 1000 > next_start:
+                if segment['end'] > next_start_sec:
                     overlap_segments.append(segment)
                 else:
                     current_segments.append(segment)
@@ -196,7 +199,7 @@ def transcribe_with_chunks(audio_path: Union[str, Path],
     temp_chunks = []  # Store all generated temp chunks for cleanup in case of error
     
     # Process each chunk with the provided transcribe function
-    for i, (chunk_path, start_time) in enumerate(chunks):
+    for i, (chunk_path, start_time_seconds) in enumerate(chunks):
         logger.info(f"Transcribing chunk {i+1}/{len(chunks)}")
         temp_chunks.append(chunk_path)  # Track for cleanup
         
@@ -208,9 +211,9 @@ def transcribe_with_chunks(audio_path: Union[str, Path],
             # Check if result is valid
             if not result or (isinstance(result, dict) and not result.get('text') and not result.get('segments')):
                 logger.warning(f"Chunk {i+1} returned empty or invalid result")
-                failed_chunks.append((i+1, start_time, "Empty or invalid result"))
+                failed_chunks.append((i+1, start_time_seconds, "Empty or invalid result"))
             else:
-                results.append((result, start_time))
+                results.append((result, start_time_seconds))
                 
         except Exception as e:
             error_message = str(e)

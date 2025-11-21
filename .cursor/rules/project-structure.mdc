@@ -68,6 +68,24 @@ alwaysApply: false
             *   Uses `asyncio.run` to start the async event loop.
 
 
+*   **Git Workflow & Versioning**:
+    *   **Atomic Commits**: Always commit after each phase/block of work. Each logical unit of changes should be a separate commit.
+    *   **Commit Message Format**: Use conventional commits format: `type: description`
+        - Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
+        - Example: `feat: add chunking fallback for oversized files`
+        - Example: `fix: resolve setup menu color rendering issues`
+    *   **Version Bumping**: Always bump version number in `pyproject.toml` after completing an entire plan/feature implementation.
+        - Current version format: `0.1.x` (patch), `0.x.0` (minor), `x.0.0` (major)
+        - Update `version = "X.Y.Z"` in `pyproject.toml`
+    *   **Tool Rebuild**: After version bump, rebuild the tool:
+        - `uv tool install . --force` - Reinstalls the tool with latest changes
+    *   **Testing & Building Pipeline**:
+        - Test runs: `uv run transcribe --help` or `uv run transcribe <args>` - Test the CLI
+        - Build packages: `uv build` - Creates dist packages (.whl and .tar.gz)
+        - Install as tool: `uv tool install .` or `uv tool install . --force` - Makes `transcribe` available globally
+        - Check tool: `uv tool list` - Lists installed tools
+        - Run installed tool: `transcribe --help` - Uses globally installed version
+
 *   **Other**:
     *   `.env` file stores sensitive information like API keys (example in `.env.example`).
     *   `pyproject.toml` defines project metadata, dependencies, and build system (`hatchling`) and is managed via `uv` commands wherever possible and NOT edited directly.

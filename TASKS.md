@@ -184,6 +184,26 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   ACTION
   migrate to the recommended replacement model,  whisper-large-v3-turbo.
 
+- [x] **Groq chunking fallback for oversized files**
+  - [x] Updated `optimize_audio_for_api()` to return `OptimizationResult` with size and bytes-per-second metadata
+  - [x] Modified `cli.py` to detect chunking support and automatically compute chunk length when file exceeds API limit
+  - [x] Fixed time unit mismatch in chunking (changed from milliseconds to seconds throughout)
+  - [x] Updated Groq API to validate chunk sizes and log chunking plan
+  - [x] Files that can't be optimized below limit now automatically use chunking instead of failing
+
+- [x] **Progress feedback for long-running audio conversions**
+  - [x] Replaced pydub-only extraction with ffmpeg-first approach (faster, can copy streams)
+  - [x] Added `_run_ffmpeg_with_progress()` helper for progress reporting during conversions
+  - [x] Added `_get_audio_duration_seconds()` helper using ffprobe/pydub
+  - [x] Updated `extract_audio_from_mp4()`, `convert_to_flac()`, and `convert_to_mp3()` to show progress
+  - [x] Progress updates appear every 2 seconds showing percentage and elapsed/total time
+  - [x] Falls back to pydub when ffmpeg is not available
+
+- [x] **Fix setup menu color rendering**
+  - [x] Removed raw ANSI escape codes from questionary choice labels
+  - [x] Created `format_api_status()` helper using plain text to avoid rendering issues
+  - [x] Menu now displays status without showing ANSI code sequences
+
 ## In Progress Tasks
 
 - [ ] ElevenLabs Speech-to-Text parameter integration (see: https://elevenlabs.io/docs/api-reference/speech-to-text/convert)
@@ -362,6 +382,11 @@ Output options have been streamlined with sensible defaults while maintaining fl
 ### Relevant Files
 
 - `transcribe.py` - Main entry point (new central script)
+- `audio_transcribe/cli.py` - Main CLI handler with chunking fallback logic
+- `audio_transcribe/tui/wizard.py` - Setup wizard with fixed color rendering
+- `audio_transcribe/utils/api/groq.py` - Groq API with chunk size validation
+- `audio_transcribe/utils/api/chunking.py` - ChunkingMixin with time unit fixes
+- `audio_transcribe/transcribe_helpers/chunking.py` - Chunking helpers with seconds-based timestamps
 - `audio_transcribe_assemblyai.py` - AssemblyAI previous implementation (existing)
 - `audio_transcribe_elevenlabs.py` - ElevenLabs implementation (existing)
 - `audio_transcribe_groq.py` - Groq implementation (existing)
@@ -372,11 +397,15 @@ Output options have been streamlined with sensible defaults while maintaining fl
 - **audio_processing.py**
   - `check_audio_length` — Check if audio duration is within max length.
   - `check_audio_format` — Validate audio file format.
-  - `convert_to_flac` — Convert audio to FLAC.
+  - `convert_to_flac` — Convert audio to FLAC (prefers ffmpeg, falls back to pydub with progress).
+  - `convert_to_mp3` — Convert audio to MP3 (prefers ffmpeg, falls back to pydub with progress).
   - `convert_to_pcm` — Convert audio to PCM WAV.
   - `check_file_size` — Check if file size is under API limit.
-  - `preprocess_audio` — Preprocess audio for transcription.
-  - `preprocess_audio_with_ffmpeg` — Preprocess audio using ffmpeg.
+  - `extract_audio_from_mp4` — Extract audio from video (prefers ffmpeg stream copy, falls back to pydub with progress).
+  - `optimize_audio_for_api` — Optimize audio with cascade strategy, returns `OptimizationResult` with size and bytes-per-second.
+  - `OptimizationResult` — Dataclass with path, is_temporary, size_mb, bytes_per_second for chunking decisions.
+  - `_get_audio_duration_seconds` — Get media duration using ffprobe or pydub.
+  - `_run_ffmpeg_with_progress` — Run ffmpeg with progress reporting (logs every 2 seconds).
   - `audio_to_base64` — Encode audio file as base64.
   - `get_api_file_size_limit` — Return max file size for given API.
 

@@ -85,7 +85,7 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
             logger.error(f"Failed to validate Groq API key: {str(e)}")
             return False
             
-    def transcribe_chunk(self, chunk_path: Path, chunk_index: int, start_time: float, **kwargs) -> Tuple[Dict[str, Any], int]:
+    def transcribe_chunk(self, chunk_path: Path, chunk_index: int, start_time: float, **kwargs) -> Tuple[Dict[str, Any], float]:
         """
         Transcribe a single audio chunk using Groq's audio transcriptions API.
         
@@ -96,14 +96,20 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
             **kwargs: Additional arguments (model, language, etc.)
             
         Returns:
-            Tuple of (chunk_result, chunk_start_ms)
+            Tuple of (chunk_result, chunk_start_seconds)
         """
         if not self.client:
             raise ValueError("Groq client not initialized")
             
         # Convert Path to string if needed
         audio_chunk_path = str(chunk_path)
-        chunk_start_ms = int(start_time * 1000)
+        
+        # Validate chunk size (Groq limit is 25MB)
+        chunk_size_mb = os.path.getsize(chunk_path) / (1024 * 1024)
+        limit_mb = get_api_file_size_limit("groq")
+        if chunk_size_mb > limit_mb:
+            logger.warning(f"Chunk {chunk_index} size ({chunk_size_mb:.2f}MB) exceeds {limit_mb}MB limit. "
+                          f"This may cause API errors.")
         
         model = kwargs.get("model", "whisper-large-v3")
         language = kwargs.get("language")
@@ -112,7 +118,7 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
         if model is None:
             model = "whisper-large-v3"
             
-        logger.info(f"Transcribing chunk {chunk_index} starting at {chunk_start_ms}ms with Groq (model: {model})")
+        logger.info(f"Transcribing chunk {chunk_index} starting at {start_time:.1f}s with Groq (model: {model}, size: {chunk_size_mb:.2f}MB)")
         
         # Open the file in binary mode
         with open(audio_chunk_path, "rb") as audio_file:
@@ -156,18 +162,18 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
                 except Exception as e_raw_chunk_save:
                     logger.error(f"Failed to save raw Groq chunk response: {e_raw_chunk_save}")
 
-                return raw_data, chunk_start_ms
+                return raw_data, start_time
                 
             except Exception as e:
                 logger.error(f"Error transcribing chunk with Groq: {str(e)}")
                 raise ValueError(f"Groq transcription failed: {str(e)}")
             
-    def merge_chunk_results(self, results: List[Tuple[Dict[str, Any], int]]) -> Dict[str, Any]:
+    def merge_chunk_results(self, results: List[Tuple[Dict[str, Any], float]]) -> Dict[str, Any]:
         """
         Merge transcription chunks, handling word-level timestamps.
         
         Args:
-            results: List of (result, start_time_ms) tuples
+            results: List of (result, start_time_seconds) tuples
             
         Returns:
             Merged transcription result dict
@@ -178,42 +184,12 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
         merged_segments = []
         all_words = []
         
-        # We need overlap to adjust timestamps correctly if we want to be precise,
-        # but the previous implementation used a fixed overlap passed to _merge_transcripts.
-        # ChunkingMixin doesn't pass overlap to merge_chunk_results.
-        # However, we can infer or just use the start times provided in results.
-        # The previous logic used:
-        # adjusted_segment['start'] = segment.get('start', 0) + chunk_start_sec - (i * overlap_sec)
-        # Wait, the previous logic SUBTRACTED overlap?
-        # "chunk_start_sec" in previous logic was calculated as:
-        # start = i * (chunk_ms - overlap_ms)
-        # So chunk_start_sec ALREADY accounted for overlap in terms of absolute time.
-        # The previous logic:
-        # if i > 0:
-        #    adjusted_segment['start'] = segment.get('start', 0) + chunk_start_sec - (i * overlap_sec)
-        # This looks weird. If chunk_start_sec is the absolute start time of the chunk,
-        # then we should just add it.
-        # Unless the segment timestamps are relative to the chunk start? Yes they are.
-        # So absolute_start = segment_start + chunk_start_absolute.
-        # Why did it subtract (i * overlap_sec)?
-        # Maybe because of how it calculated chunk_start_sec?
-        # Let's look at previous code:
-        # start = i * (chunk_ms - overlap_ms)
-        # This IS the absolute start time.
-        # So simply adding it should be correct.
-        # The subtraction might have been a bug or a specific compensation for something.
-        # Given I'm refactoring, I should probably stick to simple addition:
-        # absolute_time = relative_time + chunk_start_time
-        
-        for i, (chunk, chunk_start_ms) in enumerate(results):
+        for i, (chunk, chunk_start_sec) in enumerate(results):
             # Extract segments and words if available
             segments = chunk.get('segments', [])
             words = chunk.get('words', [])
             
-            # Convert chunk_start_ms to seconds for timestamp adjustment
-            chunk_start_sec = chunk_start_ms / 1000.0
-            
-            # Adjust segment timestamps
+            # Adjust segment timestamps (chunk timestamps are relative, add absolute start time)
             for segment in segments:
                 adjusted_segment = segment.copy()
                 adjusted_segment['start'] = segment.get('start', 0) + chunk_start_sec
@@ -275,17 +251,19 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
             # Step 2: Check if we need to chunk the audio
             from pydub import AudioSegment
             audio = AudioSegment.from_file(flac_path)
-            duration = len(audio)  # Duration in milliseconds
-            logger.info(f"Audio duration: {duration/1000:.2f} seconds")
+            duration_seconds = len(audio) / 1000.0  # Duration in seconds
+            logger.info(f"Audio duration: {duration_seconds:.2f} seconds")
             
             # If audio is short enough and under size limit, transcribe in a single request
             limit_mb = get_api_file_size_limit("groq")
             file_size_mb = os.path.getsize(flac_path) / (1024 * 1024)
             
-            if duration <= chunk_length * 1000 and file_size_mb <= limit_mb:
+            if duration_seconds <= chunk_length and file_size_mb <= limit_mb:
                 logger.info("Audio is short enough for single transcription request")
                 result_dict, _ = self.transcribe_chunk(Path(flac_path), 0, 0.0, **kwargs)
             else:
+                # Log chunking plan
+                logger.info(f"Using chunking: length={chunk_length}s, overlap={overlap}s")
                 # Use ChunkingMixin
                 result_dict = self.transcribe_with_chunking(flac_path, chunk_length, overlap, **kwargs)
                 

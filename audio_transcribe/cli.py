@@ -24,8 +24,9 @@ warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
 # Import helpers from the package
 from audio_transcribe.transcribe_helpers.audio_processing import (
     check_audio_length, check_audio_format, convert_to_flac, convert_to_pcm, 
-    get_api_file_size_limit, check_file_size, optimize_audio_for_api
+    get_api_file_size_limit, check_file_size, optimize_audio_for_api, OptimizationResult
 )
+from audio_transcribe.utils.api.chunking import ChunkingMixin
 from audio_transcribe.transcribe_helpers.utils import setup_logger
 from audio_transcribe.utils.parsers import TranscriptionResult, load_json_data, detect_and_parse_json
 # Import the whole parsers module to use getattr
@@ -213,11 +214,41 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
 
             # Optimize audio file size if needed
             try:
-                optimized_path, is_temp = optimize_audio_for_api(current_audio_file_path, api_name)
-                current_audio_file_path = optimized_path
-                if is_temp:
+                opt_result = optimize_audio_for_api(current_audio_file_path, api_name)
+                max_size_mb = get_api_file_size_limit(api_name)
+                
+                # Check if file still exceeds limit and API supports chunking
+                if not opt_result.fits_limit(max_size_mb) and isinstance(api_instance, ChunkingMixin):
+                    # Calculate minimum chunk length to keep chunks under limit
+                    if opt_result.bytes_per_second > 0:
+                        # Calculate chunk length: max_size_bytes / bytes_per_second
+                        max_size_bytes = max_size_mb * 1024 * 1024
+                        calculated_chunk_length = max_size_bytes / opt_result.bytes_per_second
+                        
+                        # Use the smaller of calculated or user-specified chunk_length
+                        user_chunk_length = kwargs.get("chunk_length", 600)
+                        chunk_length_override = min(calculated_chunk_length, user_chunk_length)
+                        
+                        # Ensure minimum chunk length (at least 10 seconds)
+                        chunk_length_override = max(chunk_length_override, 10)
+                        
+                        logger.info(f"File ({opt_result.size_mb:.2f}MB) exceeds {max_size_mb}MB limit. "
+                                  f"Using chunking with length={chunk_length_override:.1f}s "
+                                  f"(calculated from {opt_result.bytes_per_second:.0f} bytes/sec)")
+                        
+                        # Override chunk_length in kwargs
+                        transcribe_kwargs['chunk_length'] = int(chunk_length_override)
+                    else:
+                        logger.warning("Could not calculate bytes per second. Using default chunk length.")
+                elif not opt_result.fits_limit(max_size_mb):
+                    logger.error(f"Audio optimization failed: File ({opt_result.size_mb:.2f}MB) exceeds "
+                               f"{max_size_mb}MB limit and API does not support chunking.")
+                    return []
+                
+                current_audio_file_path = opt_result.path
+                if opt_result.is_temporary:
                     temp_files_to_cleanup.append(current_audio_file_path)
-            except RuntimeError as e:
+            except Exception as e:
                 logger.error(f"Audio optimization failed: {e}")
                 return []
 
