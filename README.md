@@ -151,10 +151,12 @@ These files are never committed to git and are only accessible by your user acco
 
 ### Getting API Keys
 
-- **AssemblyAI**: https://www.assemblyai.com/
-- **ElevenLabs**: https://elevenlabs.io/
-- **Groq**: https://groq.com/
-- **OpenAI**: https://platform.openai.com/
+- **AssemblyAI**: Register at https://www.assemblyai.com/ get the key at https://www.assemblyai.com/dashboard/api-keys
+- **ElevenLabs**: Register at https://dub.link/elevenlabs get the key at https://elevenlabs.io/app/developers/api-keys
+- **Groq**: Register at https://groq.com/ get the key at https://console.groq.com/keys
+- **OpenAI**: Register at https://platform.openai.com/ get the key at https://platform.openai.com/settings/organization/api-keys
+
+Note: AssemlyAI, Elevenlabs and Groq have free credits available. OpenAI afaik not anymore. You will need to load a tiny e.g. 5$ amount prepaid to try it out
 
 ## Output Formats
 
