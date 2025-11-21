@@ -351,13 +351,16 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 @click.option("--debug", "-d", is_flag=True, help="Enable debug logging")
 @click.option("--verbose", "-v", is_flag=True, help="Show all log messages in console")
 @click.option("--start-hour", type=int, default=None, help="Hour offset for SRT timestamps")
+@click.option("--setup", is_flag=True, help="Run setup wizard or configure defaults non-interactively")
+@click.option("--api-key", help="Set API key for the specified API (requires --setup)")
 @click.version_option()
 @click.pass_context
 def main(ctx, input_path, file, folder, api, language, output, chars_per_line, words_per_subtitle, 
          word_srt, davinci_srt, silent_portions, padding_start, padding_end, show_pauses, 
          filler_lines, filler_words, remove_fillers, speaker_labels, fps, fps_offset_start, 
          fps_offset_end, diarize, num_speakers, use_input, use_pcm, keep_flac, keep, model, 
-         chunk_length, overlap, force, save_cleaned_json, use_json_input, debug, verbose, start_hour):
+         chunk_length, overlap, force, save_cleaned_json, use_json_input, debug, verbose, start_hour,
+         setup, api_key):
     """Unified Audio Transcription Tool."""
     
     # If a subcommand is invoked, do nothing here (let the subcommand handle it)
@@ -369,6 +372,59 @@ def main(ctx, input_path, file, folder, api, language, output, chars_per_line, w
     
     # Initialize ConfigManager
     config = ConfigManager()
+
+    # Handle setup flag
+    if setup:
+        # Check if we have other arguments for non-interactive setup
+        # We need to check the context or kwargs, but since we have them as args:
+        non_interactive_args = False
+        if api or language or output or model or api_key:
+            non_interactive_args = True
+        
+        if non_interactive_args:
+            logger.info("Running non-interactive setup...")
+            
+            # If API is specified, update default API
+            if api:
+                config.set("default_api", api)
+                logger.success(f"Set default API to: {api}")
+            
+            # If API key is specified
+            if api_key:
+                # If API name is provided, use it, otherwise use default
+                target_api = api or config.get("default_api")
+                if target_api:
+                    config.set_api_key(target_api, api_key)
+                    logger.success(f"Set API key for {target_api}")
+                else:
+                    logger.error("Cannot set API key: No API specified and no default API set.")
+            
+            # Handle other defaults
+            if language:
+                config.set("default_language", language)
+                logger.success(f"Set default language to: {language}")
+                
+            if model:
+                # If API is specified, set model for that API
+                target_api = api or config.get("default_api")
+                if target_api:
+                    config.set_model(target_api, model)
+                    logger.success(f"Set default model for {target_api} to: {model}")
+                else:
+                    logger.warning("Model specified but no API context found. Skipping model default.")
+
+            # Handle output formats
+            if output:
+                 # 'output' comes as a tuple from click
+                 config.set("default_output_formats", list(output))
+                 logger.success(f"Set default output formats to: {', '.join(output)}")
+
+            logger.success("Configuration updated successfully.")
+            sys.exit(0)
+        else:
+            # No other args, run interactive wizard
+            run_setup_wizard()
+            sys.exit(0)
 
     # Determine target path from positional arg or legacy flags
     target_path = input_path or file or folder
@@ -479,11 +535,6 @@ def main(ctx, input_path, file, folder, api, language, output, chars_per_line, w
         process_audio_path(target_path, **kwargs)
     else:
         process_audio_path(target_path, **kwargs)
-
-@main.command()
-def setup():
-    """Setup API keys and configuration."""
-    run_setup_wizard()
 
 @main.group()
 def tools():
