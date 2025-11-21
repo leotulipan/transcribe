@@ -44,7 +44,8 @@ git checkout main
   - Add rule for `main` branch
   - Enable "Require pull request reviews before merging"
   - Enable "Require status checks to pass before merging"
-  - Select the `build` job from the CI workflow
+  - Select the `build` job from the CI workflow (this will appear after the first CI run completes)
+  - Optionally also select the `lint` job
 
 ### 2. Secrets Configuration
 

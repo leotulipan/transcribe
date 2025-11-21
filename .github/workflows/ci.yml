@@ -42,3 +42,49 @@ jobs:
         # uv run ruff check . || true
         # uv run mypy . || true
 
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install UV
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+    
+    - name: Cache UV dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+    
+    - name: Build executable
+      run: |
+        uv run build.py
+    
+    - name: Verify build artifacts
+      run: |
+        if (Test-Path dist\*.exe) {
+          Write-Host "✓ Executable created successfully"
+          Get-Item dist\*.exe | ForEach-Object { Write-Host "  - $($_.Name) ($([math]::Round($_.Length/1MB, 2)) MB)" }
+        } else {
+          Write-Host "✗ Executable not found"
+          exit 1
+        }
+        if (Test-Path dist\*.zip) {
+          Write-Host "✓ Zip archive created successfully"
+          Get-Item dist\*.zip | ForEach-Object { Write-Host "  - $($_.Name) ($([math]::Round($_.Length/1MB, 2)) MB)" }
+        } else {
+          Write-Host "✗ Zip archive not found"
+          exit 1
+        }
+
