@@ -13,7 +13,7 @@ A powerful, easy-to-use tool for transcribing audio and video files using multip
 
 2. **Set Up API Keys**
    ```bash
-   transcribe.exe setup
+   transcribe.exe --setup
    ```
    This interactive wizard will guide you through configuring API keys for:
    - AssemblyAI
@@ -23,7 +23,7 @@ A powerful, easy-to-use tool for transcribing audio and video files using multip
 
 3. **Transcribe Your First File**
    ```bash
-   transcribe.exe --file "path/to/your/audio.mp4" --api groq
+   transcribe.exe "path/to/your/audio.mp4" --api groq
    ```
 
 That's it! The transcription will be saved next to your audio file.
@@ -36,6 +36,8 @@ That's it! The transcription will be saved next to your audio file.
 
 Example batch files:
 - `transcribe_elevenlabs_de.bat` - Transcribe with ElevenLabs (German, DaVinci Resolve optimized)
+  - Automatically marks pauses and filler words for DaVinci Resolve Studio auto-cut
+  - See "DaVinci Resolve Features" section below for details
 - `transcribe_groq_de.bat` - Transcribe with Groq (German)
 - `transcribe_assemblyai.bat` - Transcribe with AssemblyAI
 
@@ -87,48 +89,57 @@ Download the latest release from the [Releases page](https://github.com/leotulip
 ### Basic Usage
 
 ```bash
-transcribe.exe --file "path/to/audio.wav" --api groq
+transcribe.exe "path/to/audio.wav" --api groq
 ```
+
+**Note**: The `--file` and `--folder` options are deprecated. Simply provide the file or folder path as a positional argument.
 
 ### Process an Entire Folder
 
 ```bash
-transcribe.exe --folder "path/to/audio_files" --api groq
+transcribe.exe "path/to/audio_files" --api groq
 ```
 
 ### With Language Selection
 
 ```bash
-transcribe.exe --file "path/to/audio.wav" --api groq --language de
+transcribe.exe "path/to/audio.wav" --api groq --language de
 ```
 
 ### DaVinci Resolve Optimized Output
 
 ```bash
-transcribe.exe --file "path/to/audio.wav" --api elevenlabs --davinci-srt
+transcribe.exe "path/to/audio.wav" --api elevenlabs --davinci-srt
 ```
 
-### Advanced Options
+This creates an SRT file optimized for DaVinci Resolve Studio with pause markers that enable automatic cutting.
+
+### Advanced DaVinci Resolve Options
 
 ```bash
-transcribe.exe --file "path/to/audio.wav" --api elevenlabs \
-  --output davinci_srt \
+transcribe.exe "path/to/audio.wav" --api elevenlabs \
   --davinci-srt \
   --filler-lines \
   --silent-portions 350 \
   --padding-start -125
 ```
 
+**What this does:**
+- `--davinci-srt`: Enables DaVinci Resolve optimized output
+- `--filler-lines`: Outputs filler words as separate UPPERCASE subtitle lines
+- `--silent-portions 350`: Marks pauses and filler words longer than 350ms as `(...)` for auto-cut
+- `--padding-start -125`: Adjusts timing by -125ms (starts earlier) for frame accuracy
+
 ## API Keys Setup
 
 The first time you run the tool, use the setup wizard:
 
 ```bash
-transcribe.exe setup
+transcribe.exe --setup
 ```
 
 This will:
-- Guide you through configuring each API
+- Launch an interactive TUI (Text User Interface) to configure each API
 - Validate your API keys
 - Store keys securely in your user profile directory
 
@@ -157,11 +168,15 @@ Standard subtitle format compatible with most video players and editors.
 Each word appears as its own subtitle line with precise timestamps.
 
 ### DaVinci Resolve Optimized (`.srt`)
-Optimized for DaVinci Resolve with:
-- Filler words as separate lines (UPPERCASE)
-- Pause markers `(...)` for silences ≥350ms
-- Frame-accurate timing adjustments
-- Customizable padding and FPS offsets
+Optimized for DaVinci Resolve Studio with special features for automatic editing:
+
+- **Pause Detection**: Silences and filler words longer than a specified duration (default 350ms) are marked as `(...)` in the subtitles
+- **Auto-Cut Feature**: DaVinci Resolve Studio recognizes these `(...)` markers and can automatically cut the video/audio at these pause points
+- **Filler Words as Separate Lines**: Filler words (like "um", "uh", "ähm") appear as their own subtitle lines in UPPERCASE, making them easy to identify and remove
+- **Frame-Accurate Timing**: Adjustable timing offsets for frame-perfect synchronization
+- **Customizable Padding**: Fine-tune start/end times with millisecond precision
+
+**Example**: If you set `--silent-portions 350`, any pause or filler word longer than 350ms will become `(...)` in the SRT file. When you import this SRT into DaVinci Resolve Studio, you can use the auto-cut feature to automatically split your timeline at these pause markers, making it easy to remove unwanted silences and filler words.
 
 ## File Size Limits
 
@@ -183,16 +198,28 @@ Ready-to-use batch files are available in the `batch_templates/` directory. Thes
 2. Automatically transcribe with pre-configured settings
 3. Customize the batch files for your needs
 
-See `batch_templates/README.md` for details.
+### DaVinci Resolve Batch File
+
+The `transcribe_elevenlabs_de.bat` file is pre-configured for DaVinci Resolve Studio workflows:
+
+- **German language** transcription
+- **DaVinci Resolve optimized** SRT output
+- **Pause detection** at 350ms threshold
+- **Auto-cut markers**: Pauses and filler words longer than 350ms are marked as `(...)`
+
+When you import the resulting SRT into DaVinci Resolve Studio, you can use the auto-cut feature to automatically split your timeline at these `(...)` markers, making it easy to remove unwanted silences and filler words during editing.
+
+See `batch_templates/README.md` for more details and customization options.
 
 ## Command Line Options
 
 ```
-Usage: transcribe.exe [OPTIONS]
+Usage: transcribe.exe [OPTIONS] [FILE_OR_FOLDER]
+
+Arguments:
+  [FILE_OR_FOLDER]                 Audio/video file or folder to transcribe
 
 Options:
-  -f, --file PATH                 Audio/video file to transcribe
-  -F, --folder DIRECTORY          Folder containing audio/video files
   -a, --api [assemblyai|elevenlabs|groq|openai]
                                   API to use (default: groq)
   -l, --language TEXT             Language code (ISO-639-1 or ISO-639-3)
@@ -200,17 +227,21 @@ Options:
                                   Output format(s) (default: text,srt)
   -D, --davinci-srt               Output SRT optimized for DaVinci Resolve
   -p, --silent-portions INTEGER   Mark pauses longer than X milliseconds with (...)
-  --filler-lines                   Output filler words as their own subtitle lines
+                                  Used with --davinci-srt for auto-cut markers
+  --filler-lines                   Output filler words as their own subtitle lines (UPPERCASE)
   --filler-words TEXT             Custom filler words to detect
   --remove-fillers                 Remove filler words from output
   --speaker-labels                 Enable speaker labels in SRT (when available)
   --diarize                        Enable speaker diarization (ElevenLabs)
   --num-speakers INTEGER           Maximum number of speakers (1..32)
   -m, --model TEXT                Model to use (API-specific)
+  --setup                          Run interactive setup wizard for API keys
   -v, --verbose                    Show all log messages
   -d, --debug                      Enable debug logging
   --help                           Show this message
 ```
+
+**Note**: The `--file` and `--folder` options are deprecated. Use positional arguments instead.
 
 Run `transcribe.exe --help` for the complete list of options.
 
@@ -220,7 +251,7 @@ Run `transcribe.exe --help` for the complete list of options.
 
 Run the setup wizard:
 ```bash
-transcribe.exe setup
+transcribe.exe --setup
 ```
 
 ### File Too Large
@@ -261,7 +292,7 @@ The executable will be in the `dist/` directory.
   - `transcribe_helpers/` - Transcription helpers
   - `tui/` - Interactive setup wizard
 - `batch_templates/` - Ready-to-use batch files
-- `legacy/` - Old scripts (archived)
+- `feature-sprints/` - Planning and documentation files
 
 ### Running Tests
 
