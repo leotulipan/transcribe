@@ -196,4 +196,7 @@ intermarket_bmd/class_PlentymarketsAPI.py
 # Ignore all files langchain turorials
 */langchain-tutorials/*
 parser_log.txt
+
+# Test files
 compare_audio-test.*
+test/*
