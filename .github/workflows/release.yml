@@ -46,18 +46,17 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: transcribe-windows-amd64
-        path: |
-          dist/*.exe
-          dist/*.zip
+        path: dist/*.zip
         retention-days: 30
     
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == 'true')
+      if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
       uses: softprops/action-gh-release@v1
       with:
         files: dist/*.zip
+        tag_name: ${{ github.ref_name || format('manual-{0}', github.run_number) }}
         draft: false
-        prerelease: false
+        prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
