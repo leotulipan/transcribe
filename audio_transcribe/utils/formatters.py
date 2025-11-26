@@ -2,7 +2,7 @@
 Unified output formatters for transcription results.
 
 This module provides functions to convert transcription results into various output formats
-like SRT, word-level SRT, Davinci SRT, and plain text.
+like SRT, word-level SRT (available for all APIs with word-level timestamps), Davinci SRT, and plain text.
 """
 from typing import Union, List, Dict, Any, Optional, Tuple
 from pathlib import Path

@@ -290,7 +290,8 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
         logger.success(f"Successfully obtained transcription. Words count: {len(transcription_result.words)}")
         
         # Output generation
-        output_files = create_output_files(transcription_result, original_input_path, kwargs)
+        format_types = kwargs.get("output", ["text", "srt"])
+        output_files = create_output_files(transcription_result, original_input_path, format_types, **kwargs)
         
         # Save cleaned JSON if requested
         if save_cleaned_json:
@@ -354,7 +355,7 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 @click.option("--output", "-o", type=click.Choice(["text", "srt", "word_srt", "davinci_srt", "json", "all"], case_sensitive=False), multiple=True, help="Output format(s) to generate (default: text,srt)")
 @click.option("--chars-per-line", "-c", type=int, default=None, help="Maximum characters per line in SRT file (default: 80)")
 @click.option("--words-per-subtitle", "-w", type=int, default=None, help="Maximum words per subtitle block (default: 0 = disabled). Mutually exclusive with -c.")
-@click.option("--word-srt", "-C", is_flag=True, help="Output SRT with each word as its own subtitle")
+@click.option("--word-srt", "-C", is_flag=True, help="Output SRT with each word as its own subtitle (requires word-level timestamps, available for all APIs)")
 @click.option("--davinci-srt", "-D", is_flag=True, help="Output SRT optimized for DaVinci Resolve")
 @click.option("--silent-portions", "-p", type=int, default=None, help="Mark pauses longer than X milliseconds with (...)")
 @click.option("--padding-start", type=int, default=None, help="Milliseconds to offset word start times (negative=earlier, positive=later)")

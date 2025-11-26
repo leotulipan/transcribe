@@ -268,7 +268,8 @@ def create_srt(words: List[Dict[str, Any]], output_file: Union[str, Path],
     elif srt_mode == "davinci":
         create_davinci_srt(
             words_copy, output_file, silentportions=silentportions,
-            fps=fps, padding_start=0, padding_end=0, remove_fillers=False, start_hour=start_hour
+            fps=fps, padding_start=0, padding_end=0, remove_fillers=False, start_hour=start_hour,
+            max_words_per_block=max_words_per_block
         )
     else:  # standard
         create_standard_srt(
@@ -691,10 +692,12 @@ def create_davinci_srt(words: List[Dict[str, Any]], output_file: Union[str, Path
                       silentportions: int = 0, padding_start: int = 0, padding_end: int = 0,
                       fps: Optional[float] = None, fps_offset_start: int = -1, 
                       fps_offset_end: int = 0, remove_fillers: bool = True,
-                      filler_words: Optional[List[str]] = None, start_hour: int = 0) -> None:
+                      filler_words: Optional[List[str]] = None, start_hour: int = 0,
+                      max_words_per_block: int = 500) -> None:
     """Create SRT file optimized for Davinci Resolve Studio.
 
     Writes contiguous word sequences as blocks and places audio events (including fillers when flagged) on their own lines.
+    Splits blocks at sentence boundaries (.!?) or when max_words_per_block is reached.
     """
     output_file = Path(output_file)
     counter = 1
@@ -778,6 +781,18 @@ def create_davinci_srt(words: List[Dict[str, Any]], output_file: Union[str, Path
             if 'end' in w:
                 block_end = w.get('end', block_start or 0)
             block_words.append(w)
+            
+            # Check for sentence boundary or max words limit
+            word_text = w.get('text', '')
+            sentence_end_markers = ['.', '!', '?']
+            is_sentence_end = word_text and word_text[-1] in sentence_end_markers
+            
+            # Count regular words (excluding spacing and audio events)
+            regular_word_count = sum(1 for bw in block_words if bw and bw.get('type') == 'word')
+            
+            # Flush block if sentence ends or max words reached
+            if is_sentence_end or (max_words_per_block > 0 and regular_word_count >= max_words_per_block):
+                flush_block()
 
         # flush remaining text
         if block_words:
@@ -1011,6 +1026,8 @@ def custom_export_subtitles(transcript_id: str, headers: Dict[str, str],
                            filler_words: Optional[List[str]] = None) -> str:
     """
     Export subtitles using AssemblyAI API with custom formatting and standardized word format.
+    Note: This function is AssemblyAI-specific. For other APIs, word-level SRT export is handled
+    through the standard create_srt() function with srt_mode="word".
     
     Args:
         transcript_id: ID of the transcript

@@ -167,7 +167,7 @@ Simple text file with the transcription.
 Standard subtitle format compatible with most video players and editors.
 
 ### Word-Level SRT (`.word.srt`)
-Each word appears as its own subtitle line with precise timestamps.
+Each word appears as its own subtitle line with precise timestamps. Available for all APIs (AssemblyAI, ElevenLabs, Groq, OpenAI) that provide word-level timestamps.
 
 ### DaVinci Resolve Optimized (`.srt`)
 Optimized for DaVinci Resolve Studio with special features for automatic editing:
