@@ -174,29 +174,10 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# PyCharm
-#  JetBrains specific template is maintainted in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
-plentymarkets_api/documentation and tooling/swagger-codegen-cli-2.4.30.jar
-plentymarkets_api/documentation and tooling/swagger-codegen-cli.jar
-jera_bmd/*.xlsx
-*.ogg
-plenty_token.json
-*.tmp
-plentymarkets_api/interface_documentation/*.html
-# Teachable
-??_??_??_*.html
-course_data.csv
-# Hard Links so do not track this doublicate:
-intermarket_bmd/class_PlentymarketsAPI.py
-
-# Ignore all files langchain turorials
-*/langchain-tutorials/*
-parser_log.txt
 
 # Test files
 compare_audio-test.*
 test/*
+./test/*
+test/*.json
+parser_log.txt
