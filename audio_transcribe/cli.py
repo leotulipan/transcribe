@@ -113,6 +113,11 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
         # Convert to Path object if it's a string
         original_input_path = Path(file_path) if isinstance(file_path, str) else file_path
         
+        # Auto-detect JSON files and enable use_json_input automatically
+        if original_input_path.suffix.lower() == '.json' and not use_json_input:
+            logger.info(f"Auto-detected JSON file: {original_input_path}. Enabling JSON input mode.")
+            use_json_input = True
+        
         # Extract directory and file name components
         file_dir = original_input_path.parent
         file_name_stem = original_input_path.stem
