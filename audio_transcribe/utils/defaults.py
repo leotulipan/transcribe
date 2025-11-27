@@ -17,7 +17,7 @@ class DefaultsManager:
     
     # Output format defaults
     FORMAT_DEFAULTS = {
-        'chars_per_line': 80,
+        'chars_per_line': 0,  # 0 = no line wrapping (YouTube-friendly single-line subtitles)
         'words_per_subtitle': 0,
         'silent_portions': 0,
         'padding_start': 0,

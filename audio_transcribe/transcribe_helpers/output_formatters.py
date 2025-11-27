@@ -30,6 +30,25 @@ except ImportError:
 from audio_transcribe.transcribe_helpers.text_processing import process_filler_words
 
 
+def wrap_text_for_srt(text: str, chars_per_line: int) -> List[str]:
+    """
+    Wrap text for SRT output. If chars_per_line is 0 or None, return text as single line.
+    
+    Args:
+        text: Text to wrap
+        chars_per_line: Maximum characters per line (0 = no wrapping)
+        
+    Returns:
+        List of text lines
+    """
+    if not chars_per_line or chars_per_line <= 0:
+        # No wrapping - return as single line
+        return [text] if text else []
+    
+    wrapped = textwrap.wrap(text, width=chars_per_line, break_long_words=False)
+    return wrapped if wrapped else [text]
+
+
 def join_text_with_proper_spacing(current_text: str, new_word: str) -> str:
     """
     Join text with proper spacing after periods, commas, etc.
@@ -539,9 +558,7 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
                 if current_subtitle and current_start is not None and current_end is not None and current_text.strip():
                     start_ms = int(current_start * 1000)
                     end_ms = int(current_end * 1000)
-                    text_lines = textwrap.wrap(current_text, width=chars_per_line, break_long_words=False)
-                    if not text_lines:
-                        text_lines = [current_text]
+                    text_lines = wrap_text_for_srt(current_text, chars_per_line)
                     file_obj.write(f"{counter}\n")
                     file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
                     file_obj.write("\n".join(text_lines) + "\n\n")
@@ -574,9 +591,7 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
                         end_ms = int(current_end * 1000)
                         
                         # Split text into lines based on character limit
-                        text_lines = textwrap.wrap(current_text, width=chars_per_line, break_long_words=False)
-                        if not text_lines:
-                            text_lines = [current_text]  # Fallback in case wrap returned empty list
+                        text_lines = wrap_text_for_srt(current_text, chars_per_line)
                         
                         file_obj.write(f"{counter}\n")
                         file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
@@ -621,9 +636,15 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
             if words_per_subtitle and words_per_subtitle > 0:
                 if len(current_subtitle) >= words_per_subtitle:
                     should_break = True
-            else:
+            elif chars_per_line and chars_per_line > 0:
+                # Character-based breaking if chars_per_line is set
                 if (len(current_text) >= chars_per_line and 
                     (current_text[-1] in ".!?,:;" or i == len(words) - 1 or (i < len(words) - 1 and words[i+1].get('type') == 'spacing'))):
+                    should_break = True
+            else:
+                # Sentence-based breaking when chars_per_line=0 (YouTube format)
+                # Break on sentence-ending punctuation
+                if current_text and current_text[-1] in ".!?":
                     should_break = True
 
             if should_break:
@@ -633,9 +654,7 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
                     end_ms = int(current_end * 1000)
                     
                     # Split text into lines based on character limit
-                    text_lines = textwrap.wrap(current_text, width=chars_per_line, break_long_words=False)
-                    if not text_lines:
-                        text_lines = [current_text]  # Fallback
+                    text_lines = wrap_text_for_srt(current_text, chars_per_line)
                     
                     file_obj.write(f"{counter}\n")
                     file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
@@ -654,9 +673,7 @@ def create_standard_srt(words: List[Dict[str, Any]], output_file: Union[str, Pat
             end_ms = int(current_end * 1000)
             
             # Split text into lines based on character limit
-            text_lines = textwrap.wrap(current_text, width=chars_per_line, break_long_words=False)
-            if not text_lines:
-                text_lines = [current_text]  # Fallback
+            text_lines = wrap_text_for_srt(current_text, chars_per_line)
             
             file_obj.write(f"{counter}\n")
             file_obj.write(f"{format_time_ms(start_ms, start_hour)} --> {format_time_ms(end_ms, start_hour)}\n")
