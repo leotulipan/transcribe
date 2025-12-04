@@ -199,6 +199,12 @@ A unified tool for transcribing audio using various APIs (AssemblyAI, ElevenLabs
   - [x] Progress updates appear every 2 seconds showing percentage and elapsed/total time
   - [x] Falls back to pydub when ffmpeg is not available
 
+- [x] **SRT output format control**
+  - [x] Ensure `-o srt` only generates a single primary `.srt` file (YouTube-style defaults via `chars_per_line=0`)
+  - [x] Restrict `.word.srt` creation to explicit `-o word_srt`
+  - [x] Restrict `.davinci.srt` creation to explicit `-o davinci_srt`
+  - [x] Keep `--word-srt` / `--davinci-srt` as formatting presets for the primary `.srt` only
+
 - [x] **Fix setup menu color rendering**
   - [x] Removed raw ANSI escape codes from questionary choice labels
   - [x] Created `format_api_status()` helper using plain text to avoid rendering issues

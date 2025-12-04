@@ -216,12 +216,21 @@ def create_output_files(result: TranscriptionResult, audio_path: Union[str, Path
     
     # Now just use result.words for all formats
     created_files = {}
+    # Explicit output control:
+    # - Only create *.word.srt when 'word_srt' is present in format_types
+    # - Only create *.davinci.srt when 'davinci_srt' is present in format_types
+    # - The --word-srt / --davinci-srt flags only influence HOW the primary .srt
+    #   is formatted, not which additional files are emitted.
     word_srt_flag = kwargs.get("word_srt", False)
+    davinci_srt_flag = kwargs.get("davinci_srt", False)
+
     for format_type in format_types:
         if format_type == "srt":
             output_file = file_dir / f"{file_name}.srt"
             if word_srt_flag:
                 create_srt_file(result, output_file, "word", **kwargs)
+            elif davinci_srt_flag:
+                create_srt_file(result, output_file, "davinci", **kwargs)
             else:
                 create_srt_file(result, output_file, "standard", **kwargs)
             created_files["srt"] = str(output_file)
