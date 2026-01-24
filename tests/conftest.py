@@ -6,9 +6,15 @@ including the LLM judge for non-deterministic output comparison.
 """
 import json
 import sys
+import os
 from pathlib import Path
 from typing import Generator, Optional, Tuple
 import pytest
+
+# Add WinGet Links directory to PATH for ffmpeg (if installed via winget)
+winget_links = Path("C:/Users/leona/AppData/Local/Microsoft/WinGet/Links")
+if winget_links.exists():
+    os.environ["PATH"] = str(winget_links) + os.pathsep + os.environ.get("PATH", "")
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -328,3 +334,81 @@ def mock_transcription_result() -> TranscriptionResult:
         segments=[],
         api_name="mock"
     )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def generate_test_fixtures():
+    """Auto-generate test audio files if missing."""
+    required_files = [
+        'silent_10s.wav',
+        'silent_30s.wav',
+        'silent_60s.wav',
+        'silent_600s.wav',
+        'stereo_5s.wav',
+    ]
+
+    fixtures_dir = AUDIO_FIXTURES_DIR
+
+    # Check if files exist
+    missing = [f for f in required_files if not (fixtures_dir / f).exists()]
+
+    if missing:
+        from loguru import logger
+        logger.info(f"Generating missing test fixtures: {missing}")
+
+        # Import the generator
+        import sys
+        from pathlib import Path
+
+        # Add scripts directory to path
+        scripts_dir = Path(__file__).parent / "scripts"
+        sys.path.insert(0, str(scripts_dir))
+
+        try:
+            from generate_test_audio import main as generate_main
+            generate_main()
+        except Exception as e:
+            logger.warning(f"Could not generate test fixtures: {e}")
+            # Continue anyway - tests will use existing files
+
+
+@pytest.fixture(scope="session")
+def ffmpeg_available():
+    """Check if ffmpeg is available on the system."""
+    import shutil
+    return shutil.which("ffmpeg") is not None
+
+
+def pytest_configure(config):
+    """Configure pytest with custom markers."""
+    config.addinivalue_line(
+        "markers", "integration: marks tests as integration tests (require API keys)"
+    )
+    config.addinivalue_line(
+        "markers", "slow: marks tests as slow (may call real APIs)"
+    )
+    config.addinivalue_line(
+        "markers", "unit: marks tests as unit tests (fast, no external calls)"
+    )
+    config.addinivalue_line(
+        "markers", "requires_ffmpeg: marks tests that require ffmpeg to be installed"
+    )
+
+    # Check if ffmpeg is available
+    import shutil
+    ffmpeg_exists = shutil.which("ffmpeg") is not None
+
+    if not ffmpeg_exists:
+        # Add a command-line option to help users understand why tests are being skipped
+        config.option.verbose = True
+
+
+def pytest_collection_modifyitems(config, items):
+    """Modify collected test items to add skip markers for tests requiring ffmpeg."""
+    import shutil
+    ffmpeg_exists = shutil.which("ffmpeg") is not None
+
+    for item in items:
+        # If test requires ffmpeg but ffmpeg is not available, skip it
+        if "requires_ffmpeg" in item.keywords and not ffmpeg_exists:
+            item.add_marker(pytest.mark.skip(reason="ffmpeg is not installed"))
