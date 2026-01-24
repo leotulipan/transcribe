@@ -1,0 +1,21 @@
+{
+  "model": "voxtral-mini-2507",
+  "text": " This is a short, clear and distinct audio sample with one speaker.",
+  "usage": {
+    "prompt_tokens": 4,
+    "completion_tokens": 32,
+    "total_tokens": 411,
+    "prompt_audio_seconds": 7
+  },
+  "language": null,
+  "segments": [
+    {
+      "text": " This is a short, clear and distinct audio sample with one speaker.",
+      "start": 0.0,
+      "end": 7.0,
+      "type": "transcription_segment"
+    }
+  ],
+  "finish_reason": null,
+  "api_name": "mistral"
+}

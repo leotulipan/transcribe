@@ -6,8 +6,8 @@ import tempfile
 import subprocess
 import base64
 from pathlib import Path
-from typing import Union, Optional, List, Dict, Any, Tuple
-from dataclasses import dataclass
+from typing import Union, Optional, List, Dict, Any, Tuple, TYPE_CHECKING
+from dataclasses import dataclass, field
 from pydub import AudioSegment
 from loguru import logger
 
@@ -17,12 +17,34 @@ try:
 except ImportError:
     import sys
     import os
-    
+
     # Add the parent directory to sys.path
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    
+
     # Import our mock logger
     from loguru_patch import logger
+
+# Import new modules
+from .pyav_backend import (
+    is_pyav_available,
+    get_duration_seconds,
+    extract_audio_pyav,
+    convert_to_flac_pyav,
+    convert_to_mp3_pyav,
+    _get_duration_ffprobe
+)
+
+if TYPE_CHECKING:
+    from .intermediate_files import IntermediateFileManager
+
+
+# API format requirements for passthrough logic
+API_FORMAT_REQUIREMENTS = {
+    "groq": {"requires_flac": True, "accepts_video": False},
+    "openai": {"requires_flac": True, "accepts_video": False},
+    "assemblyai": {"requires_flac": False, "accepts_video": True},
+    "elevenlabs": {"requires_flac": False, "accepts_video": True},
+}
 
 
 def check_audio_length(file_path: Union[str, Path], max_length: int = 7200) -> bool:
@@ -70,28 +92,19 @@ def check_audio_format(audio: AudioSegment, file_extension: str = None) -> bool:
 
 def _get_audio_duration_seconds(audio_path: Path) -> float:
     """
-    Get audio/video duration in seconds using ffprobe or pydub.
-    
+    Get audio/video duration in seconds using PyAV (10x faster) or ffprobe/pydub fallback.
+
     Args:
         audio_path: Path to audio/video file
-        
+
     Returns:
         Duration in seconds, or 0.0 if unable to determine
     """
-    # Try ffprobe first (faster)
-    try:
-        result = subprocess.run(
-            ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
-             '-of', 'default=noprint_wrappers=1:nokey=1', str(audio_path)],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return float(result.stdout.strip())
-    except (subprocess.TimeoutExpired, FileNotFoundError, ValueError):
-        pass
-    
+    # Try PyAV first (fastest)
+    duration = get_duration_seconds(audio_path)
+    if duration > 0:
+        return duration
+
     # Fallback to pydub
     try:
         audio = AudioSegment.from_file(str(audio_path))
@@ -397,10 +410,49 @@ class OptimizationResult:
     is_temporary: bool
     size_mb: float
     bytes_per_second: float  # Calculated from file size and audio duration
-    
+    intermediate_manager: Optional['IntermediateFileManager'] = field(default=None, compare=False, repr=False)
+
     def fits_limit(self, max_size_mb: float) -> bool:
         """Check if the optimized file fits within the size limit."""
         return self.size_mb <= max_size_mb
+
+    def cleanup(self) -> None:
+        """Clean up intermediate files via the intermediate manager."""
+        if self.intermediate_manager:
+            self.intermediate_manager.cleanup()
+
+
+def can_passthrough(file_path: Path, api_name: str, threshold_mb: float) -> bool:
+    """
+    Check if file can skip processing entirely (direct upload).
+
+    Args:
+        file_path: Path to the file to check
+        api_name: Name of the API to check against
+        threshold_mb: Size threshold for passthrough
+
+    Returns:
+        True if file can be uploaded directly, False otherwise
+    """
+    size_mb = file_path.stat().st_size / (1024 * 1024)
+    api_limit = get_api_file_size_limit(api_name)
+
+    # Check file size against both threshold and API limit
+    if size_mb > min(threshold_mb, api_limit):
+        return False
+
+    reqs = API_FORMAT_REQUIREMENTS.get(api_name.lower(), {"accepts_video": True})
+    ext = file_path.suffix.lower()
+
+    # Video files can only passthrough to APIs that accept them
+    if ext in ['.mp4', '.mkv', '.avi', '.mov', '.webm']:
+        return reqs.get("accepts_video", False)
+
+    # FLAC-required APIs need FLAC format
+    if reqs.get("requires_flac") and ext != '.flac':
+        return False
+
+    return True
 
 def get_api_file_size_limit(api_name: str) -> int:
     """
@@ -502,161 +554,242 @@ def _calculate_bytes_per_second(audio_path: Path) -> float:
         logger.warning(f"Failed to calculate bytes per second for {audio_path}: {e}")
         return 0.0
 
-def optimize_audio_for_api(input_path: Union[str, Path], api_name: str) -> OptimizationResult:
+def optimize_audio_for_api(
+    input_path: Union[str, Path],
+    api_name: str,
+    size_threshold_mb: float = 100.0,
+    preserve_on_error: bool = True
+) -> OptimizationResult:
     """
     Optimize audio file to meet API file size limits using a cascade of strategies.
-    
-    Strategies:
-    1. Check if original file fits.
-    2. If video, extract audio (m4a/aac).
-    3. Convert to FLAC (lossless compression).
-    4. Convert to MP3 128kbps mono (lossy compression).
-    
+
+    New algorithm:
+    1. Check passthrough - if file is small and format compatible, return original
+    2. Extract audio (if video) - use PyAV with ffmpeg fallback, check extracted size
+    3. Convert to FLAC (if needed) - only if API requires FLAC or file still too large
+    4. Convert to MP3 (last resort) - only if FLAC still exceeds limit
+    5. Return with IntermediateFileManager attached for deferred cleanup
+
     Args:
         input_path: Path to the input file
         api_name: Name of the API to check limits for
-        
+        size_threshold_mb: Size threshold for passthrough (default 100MB)
+        preserve_on_error: Whether to preserve intermediate files on error (default True)
+
     Returns:
-        OptimizationResult with path, is_temporary, size_mb, and bytes_per_second
+        OptimizationResult with path, is_temporary, size_mb, bytes_per_second, and intermediate_manager
     """
+    from .intermediate_files import IntermediateFileManager, FileOperation
+
     input_path = Path(input_path)
     max_size_mb = get_api_file_size_limit(api_name)
-    
+
     logger.info(f"Optimizing {input_path.name} for {api_name} (Limit: {max_size_mb}MB)...")
-    
-    # Track intermediate files to clean up
-    intermediate_files = []
-    
+
+    # Setup intermediate file manager
+    manager = IntermediateFileManager(input_path)
+    manager.setup()
+
     current_path = input_path
     is_current_temp = False
-    
+    original_size_mb = os.path.getsize(input_path) / (1024 * 1024)
+
     try:
-        # 1. Check original file
-        current_size_mb = os.path.getsize(current_path) / (1024 * 1024)
-        if current_size_mb <= max_size_mb:
-            logger.info(f"Original file fits ({current_size_mb:.2f}MB <= {max_size_mb}MB). No conversion needed.")
+        # 1. Check passthrough (new)
+        if can_passthrough(current_path, api_name, size_threshold_mb):
+            logger.info(f"Passthrough: File can be uploaded directly "
+                       f"({original_size_mb:.2f}MB <= threshold {size_threshold_mb}MB)")
             bytes_per_sec = _calculate_bytes_per_second(current_path)
             return OptimizationResult(
                 path=current_path,
                 is_temporary=False,
-                size_mb=current_size_mb,
-                bytes_per_second=bytes_per_sec
+                size_mb=original_size_mb,
+                bytes_per_second=bytes_per_sec,
+                intermediate_manager=None
             )
-            
-        logger.info(f"File too large ({current_size_mb:.2f}MB). Attempting optimization...")
-        
-        # 2. If video, extract audio
+
+        # File needs processing
+        logger.info(f"File requires processing ({original_size_mb:.2f}MB)")
+
+        # 2. Extract audio (if video)
         video_extensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm']
         if current_path.suffix.lower() in video_extensions:
             logger.info("Strategy 1: Extracting audio from video...")
-            extracted_path = extract_audio_from_mp4(current_path)
-            if extracted_path:
-                extracted_path = Path(extracted_path)
+
+            # Use intermediate manager for output path
+            extracted_path = manager.get_path_for(FileOperation.EXTRACTED, current_path.suffix[1:])
+
+            # Try PyAV first (faster)
+            extracted_success = False
+            if is_pyav_available():
+                logger.debug("Using PyAV for audio extraction")
+                extracted_success = extract_audio_pyav(current_path, extracted_path)
+
+            # Fallback to ffmpeg subprocess
+            if not extracted_success:
+                logger.debug("PyAV extraction failed or unavailable, using ffmpeg subprocess")
+                # Use the existing extract_audio_from_mp4 but with our output path
+                # We need to temporarily override the output path logic
+                # For now, use a simpler approach with ffmpeg
+                import tempfile
+                with tempfile.NamedTemporaryFile(suffix='.m4a', delete=False) as temp_file:
+                    temp_extracted = Path(temp_file.name)
+
+                try:
+                    # Use ffmpeg subprocess
+                    cmd = ['ffmpeg', '-i', str(current_path), '-vn', '-acodec', 'copy', '-y', str(temp_extracted)]
+                    result = subprocess.run(cmd, capture_output=True, timeout=120)
+                    if result.returncode == 0 and temp_extracted.exists():
+                        # Move to our managed path
+                        import shutil
+                        shutil.move(str(temp_extracted), str(extracted_path))
+                        extracted_success = True
+                except Exception as e:
+                    logger.warning(f"ffmpeg extraction failed: {e}")
+                finally:
+                    if temp_extracted.exists():
+                        try:
+                            temp_extracted.unlink()
+                        except:
+                            pass
+
+            if extracted_success and extracted_path.exists():
                 size_mb = os.path.getsize(extracted_path) / (1024 * 1024)
-                
-                # Update current path to the new file
-                if is_current_temp:
-                    intermediate_files.append(current_path)
-                current_path = extracted_path
-                is_current_temp = True
-                
-                if size_mb <= max_size_mb:
+                manager.register(extracted_path, FileOperation.EXTRACTED, current_path)
+
+                # Check if extracted fits API limit
+                reqs = API_FORMAT_REQUIREMENTS.get(api_name.lower(), {"requires_flac": True})
+                if size_mb <= max_size_mb and not reqs.get("requires_flac"):
                     logger.success(f"Audio extraction successful. New size: {size_mb:.2f}MB")
-                    _cleanup_intermediates(intermediate_files)
-                    bytes_per_sec = _calculate_bytes_per_second(current_path)
+                    bytes_per_sec = _calculate_bytes_per_second(extracted_path)
                     return OptimizationResult(
-                        path=current_path,
+                        path=extracted_path,
                         is_temporary=True,
                         size_mb=size_mb,
-                        bytes_per_second=bytes_per_sec
+                        bytes_per_second=bytes_per_sec,
+                        intermediate_manager=manager
                     )
                 else:
-                    logger.info(f"Extracted audio still too large ({size_mb:.2f}MB). Continuing to next strategy...")
-        
-        # 3. Convert to FLAC
-        logger.info("Strategy 2: Converting to FLAC...")
-        flac_path = convert_to_flac(current_path)
-        if flac_path:
-            flac_path = Path(flac_path)
-            size_mb = os.path.getsize(flac_path) / (1024 * 1024)
-            
-            # Update current path
-            if is_current_temp:
-                intermediate_files.append(current_path)
-            current_path = flac_path
-            is_current_temp = True
-            
-            if size_mb <= max_size_mb:
-                logger.success(f"FLAC conversion successful. New size: {size_mb:.2f}MB")
-                _cleanup_intermediates(intermediate_files)
-                bytes_per_sec = _calculate_bytes_per_second(current_path)
-                return OptimizationResult(
-                    path=current_path,
-                    is_temporary=True,
-                    size_mb=size_mb,
-                    bytes_per_second=bytes_per_sec
-                )
+                    logger.info(f"Extracted audio: {size_mb:.2f}MB. Continuing to FLAC conversion...")
+                    current_path = extracted_path
+                    is_current_temp = True
             else:
-                logger.info(f"FLAC file still too large ({size_mb:.2f}MB). Continuing to next strategy...")
-                
-        # 4. Convert to MP3 128kbps mono
-        logger.info("Strategy 3: Converting to MP3 (128k mono)...")
-        mp3_path = convert_to_mp3(current_path, bitrate="128k")
-        if mp3_path:
-            mp3_path = Path(mp3_path)
-            size_mb = os.path.getsize(mp3_path) / (1024 * 1024)
-            
-            # Update current path
-            if is_current_temp:
-                intermediate_files.append(current_path)
-            current_path = mp3_path
-            is_current_temp = True
-            
-            if size_mb <= max_size_mb:
-                logger.success(f"MP3 conversion successful. New size: {size_mb:.2f}MB")
-                _cleanup_intermediates(intermediate_files)
-                bytes_per_sec = _calculate_bytes_per_second(current_path)
-                return OptimizationResult(
-                    path=current_path,
-                    is_temporary=True,
-                    size_mb=size_mb,
-                    bytes_per_second=bytes_per_sec
-                )
-            else:
-                logger.warning(f"MP3 file still too large ({size_mb:.2f}MB). Will attempt chunking if supported.")
-                # Don't fail here - return the best result we have for chunking
-                bytes_per_sec = _calculate_bytes_per_second(current_path)
-                _cleanup_intermediates(intermediate_files)
-                return OptimizationResult(
-                    path=current_path,
-                    is_temporary=True,
-                    size_mb=size_mb,
-                    bytes_per_second=bytes_per_sec
-                )
-                
-        # If we get here, we have no optimized file
-        # Return the original with its metadata (caller can decide what to do)
+                logger.warning("Audio extraction failed, continuing with original file")
+
+        # 3. Convert to FLAC (if needed)
+        reqs = API_FORMAT_REQUIREMENTS.get(api_name.lower(), {"requires_flac": True})
+        current_size_mb = os.path.getsize(current_path) / (1024 * 1024)
+
+        if reqs.get("requires_flac") or current_path.suffix.lower() != '.flac':
+            if current_size_mb > max_size_mb or reqs.get("requires_flac"):
+                logger.info("Strategy 2: Converting to FLAC...")
+
+                flac_path = manager.get_path_for(FileOperation.CONVERTED_FLAC, "flac")
+
+                # Try PyAV first
+                flac_success = False
+                if is_pyav_available():
+                    logger.debug("Using PyAV for FLAC conversion")
+                    flac_success = convert_to_flac_pyav(current_path, flac_path)
+
+                # Fallback to ffmpeg subprocess via existing function
+                if not flac_success:
+                    logger.debug("PyAV FLAC conversion failed, using ffmpeg fallback")
+                    flac_temp = convert_to_flac(current_path)
+                    if flac_temp:
+                        import shutil
+                        shutil.move(str(flac_temp), str(flac_path))
+                        flac_success = True
+
+                if flac_success and flac_path.exists():
+                    size_mb = os.path.getsize(flac_path) / (1024 * 1024)
+                    manager.register(flac_path, FileOperation.CONVERTED_FLAC, current_path)
+
+                    if size_mb <= max_size_mb:
+                        logger.success(f"FLAC conversion successful. New size: {size_mb:.2f}MB")
+                        bytes_per_sec = _calculate_bytes_per_second(flac_path)
+                        return OptimizationResult(
+                            path=flac_path,
+                            is_temporary=True,
+                            size_mb=size_mb,
+                            bytes_per_second=bytes_per_sec,
+                            intermediate_manager=manager
+                        )
+                    else:
+                        logger.info(f"FLAC file: {size_mb:.2f}MB. Continuing to MP3 compression...")
+                        current_path = flac_path
+                        is_current_temp = True
+
+        # 4. Convert to MP3 (last resort)
+        current_size_mb = os.path.getsize(current_path) / (1024 * 1024)
+        if current_size_mb > max_size_mb:
+            logger.info("Strategy 3: Converting to MP3 (128k mono)...")
+
+            mp3_path = manager.get_path_for(FileOperation.CONVERTED_MP3, "mp3")
+
+            # Try PyAV first
+            mp3_success = False
+            if is_pyav_available():
+                logger.debug("Using PyAV for MP3 conversion")
+                mp3_success = convert_to_mp3_pyav(current_path, mp3_path)
+
+            # Fallback to ffmpeg subprocess via existing function
+            if not mp3_success:
+                logger.debug("PyAV MP3 conversion failed, using ffmpeg fallback")
+                mp3_temp = convert_to_mp3(current_path, bitrate="128k")
+                if mp3_temp:
+                    import shutil
+                    shutil.move(str(mp3_temp), str(mp3_path))
+                    mp3_success = True
+
+            if mp3_success and mp3_path.exists():
+                size_mb = os.path.getsize(mp3_path) / (1024 * 1024)
+                manager.register(mp3_path, FileOperation.CONVERTED_MP3, current_path)
+
+                if size_mb <= max_size_mb:
+                    logger.success(f"MP3 conversion successful. New size: {size_mb:.2f}MB")
+                    bytes_per_sec = _calculate_bytes_per_second(mp3_path)
+                    return OptimizationResult(
+                        path=mp3_path,
+                        is_temporary=True,
+                        size_mb=size_mb,
+                        bytes_per_second=bytes_per_sec,
+                        intermediate_manager=manager
+                    )
+                else:
+                    logger.warning(f"MP3 file: {size_mb:.2f}MB. Will attempt chunking if supported.")
+                    bytes_per_sec = _calculate_bytes_per_second(mp3_path)
+                    return OptimizationResult(
+                        path=mp3_path,
+                        is_temporary=True,
+                        size_mb=size_mb,
+                        bytes_per_second=bytes_per_sec,
+                        intermediate_manager=manager
+                    )
+
+        # If we get here, return the current file (might be original or last processed)
         bytes_per_sec = _calculate_bytes_per_second(current_path)
-        _cleanup_intermediates(intermediate_files)
+        final_size_mb = os.path.getsize(current_path) / (1024 * 1024)
+
         return OptimizationResult(
             path=current_path,
             is_temporary=is_current_temp,
-            size_mb=current_size_mb,
-            bytes_per_second=bytes_per_sec
+            size_mb=final_size_mb,
+            bytes_per_second=bytes_per_sec,
+            intermediate_manager=manager if is_current_temp else None
         )
-        
+
     except Exception as e:
-        # Clean up on error
-        _cleanup_intermediates(intermediate_files)
-        if is_current_temp and current_path.exists():
-            try:
-                os.unlink(current_path)
-            except:
-                pass
+        # Preserve intermediates on error if requested
+        if preserve_on_error:
+            manager.preserve_on_error()
+        else:
+            manager.cleanup()
         raise e
 
+
 def _cleanup_intermediates(files: List[Path]):
-    """Helper to clean up intermediate files."""
+    """Helper to clean up intermediate files. Deprecated - use IntermediateFileManager."""
     for f in files:
         if f.exists():
             try:

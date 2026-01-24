@@ -1,0 +1,6 @@
+{
+  "text": "This is a short, clear, and distinct audio sample with one speaker.\n",
+  "model": "gemini-2.0-flash-exp",
+  "api_name": "gemini",
+  "method": "inline"
+}

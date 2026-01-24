@@ -9,6 +9,16 @@ MODEL_REGISTRY = {
             "whisper-1"
         ]
     },
+    "openai_extended": {
+        "default": "gpt-4o-transcribe",
+        "models": [
+            "whisper-1",
+            "gpt-4o-transcribe",
+            "gpt-4o-mini-transcribe",
+            "gpt-4o-transcribe-diarize"
+        ],
+        "note": "gpt-4o-transcribe-diarize supports speaker diarization"
+    },
     "groq": {
         "default": "whisper-large-v3",
         "models": [
@@ -25,10 +35,26 @@ MODEL_REGISTRY = {
         ]
     },
     "elevenlabs": {
-        "default": "scribe_v1",
+        "default": "scribe_v2",
         "models": [
-            "scribe_v1"
+            "scribe_v1", "scribe_v2"
         ]
+    },
+    "gemini": {
+        "default": "gemini-2.0-flash-exp",
+        "models": [
+            "gemini-2.0-flash-exp",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro"
+        ],
+        "note": "Text-only output (no timestamps)"
+    },
+    "mistral": {
+        "default": "voxtral-mini-2507",
+        "models": [
+            "voxtral-mini-2507"
+        ],
+        "note": "Auto-detects language (cannot specify), segment-level timestamps only"
     }
 }
 

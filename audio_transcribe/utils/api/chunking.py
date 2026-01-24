@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Union, Tuple, Optional
 from pathlib import Path
 from loguru import logger
-from audio_transcribe.transcribe_helpers.chunking import split_audio
+from audio_transcribe.transcribe_helpers.chunking import split_audio_streaming
 
 class ChunkingMixin(ABC):
     """Mixin for APIs that support chunked transcription."""
@@ -13,20 +13,20 @@ class ChunkingMixin(ABC):
     def transcribe_with_chunking(self, audio_path: Union[str, Path], chunk_length: int = 600, overlap: int = 10, **kwargs) -> Any:
         """
         Generic chunking logic for any API.
-        
+
         Args:
             audio_path: Path to the audio file
             chunk_length: Length of chunks in seconds
             overlap: Overlap between chunks in seconds
             **kwargs: Additional arguments passed to transcribe_chunk
-            
+
         Returns:
             Merged transcription result
         """
         audio_path = Path(audio_path)
         logger.info(f"Splitting audio into chunks (length={chunk_length}s, overlap={overlap}s)...")
-        
-        chunks = split_audio(audio_path, chunk_length, overlap)
+
+        chunks = split_audio_streaming(audio_path, chunk_length, overlap)
         results = []
         
         logger.info(f"Created {len(chunks)} chunks. Starting transcription...")

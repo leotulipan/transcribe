@@ -10,6 +10,148 @@ from loguru import logger
 from .text_processing import find_longest_common_sequence
 
 
+def split_audio_streaming(
+    audio_path: Union[str, Path],
+    chunk_length: int = 600,
+    overlap: int = 10
+) -> List[Tuple[Path, float]]:
+    """
+    Split audio file into chunks using PyAV streaming (memory efficient).
+
+    Falls back to pydub if PyAV is unavailable.
+
+    Args:
+        audio_path: Path to audio file
+        chunk_length: Length of each chunk in seconds
+        overlap: Overlap between chunks in seconds
+
+    Returns:
+        List of (chunk_path, start_time_seconds) tuples
+
+    From: groq - Split audio into processable chunks with streaming support
+    """
+    from .pyav_backend import is_pyav_available, get_duration_seconds
+
+    audio_path = Path(audio_path)
+
+    # Try PyAV streaming first (more memory efficient)
+    if is_pyav_available():
+        try:
+            return _split_audio_pyav(audio_path, chunk_length, overlap)
+        except Exception as e:
+            logger.debug(f"PyAV streaming failed: {e}, falling back to pydub")
+
+    # Fallback to pydub
+    return split_audio(audio_path, chunk_length, overlap)
+
+
+def _split_audio_pyav(
+    audio_path: Path,
+    chunk_length: int = 600,
+    overlap: int = 10
+) -> List[Tuple[Path, float]]:
+    """
+    Split audio using PyAV streaming implementation.
+
+    Seeks to positions and encodes chunks without full file load.
+
+    Args:
+        audio_path: Path to audio file
+        chunk_length: Length of each chunk in seconds
+        overlap: Overlap between chunks in seconds
+
+    Returns:
+        List of (chunk_path, start_time_seconds) tuples
+    """
+    import av
+
+    duration_seconds = get_duration_seconds(audio_path)
+    if duration_seconds <= 0:
+        logger.warning("Could not determine audio duration, falling back to pydub")
+        return split_audio(audio_path, chunk_length, overlap)
+
+    logger.info(f"Audio duration: {duration_seconds:.2f}s (using PyAV streaming)")
+
+    # Calculate # of chunks
+    effective_chunk_length = chunk_length - overlap
+    total_chunks = int((duration_seconds / effective_chunk_length)) + 1 if effective_chunk_length > 0 else 1
+
+    logger.info(f"Processing {total_chunks} chunks...")
+
+    chunks = []
+
+    # Use intermediate file manager for consistent naming
+    from .intermediate_files import IntermediateFileManager, FileOperation
+    manager = IntermediateFileManager(audio_path)
+    manager.setup()
+
+    try:
+        import av
+        with av.open(str(audio_path)) as container:
+            audio_stream = container.streams.audio[0]
+            if not audio_stream:
+                raise ValueError("No audio stream found")
+
+            # Sample rate for output
+            sample_rate = audio_stream.sample_rate
+
+            for i in range(total_chunks):
+                start_seconds = i * effective_chunk_length
+                end_seconds = min(start_seconds + chunk_length, duration_seconds)
+
+                logger.info(f"Processing chunk {i+1}/{total_chunks}")
+                logger.info(f"Time range: {start_seconds:.1f}s - {end_seconds:.1f}s")
+
+                # Create output file
+                chunk_path = manager.get_path_for(FileOperation.CHUNK, "flac")
+                # Add chunk index to filename
+                chunk_path = chunk_path.parent / f"{chunk_path.stem}_part{i}{chunk_path.suffix}"
+
+                # Seek to start position (in video timestamps)
+                seek_timestamp = int(start_seconds / audio_stream.time_base)
+                container.seek(seek_timestamp, stream=audio_stream)
+
+                # Setup output
+                with av.open(str(chunk_path), 'w') as out:
+                    out_stream = out.add_stream('flac', rate=sample_rate)
+                    out_stream.layout = 'mono'
+
+                    # Setup resampler
+                    resampler = av.AudioResampler(format='s16', layout='mono', rate=sample_rate)
+
+                    # Decode and encode frames
+                    current_time = start_seconds
+                    for frame in container.decode(audio_stream):
+                        # Calculate frame time
+                        frame_time = frame.pts * audio_stream.time_base
+
+                        # Skip frames before start time (due to seek inaccuracy)
+                        if frame_time < start_seconds:
+                            continue
+
+                        # Stop if we've reached end time
+                        if frame_time >= end_seconds:
+                            break
+
+                        # Resample and encode
+                        for resampled in resampler.resample(frame):
+                            for packet in out_stream.encode(resampled):
+                                out.mux(packet)
+
+                    # Flush encoder
+                    for packet in out_stream.encode():
+                        out.mux(packet)
+
+                chunks.append((chunk_path, start_seconds))
+
+        return chunks
+
+    except Exception as e:
+        # Clean up on error
+        manager.cleanup()
+        raise e
+
+
 def split_audio(audio_path: Union[str, Path], chunk_length: int = 600, overlap: int = 10) -> List[Tuple[Path, float]]:
     """
     Split audio file into chunks with overlap.

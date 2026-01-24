@@ -1,0 +1,1696 @@
+{
+  "text": "Ich freue mich sehr auf dieses Gespräch mit Timo Konzelmann. Er ist Content Creator, Autor, Keto-Coach und Speaker. Timo erhielt seine ADHS-Diagnose erst im erwachsenen Alter und hat daraus ein starkes Projekt gemacht. Sein Buch und Hörbuch ADHS gesegnet und verflucht, das er in bemerkenswerter Geschwindigkeit geschrieben und eingesprochen hat. Er beschreibt ADHS nicht nur als Herausforderung, sondern auch als Potenzial. Anders denken, hören und sehen und nutzt genau diese Perspektive, Betroffenen Orientierung zu geben. Gleichzeitig teilt er, wie ihm ketogene Ernährung half, Energie und Struktur in den Alltag zu bringen, ohne daraus ein Dogma zu machen. Ein Angebot, kein Evangelium. Außerdem zeigt Timo, wie digitale Tools bis hin zu KI im Alltag mit ADHS unterstützen können. Heute klären wir, was genau meint Segen und Fluch. Wie lassen sich Neurobiologie, Ernährung und Alltagspraxis verbinden? Und welche ersten Schritte helfen Betroffenen wirklich?",
+  "confidence": 0.0,
+  "language": "deu",
+  "speakers": [],
+  "segments": [],
+  "api_name": "elevenlabs",
+  "words": [
+    {
+      "text": "Ich",
+      "start": 0.079,
+      "end": 0.219,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 0.219,
+      "end": 0.299,
+      "type": "spacing"
+    },
+    {
+      "text": "freue",
+      "start": 0.299,
+      "end": 0.539,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 0.539,
+      "end": 0.579,
+      "type": "spacing"
+    },
+    {
+      "text": "mich",
+      "start": 0.579,
+      "end": 0.819,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 0.819,
+      "end": 0.879,
+      "type": "spacing"
+    },
+    {
+      "text": "sehr",
+      "start": 0.879,
+      "end": 1.299,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 1.299,
+      "end": 1.379,
+      "type": "spacing"
+    },
+    {
+      "text": "auf",
+      "start": 1.379,
+      "end": 1.739,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 1.739,
+      "end": 1.779,
+      "type": "spacing"
+    },
+    {
+      "text": "dieses",
+      "start": 1.779,
+      "end": 2.079,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 2.079,
+      "end": 2.159,
+      "type": "spacing"
+    },
+    {
+      "text": "Gespräch",
+      "start": 2.159,
+      "end": 2.759,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 2.759,
+      "end": 2.839,
+      "type": "spacing"
+    },
+    {
+      "text": "mit",
+      "start": 2.839,
+      "end": 3.059,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 3.059,
+      "end": 3.200,
+      "type": "spacing"
+    },
+    {
+      "text": "Timo",
+      "start": 3.200,
+      "end": 3.620,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 3.620,
+      "end": 3.659,
+      "type": "spacing"
+    },
+    {
+      "text": "Konzelmann.",
+      "start": 3.659,
+      "end": 4.840,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 4.840,
+      "end": 4.879,
+      "type": "spacing"
+    },
+    {
+      "text": "Er",
+      "start": 4.880,
+      "end": 5.000,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 5.000,
+      "end": 5.059,
+      "type": "spacing"
+    },
+    {
+      "text": "ist",
+      "start": 5.059,
+      "end": 5.339,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 5.339,
+      "end": 5.379,
+      "type": "spacing"
+    },
+    {
+      "text": "Content",
+      "start": 5.380,
+      "end": 5.799,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 5.799,
+      "end": 5.839,
+      "type": "spacing"
+    },
+    {
+      "text": "Creator,",
+      "start": 5.839,
+      "end": 6.279,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 6.279,
+      "end": 6.359,
+      "type": "spacing"
+    },
+    {
+      "text": "Autor,",
+      "start": 6.359,
+      "end": 7.039,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 7.039,
+      "end": 7.079,
+      "type": "spacing"
+    },
+    {
+      "text": "Keto-Coach",
+      "start": 7.079,
+      "end": 7.839,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 7.839,
+      "end": 7.899,
+      "type": "spacing"
+    },
+    {
+      "text": "und",
+      "start": 7.899,
+      "end": 8.020,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 8.020,
+      "end": 8.119,
+      "type": "spacing"
+    },
+    {
+      "text": "Speaker.",
+      "start": 8.119,
+      "end": 9.039,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 9.039,
+      "end": 9.079,
+      "type": "spacing"
+    },
+    {
+      "text": "Timo",
+      "start": 9.079,
+      "end": 9.399,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 9.399,
+      "end": 9.479,
+      "type": "spacing"
+    },
+    {
+      "text": "erhielt",
+      "start": 9.479,
+      "end": 9.839,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 9.839,
+      "end": 9.880,
+      "type": "spacing"
+    },
+    {
+      "text": "seine",
+      "start": 9.880,
+      "end": 10.199,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 10.199,
+      "end": 10.299,
+      "type": "spacing"
+    },
+    {
+      "text": "ADHS-Diagnose",
+      "start": 10.300,
+      "end": 11.380,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 11.380,
+      "end": 11.460,
+      "type": "spacing"
+    },
+    {
+      "text": "erst",
+      "start": 11.460,
+      "end": 11.640,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 11.640,
+      "end": 11.659,
+      "type": "spacing"
+    },
+    {
+      "text": "im",
+      "start": 11.659,
+      "end": 11.759,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 11.759,
+      "end": 11.779,
+      "type": "spacing"
+    },
+    {
+      "text": "erwachsenen",
+      "start": 11.779,
+      "end": 12.380,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 12.380,
+      "end": 12.500,
+      "type": "spacing"
+    },
+    {
+      "text": "Alter",
+      "start": 12.500,
+      "end": 12.819,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 12.819,
+      "end": 13.219,
+      "type": "spacing"
+    },
+    {
+      "text": "und",
+      "start": 13.219,
+      "end": 13.380,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 13.380,
+      "end": 13.439,
+      "type": "spacing"
+    },
+    {
+      "text": "hat",
+      "start": 13.439,
+      "end": 13.599,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 13.599,
+      "end": 13.640,
+      "type": "spacing"
+    },
+    {
+      "text": "daraus",
+      "start": 13.640,
+      "end": 14.059,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 14.059,
+      "end": 14.159,
+      "type": "spacing"
+    },
+    {
+      "text": "ein",
+      "start": 14.159,
+      "end": 14.319,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 14.319,
+      "end": 14.380,
+      "type": "spacing"
+    },
+    {
+      "text": "starkes",
+      "start": 14.380,
+      "end": 14.880,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 14.880,
+      "end": 14.899,
+      "type": "spacing"
+    },
+    {
+      "text": "Projekt",
+      "start": 14.899,
+      "end": 15.279,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 15.279,
+      "end": 15.340,
+      "type": "spacing"
+    },
+    {
+      "text": "gemacht.",
+      "start": 15.340,
+      "end": 15.760,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 15.760,
+      "end": 15.899,
+      "type": "spacing"
+    },
+    {
+      "text": "Sein",
+      "start": 15.899,
+      "end": 16.100,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 16.100,
+      "end": 16.180,
+      "type": "spacing"
+    },
+    {
+      "text": "Buch",
+      "start": 16.180,
+      "end": 16.500,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 16.500,
+      "end": 16.559,
+      "type": "spacing"
+    },
+    {
+      "text": "und",
+      "start": 16.559,
+      "end": 16.680,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 16.680,
+      "end": 16.739,
+      "type": "spacing"
+    },
+    {
+      "text": "Hörbuch",
+      "start": 16.739,
+      "end": 17.200,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 17.200,
+      "end": 17.619,
+      "type": "spacing"
+    },
+    {
+      "text": "ADHS",
+      "start": 17.619,
+      "end": 18.299,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 18.299,
+      "end": 18.419,
+      "type": "spacing"
+    },
+    {
+      "text": "gesegnet",
+      "start": 18.420,
+      "end": 19.000,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 19.000,
+      "end": 19.059,
+      "type": "spacing"
+    },
+    {
+      "text": "und",
+      "start": 19.059,
+      "end": 19.139,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 19.139,
+      "end": 19.219,
+      "type": "spacing"
+    },
+    {
+      "text": "verflucht,",
+      "start": 19.219,
+      "end": 20.179,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 20.179,
+      "end": 20.219,
+      "type": "spacing"
+    },
+    {
+      "text": "das",
+      "start": 20.219,
+      "end": 20.399,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 20.399,
+      "end": 20.500,
+      "type": "spacing"
+    },
+    {
+      "text": "er",
+      "start": 20.500,
+      "end": 20.659,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 20.659,
+      "end": 20.719,
+      "type": "spacing"
+    },
+    {
+      "text": "in",
+      "start": 20.719,
+      "end": 20.819,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 20.819,
+      "end": 20.940,
+      "type": "spacing"
+    },
+    {
+      "text": "bemerkenswerter",
+      "start": 20.940,
+      "end": 21.819,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 21.819,
+      "end": 21.879,
+      "type": "spacing"
+    },
+    {
+      "text": "Geschwindigkeit",
+      "start": 21.879,
+      "end": 22.619,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 22.619,
+      "end": 22.659,
+      "type": "spacing"
+    },
+    {
+      "text": "geschrieben",
+      "start": 22.659,
+      "end": 23.219,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 23.219,
+      "end": 23.359,
+      "type": "spacing"
+    },
+    {
+      "text": "und",
+      "start": 23.359,
+      "end": 23.520,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 23.520,
+      "end": 23.739,
+      "type": "spacing"
+    },
+    {
+      "text": "eingesprochen",
+      "start": 23.739,
+      "end": 24.440,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 24.440,
+      "end": 24.519,
+      "type": "spacing"
+    },
+    {
+      "text": "hat.",
+      "start": 24.519,
+      "end": 24.739,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 24.739,
+      "end": 24.799,
+      "type": "spacing"
+    },
+    {
+      "text": "Er",
+      "start": 24.799,
+      "end": 24.920,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 24.920,
+      "end": 24.959,
+      "type": "spacing"
+    },
+    {
+      "text": "beschreibt",
+      "start": 24.959,
+      "end": 25.479,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 25.479,
+      "end": 25.659,
+      "type": "spacing"
+    },
+    {
+      "text": "ADHS",
+      "start": 25.659,
+      "end": 26.279,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 26.279,
+      "end": 26.379,
+      "type": "spacing"
+    },
+    {
+      "text": "nicht",
+      "start": 26.379,
+      "end": 26.600,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 26.600,
+      "end": 26.659,
+      "type": "spacing"
+    },
+    {
+      "text": "nur",
+      "start": 26.659,
+      "end": 26.819,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 26.819,
+      "end": 26.899,
+      "type": "spacing"
+    },
+    {
+      "text": "als",
+      "start": 26.899,
+      "end": 27.039,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 27.039,
+      "end": 27.099,
+      "type": "spacing"
+    },
+    {
+      "text": "Herausforderung,",
+      "start": 27.099,
+      "end": 28.200,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 28.200,
+      "end": 28.260,
+      "type": "spacing"
+    },
+    {
+      "text": "sondern",
+      "start": 28.260,
+      "end": 28.579,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 28.579,
+      "end": 28.680,
+      "type": "spacing"
+    },
+    {
+      "text": "auch",
+      "start": 28.680,
+      "end": 28.799,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 28.799,
+      "end": 28.840,
+      "type": "spacing"
+    },
+    {
+      "text": "als",
+      "start": 28.840,
+      "end": 28.940,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 28.940,
+      "end": 29.020,
+      "type": "spacing"
+    },
+    {
+      "text": "Potenzial.",
+      "start": 29.020,
+      "end": 29.779,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 29.779,
+      "end": 29.960,
+      "type": "spacing"
+    },
+    {
+      "text": "Anders",
+      "start": 29.960,
+      "end": 30.319,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 30.319,
+      "end": 30.379,
+      "type": "spacing"
+    },
+    {
+      "text": "denken,",
+      "start": 30.379,
+      "end": 30.959,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 30.959,
+      "end": 30.999,
+      "type": "spacing"
+    },
+    {
+      "text": "hören",
+      "start": 31.000,
+      "end": 31.420,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 31.420,
+      "end": 31.500,
+      "type": "spacing"
+    },
+    {
+      "text": "und",
+      "start": 31.500,
+      "end": 31.659,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 31.659,
+      "end": 31.719,
+      "type": "spacing"
+    },
+    {
+      "text": "sehen",
+      "start": 31.719,
+      "end": 32.040,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 32.040,
+      "end": 32.159,
+      "type": "spacing"
+    },
+    {
+      "text": "und",
+      "start": 32.159,
+      "end": 32.319,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 32.319,
+      "end": 32.380,
+      "type": "spacing"
+    },
+    {
+      "text": "nutzt",
+      "start": 32.380,
+      "end": 32.619,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 32.619,
+      "end": 32.680,
+      "type": "spacing"
+    },
+    {
+      "text": "genau",
+      "start": 32.680,
+      "end": 33.000,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 33.000,
+      "end": 33.060,
+      "type": "spacing"
+    },
+    {
+      "text": "diese",
+      "start": 33.060,
+      "end": 33.279,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 33.279,
+      "end": 33.399,
+      "type": "spacing"
+    },
+    {
+      "text": "Perspektive,",
+      "start": 33.399,
+      "end": 34.340,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 34.340,
+      "end": 34.520,
+      "type": "spacing"
+    },
+    {
+      "text": "Betroffenen",
+      "start": 34.520,
+      "end": 35.279,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 35.279,
+      "end": 35.439,
+      "type": "spacing"
+    },
+    {
+      "text": "Orientierung",
+      "start": 35.439,
+      "end": 36.139,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 36.139,
+      "end": 36.200,
+      "type": "spacing"
+    },
+    {
+      "text": "zu",
+      "start": 36.200,
+      "end": 36.299,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 36.299,
+      "end": 36.360,
+      "type": "spacing"
+    },
+    {
+      "text": "geben.",
+      "start": 36.360,
+      "end": 36.659,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 36.659,
+      "end": 36.759,
+      "type": "spacing"
+    },
+    {
+      "text": "Gleichzeitig",
+      "start": 36.759,
+      "end": 37.340,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 37.340,
+      "end": 37.459,
+      "type": "spacing"
+    },
+    {
+      "text": "teilt",
+      "start": 37.459,
+      "end": 37.819,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 37.819,
+      "end": 37.840,
+      "type": "spacing"
+    },
+    {
+      "text": "er,",
+      "start": 37.840,
+      "end": 38.099,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 38.099,
+      "end": 38.119,
+      "type": "spacing"
+    },
+    {
+      "text": "wie",
+      "start": 38.119,
+      "end": 38.299,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 38.299,
+      "end": 38.360,
+      "type": "spacing"
+    },
+    {
+      "text": "ihm",
+      "start": 38.360,
+      "end": 38.999,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 39.000,
+      "end": 39.080,
+      "type": "spacing"
+    },
+    {
+      "text": "ketogene",
+      "start": 39.080,
+      "end": 39.600,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 39.600,
+      "end": 39.639,
+      "type": "spacing"
+    },
+    {
+      "text": "Ernährung",
+      "start": 39.639,
+      "end": 40.119,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 40.119,
+      "end": 40.199,
+      "type": "spacing"
+    },
+    {
+      "text": "half,",
+      "start": 40.200,
+      "end": 40.600,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 40.600,
+      "end": 40.639,
+      "type": "spacing"
+    },
+    {
+      "text": "Energie",
+      "start": 40.639,
+      "end": 41.000,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 41.000,
+      "end": 41.040,
+      "type": "spacing"
+    },
+    {
+      "text": "und",
+      "start": 41.040,
+      "end": 41.139,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 41.139,
+      "end": 41.180,
+      "type": "spacing"
+    },
+    {
+      "text": "Struktur",
+      "start": 41.180,
+      "end": 41.560,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 41.560,
+      "end": 41.579,
+      "type": "spacing"
+    },
+    {
+      "text": "in",
+      "start": 41.579,
+      "end": 41.659,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 41.659,
+      "end": 41.680,
+      "type": "spacing"
+    },
+    {
+      "text": "den",
+      "start": 41.680,
+      "end": 41.779,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 41.779,
+      "end": 41.879,
+      "type": "spacing"
+    },
+    {
+      "text": "Alltag",
+      "start": 41.879,
+      "end": 42.260,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 42.260,
+      "end": 42.299,
+      "type": "spacing"
+    },
+    {
+      "text": "zu",
+      "start": 42.299,
+      "end": 42.400,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 42.400,
+      "end": 42.459,
+      "type": "spacing"
+    },
+    {
+      "text": "bringen,",
+      "start": 42.459,
+      "end": 42.899,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 42.899,
+      "end": 43.039,
+      "type": "spacing"
+    },
+    {
+      "text": "ohne",
+      "start": 43.040,
+      "end": 43.260,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 43.260,
+      "end": 43.319,
+      "type": "spacing"
+    },
+    {
+      "text": "daraus",
+      "start": 43.319,
+      "end": 43.639,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 43.639,
+      "end": 43.680,
+      "type": "spacing"
+    },
+    {
+      "text": "ein",
+      "start": 43.680,
+      "end": 43.799,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 43.799,
+      "end": 43.860,
+      "type": "spacing"
+    },
+    {
+      "text": "Dogma",
+      "start": 43.860,
+      "end": 44.200,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 44.200,
+      "end": 44.240,
+      "type": "spacing"
+    },
+    {
+      "text": "zu",
+      "start": 44.240,
+      "end": 44.340,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 44.340,
+      "end": 44.400,
+      "type": "spacing"
+    },
+    {
+      "text": "machen.",
+      "start": 44.400,
+      "end": 44.899,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 44.899,
+      "end": 44.939,
+      "type": "spacing"
+    },
+    {
+      "text": "Ein",
+      "start": 44.939,
+      "end": 45.079,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 45.079,
+      "end": 45.179,
+      "type": "spacing"
+    },
+    {
+      "text": "Angebot,",
+      "start": 45.180,
+      "end": 45.979,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 45.979,
+      "end": 46.000,
+      "type": "spacing"
+    },
+    {
+      "text": "kein",
+      "start": 46.000,
+      "end": 46.159,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 46.159,
+      "end": 46.220,
+      "type": "spacing"
+    },
+    {
+      "text": "Evangelium.",
+      "start": 46.220,
+      "end": 46.959,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 46.959,
+      "end": 47.239,
+      "type": "spacing"
+    },
+    {
+      "text": "Außerdem",
+      "start": 47.239,
+      "end": 47.700,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 47.700,
+      "end": 47.819,
+      "type": "spacing"
+    },
+    {
+      "text": "zeigt",
+      "start": 47.819,
+      "end": 48.119,
+      "type": "word"
+    },
+    {
+      "text": "Timo,",
+      "start": 48.119,
+      "end": 48.580,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 48.119,
+      "end": 48.119,
+      "type": "spacing"
+    },
+    {
+      "text": " ",
+      "start": 48.580,
+      "end": 48.599,
+      "type": "spacing"
+    },
+    {
+      "text": "wie",
+      "start": 48.599,
+      "end": 48.720,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 48.720,
+      "end": 48.759,
+      "type": "spacing"
+    },
+    {
+      "text": "digitale",
+      "start": 48.759,
+      "end": 49.420,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 49.420,
+      "end": 49.500,
+      "type": "spacing"
+    },
+    {
+      "text": "Tools",
+      "start": 49.500,
+      "end": 50.119,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 50.119,
+      "end": 50.159,
+      "type": "spacing"
+    },
+    {
+      "text": "bis",
+      "start": 50.159,
+      "end": 50.360,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 50.360,
+      "end": 50.400,
+      "type": "spacing"
+    },
+    {
+      "text": "hin",
+      "start": 50.400,
+      "end": 50.619,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 50.619,
+      "end": 50.700,
+      "type": "spacing"
+    },
+    {
+      "text": "zu",
+      "start": 50.700,
+      "end": 50.799,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 50.799,
+      "end": 51.200,
+      "type": "spacing"
+    },
+    {
+      "text": "KI",
+      "start": 51.200,
+      "end": 51.839,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 51.840,
+      "end": 51.920,
+      "type": "spacing"
+    },
+    {
+      "text": "im",
+      "start": 51.920,
+      "end": 52.060,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 52.060,
+      "end": 52.159,
+      "type": "spacing"
+    },
+    {
+      "text": "Alltag",
+      "start": 52.159,
+      "end": 52.520,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 52.520,
+      "end": 52.560,
+      "type": "spacing"
+    },
+    {
+      "text": "mit",
+      "start": 52.560,
+      "end": 52.700,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 52.700,
+      "end": 52.799,
+      "type": "spacing"
+    },
+    {
+      "text": "ADHS",
+      "start": 52.799,
+      "end": 53.299,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 53.299,
+      "end": 53.340,
+      "type": "spacing"
+    },
+    {
+      "text": "unterstützen",
+      "start": 53.340,
+      "end": 53.940,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 53.940,
+      "end": 53.979,
+      "type": "spacing"
+    },
+    {
+      "text": "können.",
+      "start": 53.979,
+      "end": 54.439,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 54.439,
+      "end": 54.459,
+      "type": "spacing"
+    },
+    {
+      "text": "Heute",
+      "start": 54.459,
+      "end": 54.819,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 54.819,
+      "end": 54.880,
+      "type": "spacing"
+    },
+    {
+      "text": "klären",
+      "start": 54.880,
+      "end": 55.200,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 55.200,
+      "end": 55.239,
+      "type": "spacing"
+    },
+    {
+      "text": "wir,",
+      "start": 55.239,
+      "end": 55.399,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 55.399,
+      "end": 55.439,
+      "type": "spacing"
+    },
+    {
+      "text": "was",
+      "start": 55.439,
+      "end": 55.659,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 55.659,
+      "end": 55.720,
+      "type": "spacing"
+    },
+    {
+      "text": "genau",
+      "start": 55.720,
+      "end": 56.000,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 56.000,
+      "end": 56.060,
+      "type": "spacing"
+    },
+    {
+      "text": "meint",
+      "start": 56.060,
+      "end": 56.459,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 56.459,
+      "end": 56.619,
+      "type": "spacing"
+    },
+    {
+      "text": "Segen",
+      "start": 56.619,
+      "end": 57.199,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 57.199,
+      "end": 57.259,
+      "type": "spacing"
+    },
+    {
+      "text": "und",
+      "start": 57.259,
+      "end": 57.360,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 57.360,
+      "end": 57.479,
+      "type": "spacing"
+    },
+    {
+      "text": "Fluch.",
+      "start": 57.479,
+      "end": 58.419,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 58.419,
+      "end": 58.479,
+      "type": "spacing"
+    },
+    {
+      "text": "Wie",
+      "start": 58.479,
+      "end": 58.600,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 58.600,
+      "end": 58.639,
+      "type": "spacing"
+    },
+    {
+      "text": "lassen",
+      "start": 58.639,
+      "end": 58.939,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 58.939,
+      "end": 59.000,
+      "type": "spacing"
+    },
+    {
+      "text": "sich",
+      "start": 59.000,
+      "end": 59.180,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 59.180,
+      "end": 59.260,
+      "type": "spacing"
+    },
+    {
+      "text": "Neurobiologie,",
+      "start": 59.260,
+      "end": 60.059,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 60.059,
+      "end": 60.099,
+      "type": "spacing"
+    },
+    {
+      "text": "Ernährung",
+      "start": 60.099,
+      "end": 60.540,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 60.540,
+      "end": 60.579,
+      "type": "spacing"
+    },
+    {
+      "text": "und",
+      "start": 60.579,
+      "end": 60.680,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 60.680,
+      "end": 60.779,
+      "type": "spacing"
+    },
+    {
+      "text": "Alltagspraxis",
+      "start": 60.779,
+      "end": 61.619,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 61.619,
+      "end": 61.680,
+      "type": "spacing"
+    },
+    {
+      "text": "verbinden?",
+      "start": 61.680,
+      "end": 62.979,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 62.979,
+      "end": 63.020,
+      "type": "spacing"
+    },
+    {
+      "text": "Und",
+      "start": 63.020,
+      "end": 63.079,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 63.079,
+      "end": 63.159,
+      "type": "spacing"
+    },
+    {
+      "text": "welche",
+      "start": 63.159,
+      "end": 63.439,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 63.439,
+      "end": 63.599,
+      "type": "spacing"
+    },
+    {
+      "text": "ersten",
+      "start": 63.599,
+      "end": 63.919,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 63.919,
+      "end": 63.999,
+      "type": "spacing"
+    },
+    {
+      "text": "Schritte",
+      "start": 64.000,
+      "end": 64.360,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 64.360,
+      "end": 64.419,
+      "type": "spacing"
+    },
+    {
+      "text": "helfen",
+      "start": 64.419,
+      "end": 64.779,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 64.779,
+      "end": 64.860,
+      "type": "spacing"
+    },
+    {
+      "text": "Betroffenen",
+      "start": 64.860,
+      "end": 65.539,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 65.540,
+      "end": 65.580,
+      "type": "spacing"
+    },
+    {
+      "text": "wirklich?",
+      "start": 65.580,
+      "end": 67.300,
+      "type": "word"
+    }
+  ]
+}

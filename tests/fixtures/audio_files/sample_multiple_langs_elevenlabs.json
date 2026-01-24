@@ -1,0 +1,309 @@
+{
+  "language_code": "deu",
+  "language_probability": 0.9703552722930908,
+  "text": "This is a multiple language clip. Dies ist ein Ausschnitt, in dem wir mehrere Sprachen verwenden. Nu Komma in lite svensk text.",
+  "words": [
+    {
+      "text": "This",
+      "start": 2.0,
+      "end": 2.399,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 2.399,
+      "end": 2.439,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "is",
+      "start": 2.44,
+      "end": 2.579,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 2.579,
+      "end": 2.619,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "a",
+      "start": 2.619,
+      "end": 2.699,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 2.699,
+      "end": 2.739,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "multiple",
+      "start": 2.74,
+      "end": 3.219,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 3.219,
+      "end": 3.459,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "language",
+      "start": 3.46,
+      "end": 3.959,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 3.959,
+      "end": 4.179,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "clip.",
+      "start": 4.179,
+      "end": 5.559,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 5.559,
+      "end": 5.599,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "Dies",
+      "start": 5.599,
+      "end": 6.039,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 6.039,
+      "end": 6.099,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "ist",
+      "start": 6.099,
+      "end": 6.279,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 6.279,
+      "end": 6.319,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "ein",
+      "start": 6.319,
+      "end": 6.439,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 6.439,
+      "end": 6.539,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "Ausschnitt,",
+      "start": 6.539,
+      "end": 7.559,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 7.559,
+      "end": 7.639,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "in",
+      "start": 7.639,
+      "end": 7.759,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 7.759,
+      "end": 7.759,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "dem",
+      "start": 7.759,
+      "end": 7.899,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 7.899,
+      "end": 7.939,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "wir",
+      "start": 7.94,
+      "end": 8.079,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 8.079,
+      "end": 8.099,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "mehrere",
+      "start": 8.099,
+      "end": 8.439,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 8.439,
+      "end": 8.5,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "Sprachen",
+      "start": 8.5,
+      "end": 8.96,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 8.96,
+      "end": 8.979,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "verwenden.",
+      "start": 8.979,
+      "end": 11.899,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 11.899,
+      "end": 11.96,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "Nu",
+      "start": 11.96,
+      "end": 12.239,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 12.239,
+      "end": 13.159,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "Komma",
+      "start": 13.159,
+      "end": 13.559,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 13.559,
+      "end": 13.88,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "in",
+      "start": 13.88,
+      "end": 14.039,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 14.039,
+      "end": 14.079,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "lite",
+      "start": 14.079,
+      "end": 14.46,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 14.46,
+      "end": 14.859,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "svensk",
+      "start": 14.859,
+      "end": 15.399,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 15.399,
+      "end": 16.299,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "text.",
+      "start": 16.299,
+      "end": 21.639,
+      "type": "word",
+      "logprob": 0.0
+    }
+  ],
+  "transcription_id": "O1OKXj1KU8bAHlgtCiTX"
+}

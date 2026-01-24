@@ -23,8 +23,9 @@ warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
 
 # Import helpers from the package
 from audio_transcribe.transcribe_helpers.audio_processing import (
-    check_audio_length, check_audio_format, convert_to_flac, convert_to_pcm, 
-    get_api_file_size_limit, check_file_size, optimize_audio_for_api, OptimizationResult
+    check_audio_length, check_audio_format, convert_to_flac, convert_to_pcm,
+    get_api_file_size_limit, check_file_size, optimize_audio_for_api, OptimizationResult,
+    can_passthrough
 )
 from audio_transcribe.utils.api.chunking import ChunkingMixin
 from audio_transcribe.transcribe_helpers.utils import setup_logger
@@ -217,9 +218,29 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                 logger.error(f"Invalid or missing API key for {api_name}.")
                 return []
 
+            # Warn about API capability limitations
+            output_formats = kwargs.get("output_formats", [])
+            if api_instance.supports_word_timestamps is False and any(x in str(output_formats) for x in ['word_srt', 'davinci_srt']):
+                logger.warning(
+                    f"{api_name} does not provide word-level timestamps. "
+                    f"SRT files will use approximate timing estimates from text."
+                )
+
+            # Warn about Mistral language constraint
+            if api_name == "mistral" and kwargs.get("language"):
+                logger.warning(
+                    f"Mistral Voxtral auto-detects language. "
+                    f"Requested language '{kwargs['language']}' will be ignored."
+                )
+
             # Optimize audio file size if needed
             try:
-                opt_result = optimize_audio_for_api(current_audio_file_path, api_name)
+                opt_result = optimize_audio_for_api(
+                    current_audio_file_path,
+                    api_name,
+                    size_threshold_mb=kwargs.get("size_threshold", 100.0),
+                    preserve_on_error=True
+                )
                 max_size_mb = get_api_file_size_limit(api_name)
                 
                 # Check if file still exceeds limit and API supports chunking
@@ -293,7 +314,11 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             return []
 
         logger.success(f"Successfully obtained transcription. Words count: {len(transcription_result.words)}")
-        
+
+        # Clean up intermediate files via manager (if present)
+        if 'opt_result' in locals() and opt_result.intermediate_manager:
+            opt_result.cleanup()
+
         # Output generation
         format_types = kwargs.get("output", ["text", "srt"])
         output_files = create_output_files(transcription_result, original_input_path, format_types, **kwargs)
@@ -380,6 +405,7 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 @click.option("--keep-flac", is_flag=True, help="Keep the generated FLAC file after processing")
 @click.option("--keep", is_flag=True, help="Keep optimized/converted audio files")
 @click.option("--model", "-m", help="Model to use for transcription", default=None)
+@click.option("--size-threshold", type=float, default=100.0, help="Files under this size (MB) skip processing if format compatible (default: 100)")
 @click.option("--chunk-length", type=int, default=600, help="Length of each chunk in seconds for long audio")
 @click.option("--overlap", type=int, default=10, help="Overlap between chunks in seconds")
 @click.option("--force", "-r", is_flag=True, help="Force re-transcription even if transcript exists")
@@ -392,11 +418,11 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 @click.option("--api-key", help="Set API key for the specified API (requires --setup)")
 @click.version_option()
 @click.pass_context
-def main(ctx, input_path, file, folder, api, language, output, chars_per_line, words_per_subtitle, 
-         word_srt, davinci_srt, silent_portions, padding_start, padding_end, show_pauses, 
-         filler_lines, filler_words, remove_fillers, speaker_labels, fps, fps_offset_start, 
-         fps_offset_end, diarize, num_speakers, use_input, use_pcm, keep_flac, keep, model, 
-         chunk_length, overlap, force, save_cleaned_json, use_json_input, debug, verbose, start_hour,
+def main(ctx, input_path, file, folder, api, language, output, chars_per_line, words_per_subtitle,
+         word_srt, davinci_srt, silent_portions, padding_start, padding_end, show_pauses,
+         filler_lines, filler_words, remove_fillers, speaker_labels, fps, fps_offset_start,
+         fps_offset_end, diarize, num_speakers, use_input, use_pcm, keep_flac, keep, model,
+         size_threshold, chunk_length, overlap, force, save_cleaned_json, use_json_input, debug, verbose, start_hour,
          setup, api_key):
     """Unified Audio Transcription Tool."""
     
@@ -545,6 +571,7 @@ def main(ctx, input_path, file, folder, api, language, output, chars_per_line, w
         "keep_flac": keep_flac,
         "keep": keep,
         "model": model,
+        "size_threshold": size_threshold,
         "chunk_length": chunk_length,
         "overlap": overlap,
         "force": force,

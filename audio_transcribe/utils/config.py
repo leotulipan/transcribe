@@ -15,7 +15,7 @@ class ConfigManager:
     def __init__(self):
         """Initialize the configuration manager."""
         self.app_name = "audio_transcribe"
-        
+
         # Determine configuration directory
         if os.name == 'nt':
             app_data = os.getenv('LOCALAPPDATA')
@@ -25,20 +25,26 @@ class ConfigManager:
                 self.config_dir = Path.home() / f".{self.app_name}"
         else:
             self.config_dir = Path.home() / f".{self.app_name}"
-            
+
         self.config_file = self.config_dir / "config.json"
         self.env_file = self.config_dir / ".env"
-        
+
         # Ensure config directory exists
         self.config_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Load existing config
         self.config = self._load_config()
-        
+
         # Load environment variables from central file
         # We also load from CWD as a fallback/override but don't write there
         load_dotenv(self.env_file)
         load_dotenv(Path(".env")) # Load local .env if it exists (overrides central)
+
+        # Also load from alternative locations for backwards compatibility
+        # Check C:\Users\<username>\.transcribe\.env on Windows
+        alt_env_path = Path.home() / ".transcribe" / ".env"
+        if alt_env_path.exists():
+            load_dotenv(alt_env_path)
 
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from JSON file."""

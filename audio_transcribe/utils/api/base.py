@@ -12,11 +12,18 @@ from audio_transcribe.utils.parsers import TranscriptionResult
 
 class TranscriptionAPI(ABC):
     """Base class for all transcription API implementations."""
-    
+
+    # Capability flags - override in subclasses
+    supports_word_timestamps: bool = True  # Can provide precise word timings
+    supports_segment_timestamps: bool = False  # Can provide segment timestamps
+    supports_speaker_diarization: bool = False  # Can identify speakers
+    supports_srt_format: bool = True  # API can return SRT directly
+    supported_output_formats: List[str] = ["text", "json"]  # What API returns natively
+
     def __init__(self, api_key: Optional[str] = None):
         """
         Initialize the transcription API.
-        
+
         Args:
             api_key: API key for the service (if not provided, will try to load from environment)
         """
@@ -52,12 +59,32 @@ class TranscriptionAPI(ABC):
     def list_models(self) -> List[str]:
         """
         List available models for this API.
-        
+
         Returns:
             List of model IDs available for use
         """
         return []
-        
+
+    def get_best_response_format(self, preferred_formats: List[str]) -> str:
+        """
+        Get the best response format supported by this API.
+
+        Strategy: Always try verbose_json first, then downgrade.
+        Can turn json → txt but never txt → json (and then SRT, etc).
+
+        Args:
+            preferred_formats: List of formats in order of preference
+                              (e.g., ["verbose_json", "json", "text"])
+
+        Returns:
+            Best supported format
+        """
+        for fmt in preferred_formats:
+            if fmt in self.supported_output_formats:
+                return fmt
+        # Fallback to least common denominator
+        return "text" if "text" in self.supported_output_formats else self.supported_output_formats[0]
+
     def save_result(self, result: Union[TranscriptionResult, Dict[str, Any]], audio_path: Union[str, Path]) -> str:
         """
         Save transcription result to a JSON file.
