@@ -1,0 +1,249 @@
+{
+  "language_code": "en",
+  "audio_url": "https://cdn.assemblyai.com/upload/03936912570a84cc02b822be9ba7958ab2f8229dfb4f96509a19059ead1246a6/afba229d-7b33-452f-b49f-a46f8dd2c4d4",
+  "punctuate": true,
+  "format_text": true,
+  "dual_channel": false,
+  "webhook_url": null,
+  "webhook_auth_header_name": null,
+  "webhook_auth_header_value": null,
+  "audio_start_from": null,
+  "audio_end_at": null,
+  "word_boost": [],
+  "boost_param": null,
+  "filter_profanity": false,
+  "redact_pii": false,
+  "redact_pii_audio": false,
+  "redact_pii_audio_quality": null,
+  "redact_pii_policies": null,
+  "redact_pii_sub": null,
+  "speaker_labels": true,
+  "speakers_expected": null,
+  "content_safety": false,
+  "content_safety_confidence": null,
+  "iab_categories": false,
+  "custom_spelling": null,
+  "disfluencies": false,
+  "sentiment_analysis": false,
+  "auto_chapters": false,
+  "entity_detection": false,
+  "summarization": false,
+  "summary_model": null,
+  "summary_type": null,
+  "auto_highlights": false,
+  "language_detection": true,
+  "language_confidence_threshold": null,
+  "language_confidence": 0.9934,
+  "speech_threshold": null,
+  "speech_model": "best",
+  "id": "36814cd2-39da-48fd-92e8-071405ca0ac8",
+  "status": "completed",
+  "error": null,
+  "text": "This is a short, clear and distinct audio sample with one speaker.",
+  "words": [
+    {
+      "text": "This",
+      "start": 1440,
+      "end": 1680,
+      "confidence": 0.9995117,
+      "speaker": "A"
+    },
+    {
+      "text": "is",
+      "start": 1680,
+      "end": 2000,
+      "confidence": 0.9980469,
+      "speaker": "A"
+    },
+    {
+      "text": "a",
+      "start": 2000,
+      "end": 2240,
+      "confidence": 0.9980469,
+      "speaker": "A"
+    },
+    {
+      "text": "short,",
+      "start": 2240,
+      "end": 2560,
+      "confidence": 1.0,
+      "speaker": "A"
+    },
+    {
+      "text": "clear",
+      "start": 2720,
+      "end": 3120,
+      "confidence": 0.9995117,
+      "speaker": "A"
+    },
+    {
+      "text": "and",
+      "start": 3120,
+      "end": 3520,
+      "confidence": 0.9243164,
+      "speaker": "A"
+    },
+    {
+      "text": "distinct",
+      "start": 3680,
+      "end": 4560,
+      "confidence": 0.96777344,
+      "speaker": "A"
+    },
+    {
+      "text": "audio",
+      "start": 4560,
+      "end": 5120,
+      "confidence": 0.7766113,
+      "speaker": "A"
+    },
+    {
+      "text": "sample",
+      "start": 5120,
+      "end": 5760,
+      "confidence": 0.9996745,
+      "speaker": "A"
+    },
+    {
+      "text": "with",
+      "start": 5760,
+      "end": 6160,
+      "confidence": 0.53125,
+      "speaker": "A"
+    },
+    {
+      "text": "one",
+      "start": 6240,
+      "end": 6600,
+      "confidence": 0.9995117,
+      "speaker": "A"
+    },
+    {
+      "text": "speaker.",
+      "start": 6600,
+      "end": 7200,
+      "confidence": 0.9977214,
+      "speaker": "A"
+    }
+  ],
+  "utterances": [
+    {
+      "text": "This is a short, clear and distinct audio sample with one speaker.",
+      "start": 1440,
+      "end": 7200,
+      "confidence": 0.93266463,
+      "speaker": "A",
+      "channel": null,
+      "words": [
+        {
+          "text": "This",
+          "start": 1440,
+          "end": 1680,
+          "confidence": 0.9995117,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "is",
+          "start": 1680,
+          "end": 2000,
+          "confidence": 0.9980469,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "a",
+          "start": 2000,
+          "end": 2240,
+          "confidence": 0.9980469,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "short,",
+          "start": 2240,
+          "end": 2560,
+          "confidence": 1.0,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "clear",
+          "start": 2720,
+          "end": 3120,
+          "confidence": 0.9995117,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "and",
+          "start": 3120,
+          "end": 3520,
+          "confidence": 0.9243164,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "distinct",
+          "start": 3680,
+          "end": 4560,
+          "confidence": 0.96777344,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "audio",
+          "start": 4560,
+          "end": 5120,
+          "confidence": 0.7766113,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "sample",
+          "start": 5120,
+          "end": 5760,
+          "confidence": 0.9996745,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "with",
+          "start": 5760,
+          "end": 6160,
+          "confidence": 0.53125,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "one",
+          "start": 6240,
+          "end": 6600,
+          "confidence": 0.9995117,
+          "speaker": "A",
+          "channel": null
+        },
+        {
+          "text": "speaker.",
+          "start": 6600,
+          "end": 7200,
+          "confidence": 0.9977214,
+          "speaker": "A",
+          "channel": null
+        }
+      ]
+    }
+  ],
+  "confidence": 0.93266463,
+  "audio_duration": 8,
+  "webhook_status_code": null,
+  "webhook_auth": false,
+  "summary": null,
+  "auto_highlights_result": null,
+  "content_safety_labels": null,
+  "iab_categories_result": null,
+  "chapters": null,
+  "sentiment_analysis_results": null,
+  "entities": null,
+  "api_name": "assemblyai"
+}

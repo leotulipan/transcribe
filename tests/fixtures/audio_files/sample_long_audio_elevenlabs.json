@@ -1,7 +1,7 @@
 {
   "language_code": "deu",
   "language_probability": 0.9918434619903564,
-  "text": "Ich freue mich sehr auf dieses Gespräch mit Timo Konzelmann. Er ist Content Creator, Autor, Keto-Coach und Speaker. Timo erhielt seine ADHS-Diagnose erst im erwachsenen Alter und hat daraus ein starkes Projekt gemacht. Sein Buch und Hörbuch ADHS gesegnet und verflucht, das er in bemerkenswerter Geschwindigkeit geschrieben und eingesprochen hat. Er beschreibt ADHS nicht nur als Herausforderung, sondern auch als Potenzial. Anders denken, hören und sehen und nutzt genau diese Perspektive, Betroffenen Orientierung zu geben. Gleichzeitig teilt er, wie ihm ketogene Ernährung half, Energie und Struktur in den Alltag zu bringen, ohne daraus ein Dogma zu machen. Ein Angebot, kein Evangelium. Außerdem zeigt Timo, wie digitale Tools bis hin zu KI im Alltag mit ADHS unterstützen können. Heute klären wir, was genau meint Segen und Fluch. Wie lassen sich Neurobiologie, Ernährung und Alltagspraxis verbinden? Und welche ersten Schritte helfen Betroffenen wirklich?",
+  "text": "Ich freue mich sehr auf dieses Gespräch mit Timo Konzelmann. Er ist Content Creator, Autor, Keto Coach und Speaker. Timo erhielt seine ADHS-Diagnose erst im erwachsenen Alter und hat daraus ein starkes Projekt gemacht. Sein Buch und Hörbuch ADHS gesegnet und verflucht, das er in bemerkenswerter Geschwindigkeit geschrieben und eingesprochen hat. Er beschreibt ADHS nicht nur als Herausforderung, sondern auch als Potenzial. Anders denken, hören und sehen und nutzt genau diese Perspektive, Betroffenen Orientierung zu geben. Gleichzeitig teilt er, wie ihm ketogene Ernährung half, Energie und Struktur in den Alltag zu bringen, ohne daraus ein Dogma zu machen. Ein Angebot, kein Evangelium. Außerdem zeigt Timo, wie digitale Tools bis hin zu KI im Alltag mit ADHS unterstützen können. Heute klären wir, was genau meint Segen und Fluch. Wie lassen sich Neurobiologie, Ernährung und Alltagspraxis verbinden? Und welche ersten Schritte helfen Betroffenen wirklich?",
   "words": [
     {
       "text": "Ich",
@@ -214,8 +214,22 @@
       "logprob": 0.0
     },
     {
-      "text": "Keto-Coach",
+      "text": "Keto",
       "start": 7.079,
+      "end": 7.439,
+      "type": "word",
+      "logprob": 0.0
+    },
+    {
+      "text": " ",
+      "start": 7.439,
+      "end": 7.479,
+      "type": "spacing",
+      "logprob": 0.0
+    },
+    {
+      "text": "Coach",
+      "start": 7.48,
       "end": 7.839,
       "type": "word",
       "logprob": 0.0
@@ -986,13 +1000,13 @@
     {
       "text": "Perspektive,",
       "start": 33.399,
-      "end": 34.34,
+      "end": 34.299,
       "type": "word",
       "logprob": 0.0
     },
     {
       "text": " ",
-      "start": 34.34,
+      "start": 34.299,
       "end": 34.52,
       "type": "spacing",
       "logprob": 0.0
@@ -1971,5 +1985,5 @@
       "logprob": 0.0
     }
   ],
-  "transcription_id": "KWvTQRw8vddGginJZcJS"
+  "transcription_id": "uIS0fRDzo8ofZw61AEIq"
 }

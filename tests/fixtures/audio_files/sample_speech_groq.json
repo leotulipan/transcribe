@@ -1,0 +1,103 @@
+{
+  "text": " This is a short, clear and distinct audio sample with one speaker.",
+  "task": "transcribe",
+  "language": "English",
+  "duration": 7.53,
+  "words": [
+    {
+      "word": "This",
+      "start": 1.38,
+      "end": 1.6
+    },
+    {
+      "word": "is",
+      "start": 1.6,
+      "end": 2.06
+    },
+    {
+      "word": "a",
+      "start": 2.06,
+      "end": 2.24
+    },
+    {
+      "word": "short,",
+      "start": 2.24,
+      "end": 2.68
+    },
+    {
+      "word": "clear",
+      "start": 2.68,
+      "end": 3.18
+    },
+    {
+      "word": "and",
+      "start": 3.18,
+      "end": 3.58
+    },
+    {
+      "word": "distinct",
+      "start": 3.58,
+      "end": 4.54
+    },
+    {
+      "word": "audio",
+      "start": 4.54,
+      "end": 5.06
+    },
+    {
+      "word": "sample",
+      "start": 5.06,
+      "end": 5.58
+    },
+    {
+      "word": "with",
+      "start": 5.58,
+      "end": 6.18
+    },
+    {
+      "word": "one",
+      "start": 6.18,
+      "end": 6.5
+    },
+    {
+      "word": "speaker.",
+      "start": 6.5,
+      "end": 7.48
+    }
+  ],
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 0,
+      "end": 7,
+      "text": " This is a short, clear and distinct audio sample with one speaker.",
+      "tokens": [
+        50365,
+        639,
+        307,
+        257,
+        2099,
+        11,
+        1850,
+        293,
+        10644,
+        6278,
+        6889,
+        365,
+        472,
+        8145,
+        13,
+        50715
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.24226077,
+      "compression_ratio": 1,
+      "no_speech_prob": 0.007892191
+    }
+  ],
+  "x_groq": {
+    "id": "req_01kfrdm4jves9scq8cd0dqp52q"
+  },
+  "api_name": "groq"
+}
