@@ -186,7 +186,9 @@ parser_log.txt
 /tests/fixtures/audio_files/silent_*.wav
 /tests/fixtures/audio_files/stereo_*.wav
 /tests/fixtures/audio_files/sample_speech.wav
+/tests/fixtures/audio_files/sample_speech.srt
 /tests/fixtures/audio_files/sample_speech.flac
 /tests/fixtures/audio_files/sample_speech.mp3
 /tests/fixtures/audio_files/empty.*
 /tests/fixtures/audio_files/invalid.*
+/tests/fixtures/audio_files/.*temp*

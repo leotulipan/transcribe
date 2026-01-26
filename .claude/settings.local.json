@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(where:*)",
+      "Bash(ffmpeg:*)"
     ]
   }
 }
