@@ -5,24 +5,20 @@ import os
 import tempfile
 import subprocess
 import base64
+import warnings
 from pathlib import Path
 from typing import Union, Optional, List, Dict, Any, Tuple, TYPE_CHECKING
 from dataclasses import dataclass, field
+
+# Suppress pydub warnings (SyntaxWarning from invalid escapes, RuntimeWarning from ffmpeg check)
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="pydub")
+
 from pydub import AudioSegment
 from loguru import logger
 
-# Try to import loguru, fallback to our mock implementation
-try:
-    from loguru import logger
-except ImportError:
-    import sys
-    import os
-
-    # Add the parent directory to sys.path
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-    # Import our mock logger
-    from loguru_patch import logger
+# Import centralized ffmpeg utilities
+from audio_transcribe.utils.ffmpeg import require_ffmpeg
 
 # Import new modules
 from .pyav_backend import (
@@ -200,6 +196,9 @@ def extract_audio_from_mp4(input_path: Union[str, Path]) -> Optional[str]:
     
     # Try ffmpeg first (faster, can copy stream without re-encoding)
     try:
+        # Ensure ffmpeg is available
+        require_ffmpeg()
+
         # First try to copy audio stream directly (fastest)
         cmd = [
             'ffmpeg',
@@ -289,12 +288,14 @@ def convert_to_flac(input_path: Union[str, Path], sample_rate: int = 16000) -> O
         output_path = temp_file.name
         
     logger.info(f"Converting {input_path.name} to 16kHz mono FLAC...")
-    
+
     # Get duration for progress tracking
     duration_seconds = _get_audio_duration_seconds(input_path)
-    
+
     # Try ffmpeg first (faster)
     try:
+        require_ffmpeg()
+
         cmd = [
             'ffmpeg',
             '-i', str(input_path),
@@ -491,12 +492,14 @@ def convert_to_mp3(input_path: Union[str, Path], bitrate: str = "128k") -> Optio
         output_path = temp_file.name
         
     logger.info(f"Converting {input_path.name} to MP3 ({bitrate})...")
-    
+
     # Get duration for progress tracking
     duration_seconds = _get_audio_duration_seconds(input_path)
-    
+
     # Try ffmpeg first (faster)
     try:
+        require_ffmpeg()
+
         cmd = [
             'ffmpeg',
             '-i', str(input_path),
@@ -628,6 +631,8 @@ def optimize_audio_for_api(
             # Fallback to ffmpeg subprocess
             if not extracted_success:
                 logger.debug("PyAV extraction failed or unavailable, using ffmpeg subprocess")
+                require_ffmpeg()  # Ensure ffmpeg is available before use
+
                 # Use the existing extract_audio_from_mp4 but with our output path
                 # We need to temporarily override the output path logic
                 # For now, use a simpler approach with ffmpeg

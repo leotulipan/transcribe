@@ -18,8 +18,9 @@ from loguru import logger
 from dotenv import load_dotenv
 import warnings
 
-# Suppress pydub SyntaxWarnings (invalid escape sequence)
+# Suppress pydub warnings (SyntaxWarning from invalid escapes, RuntimeWarning from ffmpeg check)
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="pydub")
 
 # Import helpers from the package
 from audio_transcribe.transcribe_helpers.audio_processing import (
@@ -39,6 +40,19 @@ from audio_transcribe.utils.defaults import DefaultsManager
 
 # Import TUI modules
 from audio_transcribe.tui import run_setup_wizard, run_interactive_mode
+from audio_transcribe.utils.ffmpeg import configure_pydub
+
+
+class NormalizedPath(click.Path):
+    """Custom Path type that normalizes paths before validation."""
+
+    def convert(self, value, param, ctx):
+        if value:
+            # Strip trailing quotes and whitespace (PowerShell escaping issue)
+            value = value.rstrip('"\'').rstrip()
+            # Strip trailing slashes/backslashes
+            value = value.rstrip('/\\')
+        return super().convert(value, param, ctx)
 
 def check_json_exists(file_dir: Union[str, Path], file_name: str, api_name: str) -> Tuple[bool, Optional[Path]]:
     """
@@ -377,9 +391,7 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
         logger.error(f"Path not found: {path}")
 
 @click.group(invoke_without_command=True)
-@click.argument("input_path", required=False, type=click.Path(exists=True))
-@click.option("--file", "-f", help="Input audio/video file (legacy)")
-@click.option("--folder", "-F", help="Input folder containing audio/video files (legacy)")
+@click.argument("input_path", required=False, type=NormalizedPath(exists=True))
 @click.option("--api", "-a", help="API to use (groq, openai, assemblyai, elevenlabs)")
 @click.option("--language", "-l", help="Language code (e.g., en, de, fr)")
 @click.option("--output", "-o", type=click.Choice(["text", "srt", "word_srt", "davinci_srt", "json", "all"], case_sensitive=False), multiple=True, help="Output format(s) to generate (default: text,srt)")
@@ -418,7 +430,7 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 @click.option("--api-key", help="Set API key for the specified API (requires --setup)")
 @click.version_option()
 @click.pass_context
-def main(ctx, input_path, file, folder, api, language, output, chars_per_line, words_per_subtitle,
+def main(ctx, input_path, api, language, output, chars_per_line, words_per_subtitle,
          word_srt, davinci_srt, silent_portions, padding_start, padding_end, show_pauses,
          filler_lines, filler_words, remove_fillers, speaker_labels, fps, fps_offset_start,
          fps_offset_end, diarize, num_speakers, use_input, use_pcm, keep_flac, keep, model,
@@ -489,8 +501,14 @@ def main(ctx, input_path, file, folder, api, language, output, chars_per_line, w
             run_setup_wizard()
             sys.exit(0)
 
-    # Determine target path from positional arg or legacy flags
-    target_path = input_path or file or folder
+    # Configure pydub with detected ffmpeg path
+    if not configure_pydub():
+        # Only error if we're actually going to process audio
+        # (not for --setup, --help, etc.)
+        pass  # Will fail later with clear error when needed
+
+    # Determine target path from positional argument
+    target_path = input_path
 
     # Determine if we should run in interactive mode
     should_run_interactive = False
