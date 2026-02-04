@@ -1,5 +1,6 @@
 # custom files with personal information that shouldn't be on github
 
+desktop.ini
 *.csv
 invoice*.pdf
 *.eml

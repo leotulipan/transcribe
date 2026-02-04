@@ -4,7 +4,12 @@
       "WebSearch",
       "Bash(test:*)",
       "Bash(where:*)",
-      "Bash(ffmpeg:*)"
+      "Bash(ffmpeg:*)",
+      "Bash(uv pip install:*)",
+      "Bash(.venv\\\\Scripts\\\\python.exe:*)",
+      "Bash(\".venv/Scripts/python.exe\" -m pip install questionary rich)",
+      "Bash(uv venv:*)",
+      "Bash(uv:*)"
     ]
   }
 }
