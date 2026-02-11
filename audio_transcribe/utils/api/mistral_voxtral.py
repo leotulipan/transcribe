@@ -171,7 +171,8 @@ class MistralVoxtralAPI(TranscriptionAPI):
             raw_data["model"] = model
 
             # Save raw response
-            self.save_result(raw_data, audio_path)
+            original_path = kwargs.get('original_path')
+            self.save_result(raw_data, audio_path, original_path=original_path)
 
             # Parse response - convert segments to approximate word timestamps
             return self._parse_voxtral_response(raw_data)

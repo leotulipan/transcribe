@@ -266,9 +266,10 @@ class OpenAIAPI(TranscriptionAPI, ChunkingMixin):
                     
                     # Add API name to the data
                     raw_data["api_name"] = self.api_name
-                    
+
                     # Save raw response
-                    self.save_result(raw_data, audio_path)
+                    original_path = kwargs.get('original_path')
+                    self.save_result(raw_data, audio_path, original_path=original_path)
                     
                     # Parse using our parser
                     try:

@@ -85,18 +85,20 @@ class TranscriptionAPI(ABC):
         # Fallback to least common denominator
         return "text" if "text" in self.supported_output_formats else self.supported_output_formats[0]
 
-    def save_result(self, result: Union[TranscriptionResult, Dict[str, Any]], audio_path: Union[str, Path]) -> str:
+    def save_result(self, result: Union[TranscriptionResult, Dict[str, Any]], audio_path: Union[str, Path], original_path: Optional[Union[str, Path]] = None) -> str:
         """
         Save transcription result to a JSON file.
-        
+
         Args:
             result: TranscriptionResult object or raw dictionary
-            audio_path: Path to the original audio file
-            
+            audio_path: Path to the audio file (may be temporary)
+            original_path: Path to the original input file (if different from audio_path)
+
         Returns:
             Path to the saved JSON file
         """
-        file_path = Path(audio_path)
+        # Use original_path for directory and filename if provided
+        file_path = Path(original_path) if original_path else Path(audio_path)
         file_dir = file_path.parent
         file_name = file_path.stem
         

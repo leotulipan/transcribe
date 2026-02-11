@@ -46,12 +46,12 @@ class AssemblyAIAPI(TranscriptionAPI):
     def list_models(self) -> List[str]:
         """
         List available models for AssemblyAI API.
-        
+
         Returns:
             List of model IDs available for use
         """
         # AssemblyAI has static model names
-        return ["best", "nano"]
+        return ["universal-3-pro", "universal-2", "best", "nano"]
 
     def check_api_key(self) -> bool:
         """Check if AssemblyAI API key is valid."""
@@ -71,15 +71,18 @@ class AssemblyAIAPI(TranscriptionAPI):
     def transcribe(self, audio_path: Union[str, Path], **kwargs) -> TranscriptionResult:
         """
         Transcribe audio file using AssemblyAI.
-        
+
         Args:
             audio_path: Path to the audio file
             **kwargs: Additional AssemblyAI-specific parameters:
                 - language: Language code
                 - speaker_labels: Enable speaker diarization
                 - dual_channel: Enable dual channel transcription
-                - model: Model to use (best, nano, etc.)
-                
+                - model: Model to use (universal-3-pro, universal-2, best, nano)
+                - speech_models: Array of models for fallback (e.g., ["universal-3-pro", "universal-2"])
+                - prompt: Context prompt for Universal-3-Pro
+                - keyterms_prompt: List of keyterms for improved accuracy
+
         Returns:
             Standardized TranscriptionResult object
         """
@@ -102,16 +105,31 @@ class AssemblyAIAPI(TranscriptionAPI):
             
         # Normalize parameters using ParameterAdapter
         adapted_params = ParameterAdapter.adapt_for_api("assemblyai", kwargs)
-        
+
         # Prepare transcription config
-        model = adapted_params.get("model", "best")
-        
+        model = adapted_params.get("model", "universal-3-pro")
+
         config_params = {
             "speaker_labels": adapted_params.get("speaker_labels", True),
             "dual_channel": adapted_params.get("dual_channel", False),
-            "speech_model": model if model in ["best", "nano"] else "best" 
         }
-        
+
+        # Handle speech_models array (new Universal-3-Pro feature)
+        if "speech_models" in adapted_params:
+            config_params["speech_models"] = adapted_params["speech_models"]
+        else:
+            # Fallback to single speech_model for backwards compatibility
+            valid_models = ["universal-3-pro", "universal-2", "best", "nano"]
+            config_params["speech_model"] = model if model in valid_models else "universal-3-pro"
+
+        # Add prompt for Universal-3-Pro
+        if "prompt" in adapted_params and adapted_params["prompt"]:
+            config_params["prompt"] = adapted_params["prompt"]
+
+        # Add keyterms_prompt for improved terminology recognition
+        if "keyterms_prompt" in adapted_params and adapted_params["keyterms_prompt"]:
+            config_params["keyterms_prompt"] = adapted_params["keyterms_prompt"]
+
         # Handle language parameter
         if "language_code" in adapted_params:
             config_params["language_code"] = adapted_params["language_code"]
@@ -135,9 +153,10 @@ class AssemblyAIAPI(TranscriptionAPI):
             # Convert to standardized format
             result_dict = transcript.json_response
             result_dict["api_name"] = self.api_name
-            
+
             # Save raw JSON response (using original audio path for naming)
-            self.save_result(result_dict, audio_path)
+            original_path = kwargs.get('original_path')
+            self.save_result(result_dict, audio_path, original_path=original_path)
             
             # Parse result
             result = parse_assemblyai_format(result_dict)

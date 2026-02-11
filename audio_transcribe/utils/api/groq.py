@@ -272,9 +272,10 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
 
             # Add API name to the response
             result_dict["api_name"] = self.api_name
-            
+
             # Save raw result for debugging and reference
-            self.save_result(result_dict, audio_path)
+            original_path = kwargs.get('original_path')
+            self.save_result(result_dict, audio_path, original_path=original_path)
             
             # Import here to avoid circular imports
             result_obj = parse_groq_format(result_dict)

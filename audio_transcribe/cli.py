@@ -374,16 +374,25 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
     if path_obj.is_file():
         process_file(path_obj, **kwargs)
     elif path_obj.is_dir():
-        # Recursive search for audio/video files
-        extensions = ['.mp3', '.wav', '.m4a', '.mp4', '.mkv', '.flac', '.ogg', '.webm']
+        # Get extensions filter from kwargs if provided
+        extensions_filter = kwargs.get('extensions')
+        if extensions_filter:
+            # Parse comma-separated extensions
+            extensions = [ext.strip() if ext.startswith('.') else f'.{ext.strip()}'
+                         for ext in extensions_filter.split(',')]
+            logger.info(f"Filtering by extensions: {', '.join(extensions)}")
+        else:
+            # Default: all supported formats
+            extensions = ['.mp3', '.wav', '.m4a', '.mp4', '.mkv', '.flac', '.ogg', '.webm']
+
         files = []
         for ext in extensions:
             files.extend(path_obj.rglob(f"*{ext}"))
-        
+
         if not files:
             logger.warning(f"No audio/video files found in {path}")
             return
-            
+
         logger.info(f"Found {len(files)} files to process in {path}")
         for file in files:
             process_file(file, **kwargs)
@@ -417,12 +426,16 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 @click.option("--keep-flac", is_flag=True, help="Keep the generated FLAC file after processing")
 @click.option("--keep", is_flag=True, help="Keep optimized/converted audio files")
 @click.option("--model", "-m", help="Model to use for transcription", default=None)
+@click.option("--prompt", type=str, default=None, help="[AssemblyAI] Context prompt for Universal-3-Pro (max 3-6 phrases)")
+@click.option("--keyterms-prompt", type=str, default=None, help="[AssemblyAI] Comma-separated keyterms for accuracy (e.g., 'CLI,API,transcription')")
+@click.option("--speech-models", type=str, default=None, help="[AssemblyAI] Fallback models: 'universal-3-pro,universal-2'")
 @click.option("--size-threshold", type=float, default=100.0, help="Files under this size (MB) skip processing if format compatible (default: 100)")
 @click.option("--chunk-length", type=int, default=600, help="Length of each chunk in seconds for long audio")
 @click.option("--overlap", type=int, default=10, help="Overlap between chunks in seconds")
 @click.option("--force", "-r", is_flag=True, help="Force re-transcription even if transcript exists")
 @click.option("--save-cleaned-json", "-J", is_flag=True, help="Save the cleaned and consistent pre-processed JSON file")
 @click.option("--use-json-input", "-j", is_flag=True, help="Accept JSON files as input")
+@click.option("--extensions", "-e", type=str, default=None, help="Comma-separated file extensions to process (e.g. '.wav,.mp3'). Default: all supported formats.")
 @click.option("--debug", "-d", is_flag=True, help="Enable debug logging")
 @click.option("--verbose", "-v", is_flag=True, help="Show all log messages in console")
 @click.option("--start-hour", type=int, default=None, help="Hour offset for SRT timestamps")
@@ -434,7 +447,8 @@ def main(ctx, input_path, api, language, output, chars_per_line, words_per_subti
          word_srt, davinci_srt, silent_portions, padding_start, padding_end, show_pauses,
          filler_lines, filler_words, remove_fillers, speaker_labels, fps, fps_offset_start,
          fps_offset_end, diarize, num_speakers, use_input, use_pcm, keep_flac, keep, model,
-         size_threshold, chunk_length, overlap, force, save_cleaned_json, use_json_input, debug, verbose, start_hour,
+         prompt, keyterms_prompt, speech_models,
+         size_threshold, chunk_length, overlap, force, save_cleaned_json, use_json_input, extensions, debug, verbose, start_hour,
          setup, api_key):
     """Unified Audio Transcription Tool."""
     
@@ -589,12 +603,16 @@ def main(ctx, input_path, api, language, output, chars_per_line, words_per_subti
         "keep_flac": keep_flac,
         "keep": keep,
         "model": model,
+        "prompt": prompt,
+        "keyterms_prompt": keyterms_prompt,
+        "speech_models": speech_models,
         "size_threshold": size_threshold,
         "chunk_length": chunk_length,
         "overlap": overlap,
         "force": force,
         "save_cleaned_json": save_cleaned_json,
         "use_json_input": use_json_input,
+        "extensions": extensions,
         "debug": debug,
         "verbose": verbose,
         "start_hour": start_hour

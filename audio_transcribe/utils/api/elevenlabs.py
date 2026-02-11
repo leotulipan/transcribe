@@ -199,9 +199,10 @@ class ElevenLabsAPI(TranscriptionAPI):
             
             duration = time.time() - start_time
             logger.info(f"Transcription completed in {duration:.2f}s")
-            
+
             # Save raw result
-            self.save_result(result, audio_path) # Use original path for naming
+            original_path = kwargs.get('original_path')
+            self.save_result(result, audio_path, original_path=original_path)
             
             # Parse and return standardized result
             return parse_elevenlabs_format(result)

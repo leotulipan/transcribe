@@ -187,7 +187,8 @@ class GeminiAPI(TranscriptionAPI):
                 "api_name": self.api_name,
                 "method": "inline"
             }
-            self.save_result(raw_data, audio_path)
+            original_path = kwargs.get('original_path')
+            self.save_result(raw_data, audio_path, original_path=original_path)
 
             # Generate approximate word timings (no timestamps from Gemini)
             words = generate_words_from_text(text)
@@ -259,7 +260,8 @@ class GeminiAPI(TranscriptionAPI):
                 "method": "files_api",
                 "file_uri": file_uri
             }
-            self.save_result(raw_data, audio_path)
+            original_path = kwargs.get('original_path')
+            self.save_result(raw_data, audio_path, original_path=original_path)
 
             # Generate approximate word timings (no timestamps from Gemini)
             words = generate_words_from_text(text)
