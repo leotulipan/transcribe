@@ -114,13 +114,11 @@ class AssemblyAIAPI(TranscriptionAPI):
             "dual_channel": adapted_params.get("dual_channel", False),
         }
 
-        # Handle speech_models array (new Universal-3-Pro feature)
+        # Use speech_models (plural, array) — the SDK requires this for newer models
         if "speech_models" in adapted_params:
             config_params["speech_models"] = adapted_params["speech_models"]
         else:
-            # Fallback to single speech_model for backwards compatibility
-            valid_models = ["universal-3-pro", "universal-2", "best", "nano"]
-            config_params["speech_model"] = model if model in valid_models else "universal-3-pro"
+            config_params["speech_models"] = [model, "universal-2"] if model != "universal-2" else ["universal-2"]
 
         # Add prompt for Universal-3-Pro
         if "prompt" in adapted_params and adapted_params["prompt"]:

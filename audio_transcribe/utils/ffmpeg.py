@@ -2,13 +2,8 @@
 
 import os
 import shutil
-import warnings
 from pathlib import Path
 from typing import Optional
-
-# Suppress pydub warnings
-warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
-warnings.filterwarnings("ignore", category=RuntimeWarning, module="pydub")
 
 from loguru import logger
 

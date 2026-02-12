@@ -8,4 +8,4 @@ from .text_processing import *
 from .chunking import *
 from .utils import *
 
-__version__ = "0.1.0"
+__version__ = "0.4.2"
