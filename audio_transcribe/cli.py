@@ -394,6 +394,13 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
         for ext in extensions:
             files.extend(path_obj.rglob(f"*{ext}"))
 
+        # Filter out macOS metadata/resource fork files (._filename, .DS_Store, etc.)
+        before_count = len(files)
+        files = [f for f in files if not f.name.startswith('.')]
+        filtered_count = before_count - len(files)
+        if filtered_count > 0:
+            logger.info(f"Skipped {filtered_count} hidden/metadata file(s) (e.g. macOS '._' resource forks)")
+
         if not files:
             logger.warning(f"No audio/video files found in {path}")
             return

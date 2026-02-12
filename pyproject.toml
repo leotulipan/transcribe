@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "audio-transcribe"
-version = "0.4.3"
+version = "0.4.4"
 description = "Unified audio transcription tool supporting multiple APIs"
 authors = [
     {name = "Audio Transcribe Team"}
@@ -41,12 +41,12 @@ dev = [
 [project.scripts]
 transcribe = "audio_transcribe.cli:main"
 
+[tool.setuptools]
+exclude-package-data = {"*" = ["desktop.ini"]}
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["audio_transcribe*"]
-
-[tool.setuptools]
-exclude-package-data = {"*" = ["desktop.ini"]}
 
 [tool.pyinstaller]
 hiddenimports = [
