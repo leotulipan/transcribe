@@ -1,0 +1,9 @@
+# Ralph Progress Log
+Started: 2026-02-12
+Feature: CLI Improvements (Recursion Toggle & CWD Default)
+Parent Task: 1
+
+## Codebase Patterns
+(Patterns discovered during this feature build)
+
+---

@@ -81,8 +81,32 @@ Download the latest release from the [Releases page](https://github.com/leotulip
 
 3. Run the tool:
    ```bash
-   uv run transcribe.py --help
+   uv run transcribe --help
    ```
+
+### Troubleshooting Installation
+
+**If you encounter build errors or want to force a clean reinstall:**
+
+```bash
+# Remove all build artifacts and cache
+rm -rf audio_transcribe.egg-info build .venv
+
+# Force reinstall the tool
+uv tool install --reinstall .
+```
+
+**If you see pydub warnings on import:**
+
+The tool requires Python 3.11 or newer. Ensure your `.python-version` file exists and contains `3.11`. If you upgraded Python versions and still see warnings:
+
+```bash
+# Clean and resync to the correct Python version
+rm -rf .venv
+uv sync
+```
+
+**Note on Google Drive integration:** If your project folder is synced with Google Drive, you may see `desktop.ini` files appearing in subdirectories. These are automatically excluded from builds and are safe to ignore. You can delete them manually if desired.
 
 ## Usage
 

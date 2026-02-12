@@ -1,0 +1,1206 @@
+{
+  "language_code": "de",
+  "audio_url": "https://cdn.assemblyai.com/upload/d4394caa69b4d63ceeb19d0397e2c836f3eec39bcd80dedddfc2d2cdc26b0fa9/89a8678c-d16e-4406-a917-5d4aacb1275b",
+  "punctuate": true,
+  "format_text": true,
+  "dual_channel": false,
+  "multichannel": null,
+  "audio_channels": null,
+  "webhook_url": null,
+  "webhook_auth_header_name": null,
+  "webhook_auth_header_value": null,
+  "audio_start_from": null,
+  "audio_end_at": null,
+  "word_boost": [],
+  "boost_param": null,
+  "filter_profanity": false,
+  "redact_pii": false,
+  "redact_pii_audio": false,
+  "redact_pii_audio_quality": null,
+  "redact_pii_policies": null,
+  "redact_pii_sub": null,
+  "speaker_labels": false,
+  "speakers_expected": null,
+  "speaker_options": null,
+  "content_safety": false,
+  "content_safety_confidence": null,
+  "iab_categories": false,
+  "custom_spelling": null,
+  "disfluencies": false,
+  "sentiment_analysis": false,
+  "auto_chapters": false,
+  "entity_detection": false,
+  "summarization": false,
+  "summary_model": null,
+  "summary_type": null,
+  "auto_highlights": false,
+  "language_detection": true,
+  "language_confidence_threshold": null,
+  "language_detection_options": null,
+  "language_confidence": 0.9979,
+  "language_codes": null,
+  "code_switching_languages": null,
+  "speech_threshold": null,
+  "speech_model": "best",
+  "speech_models": null,
+  "prompt": null,
+  "keyterms_prompt": [],
+  "speech_understanding": null,
+  "id": "6976f52a-5b98-46d5-b9f4-3ea1c8fee8b3",
+  "status": "completed",
+  "error": null,
+  "text": "Ich freue mich sehr auf dieses Gespräch mit Timo Konzelmann. Er ist Content Creator, Autor, Keto Coach und Speaker. Timo erhielt seine ADHS Diagnose erst im Erwachsenenalter und hat daraus ein starkes Projekt gemacht. Sein Buch und Hörbuch ADHS gesegnet und verflucht, das er in bemerkenswerter Geschwindigkeit geschrieben und eingesprochen hat. Er beschreibt ADHS nicht nur als Herausforderung, sondern auch als Potenzial. Andersdenken, Hören und Sehen und nutzt genau diese Perspektive, um Betroffenen Orientierung zu geben. Gleichzeitig teilt er, wie ihm ketogene Ernährung half, Energie und Struktur in den Alltag zu bringen, ohne daraus ein Dogma zu machen. Ein Angebot, kein Evangelium. Außerdem zeigt Timo, wie digitale Tools bis hin zu KI im Alltag mit ADHS unterstützen können. Heute klären wir, was genau meint Segen und Flucht. Wie lassen sich Neurobiologie, Ernährung und Alltagspraxis verbinden und welche ersten Schritte helfen Betroffenen wirklich?",
+  "words": [
+    {
+      "text": "Ich",
+      "start": 160,
+      "end": 280,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "freue",
+      "start": 280,
+      "end": 640,
+      "confidence": 0.810791,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "mich",
+      "start": 640,
+      "end": 880,
+      "confidence": 1.0,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "sehr",
+      "start": 880,
+      "end": 1200,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "auf",
+      "start": 1280,
+      "end": 1680,
+      "confidence": 1.0,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "dieses",
+      "start": 1680,
+      "end": 2160,
+      "confidence": 0.9992676,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Gespräch",
+      "start": 2160,
+      "end": 2680,
+      "confidence": 0.95996094,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "mit",
+      "start": 2680,
+      "end": 3000,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Timo",
+      "start": 3000,
+      "end": 3440,
+      "confidence": 0.94018555,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Konzelmann.",
+      "start": 3520,
+      "end": 4800,
+      "confidence": 0.755957,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Er",
+      "start": 4800,
+      "end": 5040,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ist",
+      "start": 5040,
+      "end": 5200,
+      "confidence": 1.0,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Content",
+      "start": 5200,
+      "end": 5760,
+      "confidence": 0.6508789,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Creator,",
+      "start": 5840,
+      "end": 6320,
+      "confidence": 0.9082031,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Autor,",
+      "start": 6320,
+      "end": 6720,
+      "confidence": 0.9975586,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Keto",
+      "start": 6880,
+      "end": 7440,
+      "confidence": 0.8588867,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Coach",
+      "start": 7520,
+      "end": 7920,
+      "confidence": 0.98779297,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 7920,
+      "end": 8080,
+      "confidence": 0.99560547,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Speaker.",
+      "start": 8080,
+      "end": 8800,
+      "confidence": 0.9138997,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Timo",
+      "start": 8880,
+      "end": 9360,
+      "confidence": 0.97558594,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "erhielt",
+      "start": 9360,
+      "end": 9880,
+      "confidence": 0.8859863,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "seine",
+      "start": 9880,
+      "end": 10200,
+      "confidence": 0.9987793,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ADHS",
+      "start": 10200,
+      "end": 10920,
+      "confidence": 0.87320966,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Diagnose",
+      "start": 10920,
+      "end": 11440,
+      "confidence": 1.0,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "erst",
+      "start": 11440,
+      "end": 11680,
+      "confidence": 0.99902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "im",
+      "start": 11680,
+      "end": 11800,
+      "confidence": 0.99609375,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Erwachsenenalter",
+      "start": 11800,
+      "end": 12960,
+      "confidence": 0.93715125,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 13040,
+      "end": 13360,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "hat",
+      "start": 13360,
+      "end": 13600,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "daraus",
+      "start": 13600,
+      "end": 14000,
+      "confidence": 0.8112793,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ein",
+      "start": 14080,
+      "end": 14360,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "starkes",
+      "start": 14360,
+      "end": 14880,
+      "confidence": 0.93147784,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Projekt",
+      "start": 14880,
+      "end": 15240,
+      "confidence": 0.9998372,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "gemacht.",
+      "start": 15240,
+      "end": 15760,
+      "confidence": 0.7907715,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Sein",
+      "start": 15760,
+      "end": 16119,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Buch",
+      "start": 16119,
+      "end": 16520,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 16520,
+      "end": 16680,
+      "confidence": 0.99853516,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Hörbuch",
+      "start": 16680,
+      "end": 17360,
+      "confidence": 0.9881592,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ADHS",
+      "start": 17440,
+      "end": 18320,
+      "confidence": 0.8992513,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "gesegnet",
+      "start": 18400,
+      "end": 19080,
+      "confidence": 0.994043,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 19080,
+      "end": 19240,
+      "confidence": 0.99121094,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "verflucht,",
+      "start": 19240,
+      "end": 19920,
+      "confidence": 0.9876709,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "das",
+      "start": 20160,
+      "end": 20480,
+      "confidence": 0.94189453,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "er",
+      "start": 20480,
+      "end": 20720,
+      "confidence": 0.9980469,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "in",
+      "start": 20720,
+      "end": 20920,
+      "confidence": 0.99658203,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "bemerkenswerter",
+      "start": 20920,
+      "end": 21840,
+      "confidence": 0.87402344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Geschwindigkeit",
+      "start": 21840,
+      "end": 22600,
+      "confidence": 0.97021484,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "geschrieben",
+      "start": 22600,
+      "end": 23200,
+      "confidence": 0.9135742,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 23200,
+      "end": 23600,
+      "confidence": 0.99560547,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "eingesprochen",
+      "start": 23600,
+      "end": 24400,
+      "confidence": 0.9083252,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "hat.",
+      "start": 24400,
+      "end": 24720,
+      "confidence": 0.99902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Er",
+      "start": 24720,
+      "end": 25000,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "beschreibt",
+      "start": 25000,
+      "end": 25440,
+      "confidence": 0.97021484,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ADHS",
+      "start": 25440,
+      "end": 26320,
+      "confidence": 0.99625653,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "nicht",
+      "start": 26320,
+      "end": 26600,
+      "confidence": 1.0,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "nur",
+      "start": 26600,
+      "end": 26800,
+      "confidence": 1.0,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "als",
+      "start": 26800,
+      "end": 27080,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Herausforderung,",
+      "start": 27080,
+      "end": 28200,
+      "confidence": 0.9628906,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "sondern",
+      "start": 28200,
+      "end": 28560,
+      "confidence": 0.9963379,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "auch",
+      "start": 28560,
+      "end": 28760,
+      "confidence": 0.99902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "als",
+      "start": 28760,
+      "end": 28920,
+      "confidence": 0.9995117,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Potenzial.",
+      "start": 28920,
+      "end": 29760,
+      "confidence": 0.7561849,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Andersdenken,",
+      "start": 29840,
+      "end": 30880,
+      "confidence": 0.8670654,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Hören",
+      "start": 30880,
+      "end": 31440,
+      "confidence": 0.9902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 31440,
+      "end": 31600,
+      "confidence": 0.9975586,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Sehen",
+      "start": 31600,
+      "end": 31910,
+      "confidence": 0.99609375,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 32220,
+      "end": 32300,
+      "confidence": 0.9926758,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "nutzt",
+      "start": 32300,
+      "end": 32940,
+      "confidence": 0.97021484,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "genau",
+      "start": 32940,
+      "end": 33140,
+      "confidence": 0.99487305,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "diese",
+      "start": 33140,
+      "end": 33340,
+      "confidence": 0.99658203,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Perspektive,",
+      "start": 33340,
+      "end": 34260,
+      "confidence": 0.9049072,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "um",
+      "start": 34260,
+      "end": 34500,
+      "confidence": 0.99609375,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Betroffenen",
+      "start": 34500,
+      "end": 35420,
+      "confidence": 0.88378906,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Orientierung",
+      "start": 35420,
+      "end": 36060,
+      "confidence": 0.92041016,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "zu",
+      "start": 36060,
+      "end": 36340,
+      "confidence": 0.9980469,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "geben.",
+      "start": 36340,
+      "end": 36700,
+      "confidence": 0.9797363,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Gleichzeitig",
+      "start": 36780,
+      "end": 37300,
+      "confidence": 0.99960935,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "teilt",
+      "start": 37300,
+      "end": 37940,
+      "confidence": 0.89208984,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "er,",
+      "start": 37940,
+      "end": 38100,
+      "confidence": 0.99853516,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "wie",
+      "start": 38100,
+      "end": 38300,
+      "confidence": 0.99902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ihm",
+      "start": 38300,
+      "end": 38620,
+      "confidence": 0.8642578,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ketogene",
+      "start": 38860,
+      "end": 39700,
+      "confidence": 0.99938965,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Ernährung",
+      "start": 39700,
+      "end": 40220,
+      "confidence": 0.9998779,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "half,",
+      "start": 40220,
+      "end": 40540,
+      "confidence": 0.9067383,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Energie",
+      "start": 40540,
+      "end": 41060,
+      "confidence": 0.98535156,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 41060,
+      "end": 41180,
+      "confidence": 0.9970703,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Struktur",
+      "start": 41180,
+      "end": 41620,
+      "confidence": 0.9971924,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "in",
+      "start": 41620,
+      "end": 41740,
+      "confidence": 0.99853516,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "den",
+      "start": 41740,
+      "end": 41900,
+      "confidence": 0.99853516,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Alltag",
+      "start": 41900,
+      "end": 42300,
+      "confidence": 0.91015625,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "zu",
+      "start": 42300,
+      "end": 42500,
+      "confidence": 0.99658203,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "bringen,",
+      "start": 42500,
+      "end": 42900,
+      "confidence": 0.88671875,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ohne",
+      "start": 42900,
+      "end": 43260,
+      "confidence": 0.99780273,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "daraus",
+      "start": 43260,
+      "end": 43660,
+      "confidence": 0.9987793,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ein",
+      "start": 43660,
+      "end": 43860,
+      "confidence": 0.9970703,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Dogma",
+      "start": 43860,
+      "end": 44300,
+      "confidence": 0.90983075,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "zu",
+      "start": 44300,
+      "end": 44500,
+      "confidence": 0.99609375,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "machen.",
+      "start": 44500,
+      "end": 44900,
+      "confidence": 0.9807129,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Ein",
+      "start": 44900,
+      "end": 45180,
+      "confidence": 0.9873047,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Angebot,",
+      "start": 45180,
+      "end": 45740,
+      "confidence": 0.95735675,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "kein",
+      "start": 45820,
+      "end": 46180,
+      "confidence": 0.99902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Evangelium.",
+      "start": 46180,
+      "end": 47020,
+      "confidence": 0.9998779,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Außerdem",
+      "start": 47180,
+      "end": 47700,
+      "confidence": 0.98791504,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "zeigt",
+      "start": 47700,
+      "end": 48059,
+      "confidence": 0.9938965,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Timo,",
+      "start": 48059,
+      "end": 48460,
+      "confidence": 0.95410156,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "wie",
+      "start": 48540,
+      "end": 48820,
+      "confidence": 0.99365234,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "digitale",
+      "start": 48820,
+      "end": 49540,
+      "confidence": 0.87353516,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Tools",
+      "start": 49540,
+      "end": 50060,
+      "confidence": 0.9991862,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "bis",
+      "start": 50140,
+      "end": 50460,
+      "confidence": 0.99902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "hin",
+      "start": 50460,
+      "end": 50660,
+      "confidence": 0.9941406,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "zu",
+      "start": 50660,
+      "end": 50940,
+      "confidence": 0.86816406,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "KI",
+      "start": 51100,
+      "end": 51740,
+      "confidence": 0.9970703,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "im",
+      "start": 51820,
+      "end": 52100,
+      "confidence": 0.99902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Alltag",
+      "start": 52100,
+      "end": 52500,
+      "confidence": 0.8741862,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "mit",
+      "start": 52500,
+      "end": 52700,
+      "confidence": 0.99609375,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ADHS",
+      "start": 52700,
+      "end": 53380,
+      "confidence": 0.99609375,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "unterstützen",
+      "start": 53380,
+      "end": 54020,
+      "confidence": 0.99609375,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "können.",
+      "start": 54020,
+      "end": 54300,
+      "confidence": 0.9951172,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Heute",
+      "start": 54380,
+      "end": 54780,
+      "confidence": 0.9958496,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "klären",
+      "start": 54780,
+      "end": 55260,
+      "confidence": 0.97314453,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "wir,",
+      "start": 55260,
+      "end": 55380,
+      "confidence": 0.9921875,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "was",
+      "start": 55380,
+      "end": 55620,
+      "confidence": 0.99902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "genau",
+      "start": 55620,
+      "end": 56060,
+      "confidence": 0.86206055,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "meint",
+      "start": 56060,
+      "end": 56500,
+      "confidence": 0.94311523,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Segen",
+      "start": 56500,
+      "end": 57140,
+      "confidence": 0.99853516,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 57140,
+      "end": 57420,
+      "confidence": 0.9765625,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Flucht.",
+      "start": 57420,
+      "end": 58070,
+      "confidence": 0.85221356,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Wie",
+      "start": 58540,
+      "end": 58660,
+      "confidence": 0.99853516,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "lassen",
+      "start": 58660,
+      "end": 59020,
+      "confidence": 0.87402344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "sich",
+      "start": 59020,
+      "end": 59140,
+      "confidence": 1.0,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Neurobiologie,",
+      "start": 59140,
+      "end": 60140,
+      "confidence": 0.9684245,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Ernährung",
+      "start": 60140,
+      "end": 60660,
+      "confidence": 0.99938965,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 60660,
+      "end": 60820,
+      "confidence": 0.99658203,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Alltagspraxis",
+      "start": 60820,
+      "end": 61780,
+      "confidence": 0.99825615,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "verbinden",
+      "start": 61780,
+      "end": 62460,
+      "confidence": 0.93880206,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "und",
+      "start": 62860,
+      "end": 63140,
+      "confidence": 0.98583984,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "welche",
+      "start": 63140,
+      "end": 63540,
+      "confidence": 1.0,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ersten",
+      "start": 63540,
+      "end": 63940,
+      "confidence": 0.9992676,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Schritte",
+      "start": 63940,
+      "end": 64380,
+      "confidence": 0.97249347,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "helfen",
+      "start": 64380,
+      "end": 64780,
+      "confidence": 0.99072266,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Betroffenen",
+      "start": 64780,
+      "end": 65700,
+      "confidence": 0.9989258,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "wirklich?",
+      "start": 65700,
+      "end": 66060,
+      "confidence": 0.98909503,
+      "speaker": null,
+      "channel": null
+    }
+  ],
+  "utterances": null,
+  "confidence": 0.9624756,
+  "audio_duration": 68,
+  "webhook_status_code": null,
+  "webhook_auth": false,
+  "summary": null,
+  "auto_highlights_result": null,
+  "content_safety_labels": null,
+  "iab_categories_result": null,
+  "chapters": null,
+  "sentiment_analysis_results": null,
+  "entities": null,
+  "speech_model_used": "universal-2",
+  "translated_texts": null,
+  "api_name": "assemblyai"
+}

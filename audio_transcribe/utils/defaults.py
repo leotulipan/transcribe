@@ -11,7 +11,7 @@ class DefaultsManager:
     API_DEFAULTS = {
         'groq': {'model': 'whisper-large-v3'},
         'openai': {'model': 'whisper-1'},
-        'assemblyai': {'model': 'best', 'speaker_labels': True, 'disfluencies': True},
+        'assemblyai': {'model': 'universal-3-pro', 'speaker_labels': True, 'disfluencies': True},
         'elevenlabs': {'model_id': 'scribe_v1'}
     }
     

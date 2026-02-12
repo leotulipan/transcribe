@@ -37,6 +37,7 @@ from audio_transcribe.utils.formatters import create_output_files
 from audio_transcribe.utils.api import get_api_instance
 from audio_transcribe.utils.config import ConfigManager
 from audio_transcribe.utils.defaults import DefaultsManager
+from audio_transcribe.utils.models import MODEL_REGISTRY
 
 # Import TUI modules
 from audio_transcribe.tui import run_setup_wizard, run_interactive_mode
@@ -298,12 +299,16 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             
             # Handle model parameters
             # DefaultsManager should have already populated 'model' with default if needed
+            model_used = kwargs.get('model', '(default)')
             if 'model' in kwargs and kwargs['model']:
                 if api_name == "elevenlabs":
                     transcribe_kwargs['model_id'] = kwargs['model']
                 else:
                     transcribe_kwargs['model'] = kwargs['model']
-            
+
+            # Log the model being used in verbose mode
+            logger.debug(f"Transcribing with {api_name.upper()} using model: {model_used}")
+
             # Perform transcription
             api_call_response = api_instance.transcribe(current_audio_file_path, **transcribe_kwargs)
 
@@ -400,7 +405,7 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
         logger.error(f"Path not found: {path}")
 
 @click.group(invoke_without_command=True)
-@click.argument("input_path", required=False, type=NormalizedPath(exists=True))
+@click.argument("input_path", required=False, type=NormalizedPath(exists=False))
 @click.option("--api", "-a", help="API to use (groq, openai, assemblyai, elevenlabs)")
 @click.option("--language", "-l", help="Language code (e.g., en, de, fr)")
 @click.option("--output", "-o", type=click.Choice(["text", "srt", "word_srt", "davinci_srt", "json", "all"], case_sensitive=False), multiple=True, help="Output format(s) to generate (default: text,srt)")
@@ -426,7 +431,7 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 @click.option("--keep-flac", is_flag=True, help="Keep the generated FLAC file after processing")
 @click.option("--keep", is_flag=True, help="Keep optimized/converted audio files")
 @click.option("--model", "-m", help="Model to use for transcription", default=None)
-@click.option("--prompt", type=str, default=None, help="[AssemblyAI] Context prompt for Universal-3-Pro (max 3-6 phrases)")
+@click.option("--prompt", type=str, default="Transcribe this audio with beautiful punctuation and formatting.\nInclude spoken filler words, hesitations, plus repetitions and false starts when clearly spoken.\nUse standard spelling and the most contextually correct spelling of all words and names,\nbrands, drug names, medical terms, person names, and all proper nouns.\nTranscribe in the original language mix (code-switching), preserving the words in the language they are spoken.", help="[AssemblyAI] Context prompt for Universal-3-Pro")
 @click.option("--keyterms-prompt", type=str, default=None, help="[AssemblyAI] Comma-separated keyterms for accuracy (e.g., 'CLI,API,transcription')")
 @click.option("--speech-models", type=str, default=None, help="[AssemblyAI] Fallback models: 'universal-3-pro,universal-2'")
 @click.option("--size-threshold", type=float, default=100.0, help="Files under this size (MB) skip processing if format compatible (default: 100)")
@@ -439,6 +444,7 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 @click.option("--debug", "-d", is_flag=True, help="Enable debug logging")
 @click.option("--verbose", "-v", is_flag=True, help="Show all log messages in console")
 @click.option("--start-hour", type=int, default=None, help="Hour offset for SRT timestamps")
+@click.option("--list", "list_models", is_flag=True, help="List all available APIs and their models")
 @click.option("--setup", is_flag=True, help="Run setup wizard or configure defaults non-interactively")
 @click.option("--api-key", help="Set API key for the specified API (requires --setup)")
 @click.version_option()
@@ -449,11 +455,29 @@ def main(ctx, input_path, api, language, output, chars_per_line, words_per_subti
          fps_offset_end, diarize, num_speakers, use_input, use_pcm, keep_flac, keep, model,
          prompt, keyterms_prompt, speech_models,
          size_threshold, chunk_length, overlap, force, save_cleaned_json, use_json_input, extensions, debug, verbose, start_hour,
-         setup, api_key):
+         list_models, setup, api_key):
     """Unified Audio Transcription Tool."""
-    
+
     # If a subcommand is invoked, do nothing here (let the subcommand handle it)
     if ctx.invoked_subcommand is not None:
+        return
+
+    # Handle --list flag
+    if list_models:
+        click.echo("\nAvailable Transcription APIs and Models:\n")
+        for api_name, api_info in MODEL_REGISTRY.items():
+            default_model = api_info.get("default", "")
+            models = api_info.get("models", [])
+            note = api_info.get("note", "")
+            click.echo(f"  {click.style(api_name.upper(), fg='cyan', bold=True)}")
+            for m in models:
+                if m == default_model:
+                    click.echo(f"    * {click.style(m, fg='green')} (default)")
+                else:
+                    click.echo(f"      {m}")
+            if note:
+                click.echo(f"    {note}")
+            click.echo()
         return
 
     # Set up logging

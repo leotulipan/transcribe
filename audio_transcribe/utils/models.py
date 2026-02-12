@@ -28,11 +28,12 @@ MODEL_REGISTRY = {
         ]
     },
     "assemblyai": {
-        "default": "best",
+        "default": "universal-3-pro",
         "models": [
-            "best",
-            "nano"
-        ]
+            "universal-3-pro",
+            "universal-2"
+        ],
+        "note": "Universal-3-Pro supports prompting and keyterms. Universal-2 covers 99 languages."
     },
     "elevenlabs": {
         "default": "scribe_v2",

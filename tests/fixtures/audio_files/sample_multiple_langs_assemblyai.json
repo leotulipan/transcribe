@@ -1,0 +1,222 @@
+{
+  "language_code": "de",
+  "audio_url": "https://cdn.assemblyai.com/upload/22d91cb42bd515d5a8354ca4c6180b5a3c28be3fab6e91954a99e065a37d554c/5e495442-de5c-4b93-abfe-f1f6ad92f812",
+  "punctuate": true,
+  "format_text": true,
+  "dual_channel": false,
+  "multichannel": null,
+  "audio_channels": null,
+  "webhook_url": null,
+  "webhook_auth_header_name": null,
+  "webhook_auth_header_value": null,
+  "audio_start_from": null,
+  "audio_end_at": null,
+  "word_boost": [],
+  "boost_param": null,
+  "filter_profanity": false,
+  "redact_pii": false,
+  "redact_pii_audio": false,
+  "redact_pii_audio_quality": null,
+  "redact_pii_policies": null,
+  "redact_pii_sub": null,
+  "speaker_labels": false,
+  "speakers_expected": null,
+  "speaker_options": null,
+  "content_safety": false,
+  "content_safety_confidence": null,
+  "iab_categories": false,
+  "custom_spelling": null,
+  "disfluencies": false,
+  "sentiment_analysis": false,
+  "auto_chapters": false,
+  "entity_detection": false,
+  "summarization": false,
+  "summary_model": null,
+  "summary_type": null,
+  "auto_highlights": false,
+  "language_detection": true,
+  "language_confidence_threshold": null,
+  "language_detection_options": null,
+  "language_confidence": 0.9536,
+  "language_codes": null,
+  "code_switching_languages": null,
+  "speech_threshold": null,
+  "speech_model": "best",
+  "speech_models": null,
+  "prompt": null,
+  "keyterms_prompt": [],
+  "speech_understanding": null,
+  "id": "4761707f-6304-4cb1-95d9-db8819c1901c",
+  "status": "completed",
+  "error": null,
+  "text": "This is a multiple language clip. Dies ist ein Ausschnitt, in dem wir mehrere Sprachen N lite Svensk text.",
+  "words": [
+    {
+      "text": "This",
+      "start": 2080,
+      "end": 2280,
+      "confidence": 0.9814453,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "is",
+      "start": 2280,
+      "end": 2560,
+      "confidence": 0.99902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "a",
+      "start": 2560,
+      "end": 2760,
+      "confidence": 0.99121094,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "multiple",
+      "start": 2760,
+      "end": 3400,
+      "confidence": 0.9700928,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "language",
+      "start": 3400,
+      "end": 4080,
+      "confidence": 0.97281903,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "clip.",
+      "start": 4080,
+      "end": 4800,
+      "confidence": 0.98999023,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Dies",
+      "start": 5520,
+      "end": 5920,
+      "confidence": 0.9980469,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ist",
+      "start": 5920,
+      "end": 6240,
+      "confidence": 0.99853516,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "ein",
+      "start": 6240,
+      "end": 6480,
+      "confidence": 0.99902344,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Ausschnitt,",
+      "start": 6480,
+      "end": 7120,
+      "confidence": 0.9838867,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "in",
+      "start": 7360,
+      "end": 7640,
+      "confidence": 0.9707031,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "dem",
+      "start": 7640,
+      "end": 7840,
+      "confidence": 0.6201172,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "wir",
+      "start": 7840,
+      "end": 8080,
+      "confidence": 0.6225586,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "mehrere",
+      "start": 8080,
+      "end": 8560,
+      "confidence": 0.99975586,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Sprachen",
+      "start": 8560,
+      "end": 8960,
+      "confidence": 0.9996745,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "N",
+      "start": 11760,
+      "end": 12160,
+      "confidence": 0.60839844,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "lite",
+      "start": 13920,
+      "end": 14560,
+      "confidence": 0.88012695,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "Svensk",
+      "start": 14640,
+      "end": 15680,
+      "confidence": 0.87805176,
+      "speaker": null,
+      "channel": null
+    },
+    {
+      "text": "text.",
+      "start": 16160,
+      "end": 16720,
+      "confidence": 0.98950195,
+      "speaker": null,
+      "channel": null
+    }
+  ],
+  "utterances": null,
+  "confidence": 0.91857696,
+  "audio_duration": 22,
+  "webhook_status_code": null,
+  "webhook_auth": false,
+  "summary": null,
+  "auto_highlights_result": null,
+  "content_safety_labels": null,
+  "iab_categories_result": null,
+  "chapters": null,
+  "sentiment_analysis_results": null,
+  "entities": null,
+  "speech_model_used": "universal-2",
+  "translated_texts": null,
+  "api_name": "assemblyai"
+}
