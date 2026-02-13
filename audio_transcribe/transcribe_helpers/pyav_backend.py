@@ -100,16 +100,17 @@ def extract_audio_pyav(input_path: Path, output_path: Path) -> bool:
                 return False
 
             audio_stream = audio_streams[0]
+            codec_name = audio_stream.codec_context.name
 
             with av.open(str(output_path), 'w') as out:
-                # Add stream with same codec as input (stream copy)
-                out_stream = out.add_stream(template=audio_stream)
+                # Add stream matching input codec for stream copy
+                out_stream = out.add_stream(codec_name, rate=audio_stream.rate)
+                out_stream.layout = audio_stream.layout
 
                 # mux packets
                 for packet in inp.demux(audio_stream):
                     if packet.dts is None:
                         continue
-                    # Wrap packet in output stream
                     packet.stream = out_stream
                     out.mux(packet)
 

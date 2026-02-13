@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "audio-transcribe"
-version = "0.4.4"
+version = "0.4.5"
 description = "Unified audio transcription tool supporting multiple APIs"
 authors = [
     {name = "Audio Transcribe Team"}
