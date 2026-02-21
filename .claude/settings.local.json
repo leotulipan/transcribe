@@ -9,7 +9,9 @@
       "Bash(.venv\\\\Scripts\\\\python.exe:*)",
       "Bash(\".venv/Scripts/python.exe\" -m pip install questionary rich)",
       "Bash(uv venv:*)",
-      "Bash(uv:*)"
+      "Bash(uv:*)",
+      "Bash(tasklist:*)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }
