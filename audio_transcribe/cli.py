@@ -282,6 +282,8 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                     else:
                         logger.warning("Could not calculate bytes per second. Using default chunk length.")
                 elif not opt_result.fits_limit(max_size_mb):
+                    if opt_result.intermediate_manager:
+                        opt_result.cleanup()
                     logger.error(f"Audio optimization failed: File ({opt_result.size_mb:.2f}MB) exceeds "
                                f"{max_size_mb}MB limit and API does not support chunking.")
                     return []
@@ -334,10 +336,6 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
 
         logger.success(f"Successfully obtained transcription. Words count: {len(transcription_result.words)}")
 
-        # Clean up intermediate files via manager (if present)
-        if 'opt_result' in locals() and opt_result.intermediate_manager:
-            opt_result.cleanup()
-
         # Output generation
         format_types = kwargs.get("output", ["text", "srt"])
         output_files = create_output_files(transcription_result, original_input_path, format_types, **kwargs)
@@ -361,6 +359,10 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
         logger.exception(f"An error occurred while processing {file_path}: {e}")
         return []
     finally:
+        # Cleanup intermediate manager (temp dirs) on any exit path
+        if 'opt_result' in locals() and opt_result and opt_result.intermediate_manager:
+            opt_result.cleanup()
+
         # Cleanup temporary files
         if not keep_optimized:
             for temp_file in temp_files_to_cleanup:
@@ -373,43 +375,55 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
 
 def process_audio_path(path: Union[str, Path], **kwargs) -> None:
     """
-    Process a file or directory of audio files.
+    Process a file or directory of audio files with minimal progress indicators.
     """
     path_obj = Path(path)
+
     if path_obj.is_file():
+        logger.info(f"[PROCESSING] {path_obj.name}")
         process_file(path_obj, **kwargs)
+
     elif path_obj.is_dir():
-        # Get extensions filter from kwargs if provided
         extensions_filter = kwargs.get('extensions')
         if extensions_filter:
-            # Parse comma-separated extensions
             extensions = [ext.strip() if ext.startswith('.') else f'.{ext.strip()}'
                          for ext in extensions_filter.split(',')]
-            logger.info(f"Filtering by extensions: {', '.join(extensions)}")
         else:
-            # Default: all supported formats
             extensions = ['.mp3', '.wav', '.m4a', '.mp4', '.mkv', '.flac', '.ogg', '.webm']
 
         files = []
         for ext in extensions:
             files.extend(path_obj.rglob(f"*{ext}"))
 
-        # Filter out macOS metadata/resource fork files (._filename, .DS_Store, etc.)
-        before_count = len(files)
         files = [f for f in files if not f.name.startswith('.')]
-        filtered_count = before_count - len(files)
-        if filtered_count > 0:
-            logger.info(f"Skipped {filtered_count} hidden/metadata file(s) (e.g. macOS '._' resource forks)")
 
         if not files:
-            logger.warning(f"No audio/video files found in {path}")
+            logger.error(f"[PROCESSING] No audio files found")
             return
 
-        logger.info(f"Found {len(files)} files to process in {path}")
-        for file in files:
-            process_file(file, **kwargs)
+        total_files = len(files)
+        success_count = 0
+        failed_count = 0
+
+        for idx, file in enumerate(files, 1):
+            logger.info(f"[PROCESSING] [{idx}/{total_files}] {file.name}")
+
+            try:
+                result = process_file(file, **kwargs)
+                if result:
+                    success_count += 1
+                else:
+                    failed_count += 1
+                    logger.error(f"[PROCESSING] ✗ {file.name}")
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"[PROCESSING] ✗ {file.name}: {e}")
+
+        if failed_count > 0:
+            logger.error(f"[PROCESSING] {success_count} ok, {failed_count} failed")
+
     else:
-        logger.error(f"Path not found: {path}")
+        logger.error(f"[PROCESSING] Path not found")
 
 @click.group(invoke_without_command=True)
 @click.argument("input_path", required=False, type=NormalizedPath(exists=False))

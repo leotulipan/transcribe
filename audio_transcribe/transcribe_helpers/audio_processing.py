@@ -619,8 +619,15 @@ def optimize_audio_for_api(
         if current_path.suffix.lower() in video_extensions:
             logger.info("Strategy 1: Extracting audio from video...")
 
+            # Map video extensions to appropriate audio container extensions
+            video_to_audio_ext = {
+                '.mp4': 'm4a', '.mov': 'm4a', '.m4v': 'm4a', '.avi': 'm4a',
+                '.mkv': 'ogg', '.webm': 'ogg',
+            }
+            audio_ext = video_to_audio_ext.get(current_path.suffix.lower(), 'm4a')
+
             # Use intermediate manager for output path
-            extracted_path = manager.get_path_for(FileOperation.EXTRACTED, current_path.suffix[1:])
+            extracted_path = manager.get_path_for(FileOperation.EXTRACTED, audio_ext)
 
             # Try PyAV first (faster)
             extracted_success = False

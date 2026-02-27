@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "audio-transcribe"
-version = "0.4.5"
+version = "0.4.6"
 description = "Unified audio transcription tool supporting multiple APIs"
 authors = [
     {name = "Audio Transcribe Team"}
