@@ -1,0 +1,1256 @@
+{
+  "text": "                                                                                                                                                      ",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 0,
+      "end": 4.3,
+      "text": " Ich freue mich sehr auf dieses Gespräch mit Timo Konzelmann.",
+      "tokens": [
+        50365,
+        3141,
+        43195,
+        6031,
+        5499,
+        2501,
+        12113,
+        38746,
+        10168,
+        2194,
+        314,
+        6934,
+        12718,
+        12971,
+        14912,
+        13,
+        50580
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.06441493,
+      "compression_ratio": 1.439834,
+      "no_speech_prob": 0.0052181236
+    },
+    {
+      "id": 1,
+      "seek": 0,
+      "start": 4.78,
+      "end": 8.5,
+      "text": " Er ist Content Creator, Autor, Keto-Coach und Speaker.",
+      "tokens": [
+        50604,
+        3300,
+        1418,
+        30078,
+        28208,
+        11,
+        6049,
+        284,
+        11,
+        591,
+        19515,
+        12,
+        21141,
+        608,
+        674,
+        8454,
+        13,
+        50790
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.06441493,
+      "compression_ratio": 1.439834,
+      "no_speech_prob": 0.0052181236
+    },
+    {
+      "id": 2,
+      "seek": 0,
+      "start": 9.04,
+      "end": 15.68,
+      "text": " Timo erhielt seine ADHS-Diagnose erst im Erwachsenenalter und hat daraus ein starkes Projekt gemacht.",
+      "tokens": [
+        50817,
+        314,
+        6934,
+        1189,
+        71,
+        18940,
+        15925,
+        9135,
+        12527,
+        12,
+        35,
+        72,
+        4535,
+        541,
+        11301,
+        566,
+        3300,
+        86,
+        31625,
+        268,
+        43420,
+        674,
+        2385,
+        274,
+        46483,
+        1343,
+        17417,
+        279,
+        34804,
+        12293,
+        13,
+        51149
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.06441493,
+      "compression_ratio": 1.439834,
+      "no_speech_prob": 0.0052181236
+    },
+    {
+      "id": 3,
+      "seek": 0,
+      "start": 15.68,
+      "end": 24.66,
+      "text": " Sein Buch und Hörbuch ADHS gesegnet und verflucht, das er in bemerkenswerter Geschwindigkeit geschrieben und eingesprochen hat.",
+      "tokens": [
+        51149,
+        1100,
+        259,
+        25818,
+        674,
+        389,
+        2311,
+        39742,
+        9135,
+        12527,
+        290,
+        1130,
+        4568,
+        302,
+        674,
+        1306,
+        3423,
+        10084,
+        11,
+        1482,
+        1189,
+        294,
+        312,
+        936,
+        74,
+        694,
+        1554,
+        391,
+        14241,
+        12199,
+        16626,
+        47397,
+        674,
+        49821,
+        23902,
+        2385,
+        13,
+        51598
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.06441493,
+      "compression_ratio": 1.439834,
+      "no_speech_prob": 0.0052181236
+    },
+    {
+      "id": 4,
+      "seek": 2466,
+      "start": 24.66,
+      "end": 29.66,
+      "text": " Er beschreibt ADHS nicht nur als Herausforderung, sondern auch als Potenzial.",
+      "tokens": [
+        50365,
+        3300,
+        17498,
+        31174,
+        9135,
+        12527,
+        1979,
+        4343,
+        3907,
+        37888,
+        1063,
+        11,
+        11465,
+        2168,
+        3907,
+        9145,
+        11368,
+        831,
+        13,
+        50615
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.0783329,
+      "compression_ratio": 1.4703947,
+      "no_speech_prob": 0.004904014
+    },
+    {
+      "id": 5,
+      "seek": 2466,
+      "start": 29.86,
+      "end": 31.96,
+      "text": " Anders denken, hören und sehen.",
+      "tokens": [
+        50625,
+        33988,
+        28780,
+        11,
+        38681,
+        674,
+        11333,
+        13,
+        50730
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.0783329,
+      "compression_ratio": 1.4703947,
+      "no_speech_prob": 0.004904014
+    },
+    {
+      "id": 6,
+      "seek": 2466,
+      "start": 32.14,
+      "end": 36.56,
+      "text": " Und nutzt genau diese Perspektive, um Betroffenen Orientierung zu geben.",
+      "tokens": [
+        50739,
+        2719,
+        5393,
+        2682,
+        12535,
+        6705,
+        14006,
+        23533,
+        488,
+        11,
+        1105,
+        6279,
+        30594,
+        268,
+        49544,
+        11651,
+        2164,
+        17191,
+        13,
+        50960
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.0783329,
+      "compression_ratio": 1.4703947,
+      "no_speech_prob": 0.004904014
+    },
+    {
+      "id": 7,
+      "seek": 2466,
+      "start": 36.72,
+      "end": 42.7,
+      "text": " Gleichzeitig teilt er, wie ihm ketogene Ernährung half, Energie und Struktur in den Alltag zu bringen,",
+      "tokens": [
+        50968,
+        33858,
+        32075,
+        535,
+        2352,
+        1189,
+        11,
+        3355,
+        16021,
+        14979,
+        23360,
+        24147,
+        12021,
+        1063,
+        1922,
+        11,
+        35309,
+        674,
+        745,
+        31543,
+        294,
+        1441,
+        1057,
+        25030,
+        2164,
+        27519,
+        11,
+        51267
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.0783329,
+      "compression_ratio": 1.4703947,
+      "no_speech_prob": 0.004904014
+    },
+    {
+      "id": 8,
+      "seek": 2466,
+      "start": 42.9,
+      "end": 44.66,
+      "text": " ohne daraus ein Dogma zu machen.",
+      "tokens": [
+        51277,
+        15716,
+        274,
+        46483,
+        1343,
+        13472,
+        1696,
+        2164,
+        7069,
+        13,
+        51365
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.0783329,
+      "compression_ratio": 1.4703947,
+      "no_speech_prob": 0.004904014
+    },
+    {
+      "id": 9,
+      "seek": 2466,
+      "start": 44.86,
+      "end": 46.9,
+      "text": " Ein Angebot, kein Evangelium.",
+      "tokens": [
+        51375,
+        6391,
+        44301,
+        310,
+        11,
+        13424,
+        36635,
+        2197,
+        13,
+        51477
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.0783329,
+      "compression_ratio": 1.4703947,
+      "no_speech_prob": 0.004904014
+    },
+    {
+      "id": 10,
+      "seek": 2466,
+      "start": 47.18,
+      "end": 54.22,
+      "text": " Außerdem zeigt Timo, wie digitale Tools bis hin zu KI im Alltag mit ADHS unterstützen können.",
+      "tokens": [
+        51491,
+        47834,
+        29250,
+        314,
+        6934,
+        11,
+        3355,
+        14293,
+        1220,
+        30302,
+        7393,
+        14102,
+        2164,
+        47261,
+        566,
+        1057,
+        25030,
+        2194,
+        9135,
+        12527,
+        43081,
+        6310,
+        13,
+        51843
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.0783329,
+      "compression_ratio": 1.4703947,
+      "no_speech_prob": 0.004904014
+    },
+    {
+      "id": 11,
+      "seek": 5422,
+      "start": 54.44,
+      "end": 57.78,
+      "text": " Heute klären wir, was genau meint Segen und Fluch.",
+      "tokens": [
+        50376,
+        27978,
+        9671,
+        21465,
+        1987,
+        11,
+        390,
+        12535,
+        385,
+        686,
+        1100,
+        1766,
+        674,
+        3235,
+        625,
+        13,
+        50543
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.105405696,
+      "compression_ratio": 0.96428573,
+      "no_speech_prob": 0.00020023748
+    },
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 55,
+      "end": 61.56,
+      "text": " was genau meint Segen und Fluch? Wie lassen sich Neurobiologie, Ernährung und Alltagspraxis",
+      "tokens": [
+        50365,
+        390,
+        12535,
+        385,
+        686,
+        1100,
+        1766,
+        674,
+        3235,
+        625,
+        30,
+        9233,
+        16168,
+        3041,
+        1734,
+        7052,
+        5614,
+        20121,
+        11,
+        24147,
+        12021,
+        1063,
+        674,
+        1057,
+        25030,
+        4952,
+        424,
+        39637,
+        50693
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.13561086,
+      "compression_ratio": 1.1865672,
+      "no_speech_prob": 0.018521098
+    },
+    {
+      "id": 12,
+      "seek": 5422,
+      "start": 58.42,
+      "end": 60,
+      "text": " Wie lassen sich Neurobiologie",
+      "tokens": [
+        50575,
+        9233,
+        16168,
+        3041,
+        1734,
+        7052,
+        5614,
+        20121,
+        50654
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.105405696,
+      "compression_ratio": 0.96428573,
+      "no_speech_prob": 0.00020023748
+    },
+    {
+      "id": 1,
+      "seek": 0,
+      "start": 61.56,
+      "end": 65.84,
+      "text": " verbinden? Und welche ersten Schritte helfen Betroffenen wirklich?",
+      "tokens": [
+        50693,
+        9595,
+        10291,
+        30,
+        2719,
+        24311,
+        17324,
+        46191,
+        9786,
+        29966,
+        6279,
+        30594,
+        268,
+        9696,
+        30,
+        50907
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.13561086,
+      "compression_ratio": 1.1865672,
+      "no_speech_prob": 0.018521098
+    }
+  ],
+  "words": [
+    {
+      "word": "Ich",
+      "start": 0,
+      "end": 0.2
+    },
+    {
+      "word": "freue",
+      "start": 0.2,
+      "end": 0.46
+    },
+    {
+      "word": "mich",
+      "start": 0.46,
+      "end": 0.7
+    },
+    {
+      "word": "sehr",
+      "start": 0.7,
+      "end": 1.08
+    },
+    {
+      "word": "auf",
+      "start": 1.08,
+      "end": 1.56
+    },
+    {
+      "word": "dieses",
+      "start": 1.56,
+      "end": 2
+    },
+    {
+      "word": "Gespräch",
+      "start": 2,
+      "end": 2.66
+    },
+    {
+      "word": "mit",
+      "start": 2.66,
+      "end": 2.98
+    },
+    {
+      "word": "Timo",
+      "start": 2.98,
+      "end": 3.52
+    },
+    {
+      "word": "Konzelmann.",
+      "start": 3.52,
+      "end": 4.78
+    },
+    {
+      "word": "Er",
+      "start": 4.84,
+      "end": 4.96
+    },
+    {
+      "word": "ist",
+      "start": 4.96,
+      "end": 5.26
+    },
+    {
+      "word": "Content",
+      "start": 5.26,
+      "end": 5.76
+    },
+    {
+      "word": "Creator,",
+      "start": 5.76,
+      "end": 6.28
+    },
+    {
+      "word": "Autor,",
+      "start": 6.28,
+      "end": 7.1
+    },
+    {
+      "word": "Keto-Coach",
+      "start": 7.1,
+      "end": 7.78
+    },
+    {
+      "word": "und",
+      "start": 7.78,
+      "end": 8.04
+    },
+    {
+      "word": "Speaker.",
+      "start": 8.04,
+      "end": 8.46
+    },
+    {
+      "word": "Timo",
+      "start": 9.04,
+      "end": 9.34
+    },
+    {
+      "word": "erhielt",
+      "start": 9.34,
+      "end": 9.76
+    },
+    {
+      "word": "seine",
+      "start": 9.76,
+      "end": 10.16
+    },
+    {
+      "word": "ADHS-Diagnose",
+      "start": 10.16,
+      "end": 11.3
+    },
+    {
+      "word": "erst",
+      "start": 11.3,
+      "end": 11.58
+    },
+    {
+      "word": "im",
+      "start": 11.58,
+      "end": 11.76
+    },
+    {
+      "word": "Erwachsenenalter",
+      "start": 11.76,
+      "end": 12.66
+    },
+    {
+      "word": "und",
+      "start": 12.66,
+      "end": 13.26
+    },
+    {
+      "word": "hat",
+      "start": 13.26,
+      "end": 13.5
+    },
+    {
+      "word": "daraus",
+      "start": 13.5,
+      "end": 13.92
+    },
+    {
+      "word": "ein",
+      "start": 13.92,
+      "end": 14.22
+    },
+    {
+      "word": "starkes",
+      "start": 14.22,
+      "end": 14.78
+    },
+    {
+      "word": "Projekt",
+      "start": 14.78,
+      "end": 15.16
+    },
+    {
+      "word": "gemacht.",
+      "start": 15.16,
+      "end": 16.02
+    },
+    {
+      "word": "Sein",
+      "start": 15.52,
+      "end": 16.06
+    },
+    {
+      "word": "Buch",
+      "start": 16.06,
+      "end": 16.42
+    },
+    {
+      "word": "und",
+      "start": 16.42,
+      "end": 16.7
+    },
+    {
+      "word": "Hörbuch",
+      "start": 16.7,
+      "end": 17.2
+    },
+    {
+      "word": "ADHS",
+      "start": 17.2,
+      "end": 18.2
+    },
+    {
+      "word": "gesegnet",
+      "start": 18.2,
+      "end": 18.98
+    },
+    {
+      "word": "und",
+      "start": 18.98,
+      "end": 19.18
+    },
+    {
+      "word": "verflucht,",
+      "start": 19.18,
+      "end": 20.18
+    },
+    {
+      "word": "das",
+      "start": 20.18,
+      "end": 20.4
+    },
+    {
+      "word": "er",
+      "start": 20.4,
+      "end": 20.6
+    },
+    {
+      "word": "in",
+      "start": 20.6,
+      "end": 20.84
+    },
+    {
+      "word": "bemerkenswerter",
+      "start": 20.84,
+      "end": 21.72
+    },
+    {
+      "word": "Geschwindigkeit",
+      "start": 21.72,
+      "end": 22.48
+    },
+    {
+      "word": "geschrieben",
+      "start": 22.48,
+      "end": 22.96
+    },
+    {
+      "word": "und",
+      "start": 22.96,
+      "end": 23.5
+    },
+    {
+      "word": "eingesprochen",
+      "start": 23.5,
+      "end": 24.3
+    },
+    {
+      "word": "hat.",
+      "start": 24.3,
+      "end": 25.14
+    },
+    {
+      "word": "Er",
+      "start": 24.66,
+      "end": 24.86
+    },
+    {
+      "word": "beschreibt",
+      "start": 24.86,
+      "end": 25.48
+    },
+    {
+      "word": "ADHS",
+      "start": 25.48,
+      "end": 25.96
+    },
+    {
+      "word": "nicht",
+      "start": 25.96,
+      "end": 26.48
+    },
+    {
+      "word": "nur",
+      "start": 26.48,
+      "end": 26.74
+    },
+    {
+      "word": "als",
+      "start": 26.74,
+      "end": 27.02
+    },
+    {
+      "word": "Herausforderung,",
+      "start": 27.02,
+      "end": 28.2
+    },
+    {
+      "word": "sondern",
+      "start": 28.2,
+      "end": 28.42
+    },
+    {
+      "word": "auch",
+      "start": 28.42,
+      "end": 28.78
+    },
+    {
+      "word": "als",
+      "start": 28.78,
+      "end": 28.92
+    },
+    {
+      "word": "Potenzial.",
+      "start": 28.92,
+      "end": 30.14
+    },
+    {
+      "word": "Anders",
+      "start": 29.98,
+      "end": 30.24
+    },
+    {
+      "word": "denken,",
+      "start": 30.24,
+      "end": 30.96
+    },
+    {
+      "word": "hören",
+      "start": 30.96,
+      "end": 31.26
+    },
+    {
+      "word": "und",
+      "start": 31.26,
+      "end": 31.6
+    },
+    {
+      "word": "sehen.",
+      "start": 31.6,
+      "end": 31.92
+    },
+    {
+      "word": "Und",
+      "start": 32.12,
+      "end": 32.32
+    },
+    {
+      "word": "nutzt",
+      "start": 32.32,
+      "end": 32.58
+    },
+    {
+      "word": "genau",
+      "start": 32.58,
+      "end": 32.92
+    },
+    {
+      "word": "diese",
+      "start": 32.92,
+      "end": 33.28
+    },
+    {
+      "word": "Perspektive,",
+      "start": 33.28,
+      "end": 34.12
+    },
+    {
+      "word": "um",
+      "start": 34.12,
+      "end": 34.44
+    },
+    {
+      "word": "Betroffenen",
+      "start": 34.44,
+      "end": 35.24
+    },
+    {
+      "word": "Orientierung",
+      "start": 35.24,
+      "end": 36.06
+    },
+    {
+      "word": "zu",
+      "start": 36.06,
+      "end": 36.3
+    },
+    {
+      "word": "geben.",
+      "start": 36.3,
+      "end": 37.04
+    },
+    {
+      "word": "Gleichzeitig",
+      "start": 36.74,
+      "end": 37.36
+    },
+    {
+      "word": "teilt",
+      "start": 37.36,
+      "end": 37.7
+    },
+    {
+      "word": "er,",
+      "start": 37.7,
+      "end": 38.08
+    },
+    {
+      "word": "wie",
+      "start": 38.08,
+      "end": 38.24
+    },
+    {
+      "word": "ihm",
+      "start": 38.24,
+      "end": 38.62
+    },
+    {
+      "word": "ketogene",
+      "start": 38.62,
+      "end": 39.54
+    },
+    {
+      "word": "Ernährung",
+      "start": 39.54,
+      "end": 40.12
+    },
+    {
+      "word": "half,",
+      "start": 40.12,
+      "end": 40.48
+    },
+    {
+      "word": "Energie",
+      "start": 40.48,
+      "end": 40.9
+    },
+    {
+      "word": "und",
+      "start": 40.9,
+      "end": 41.12
+    },
+    {
+      "word": "Struktur",
+      "start": 41.12,
+      "end": 41.46
+    },
+    {
+      "word": "in",
+      "start": 41.46,
+      "end": 41.64
+    },
+    {
+      "word": "den",
+      "start": 41.64,
+      "end": 41.78
+    },
+    {
+      "word": "Alltag",
+      "start": 41.78,
+      "end": 42.14
+    },
+    {
+      "word": "zu",
+      "start": 42.14,
+      "end": 42.34
+    },
+    {
+      "word": "bringen,",
+      "start": 42.34,
+      "end": 42.62
+    },
+    {
+      "word": "ohne",
+      "start": 42.94,
+      "end": 43.18
+    },
+    {
+      "word": "daraus",
+      "start": 43.18,
+      "end": 43.6
+    },
+    {
+      "word": "ein",
+      "start": 43.6,
+      "end": 43.8
+    },
+    {
+      "word": "Dogma",
+      "start": 43.8,
+      "end": 44.12
+    },
+    {
+      "word": "zu",
+      "start": 44.12,
+      "end": 44.34
+    },
+    {
+      "word": "machen.",
+      "start": 44.34,
+      "end": 44.6
+    },
+    {
+      "word": "Ein",
+      "start": 44.88,
+      "end": 45.06
+    },
+    {
+      "word": "Angebot,",
+      "start": 45.06,
+      "end": 45.98
+    },
+    {
+      "word": "kein",
+      "start": 45.98,
+      "end": 46.16
+    },
+    {
+      "word": "Evangelium.",
+      "start": 46.16,
+      "end": 47.38
+    },
+    {
+      "word": "Außerdem",
+      "start": 47.32,
+      "end": 47.64
+    },
+    {
+      "word": "zeigt",
+      "start": 47.64,
+      "end": 48.04
+    },
+    {
+      "word": "Timo,",
+      "start": 48.04,
+      "end": 48.64
+    },
+    {
+      "word": "wie",
+      "start": 48.64,
+      "end": 48.66
+    },
+    {
+      "word": "digitale",
+      "start": 48.66,
+      "end": 49.34
+    },
+    {
+      "word": "Tools",
+      "start": 49.34,
+      "end": 49.8
+    },
+    {
+      "word": "bis",
+      "start": 49.8,
+      "end": 50.32
+    },
+    {
+      "word": "hin",
+      "start": 50.32,
+      "end": 50.66
+    },
+    {
+      "word": "zu",
+      "start": 50.66,
+      "end": 51.12
+    },
+    {
+      "word": "KI",
+      "start": 51.12,
+      "end": 51.46
+    },
+    {
+      "word": "im",
+      "start": 51.46,
+      "end": 52
+    },
+    {
+      "word": "Alltag",
+      "start": 52,
+      "end": 52.48
+    },
+    {
+      "word": "mit",
+      "start": 52.48,
+      "end": 52.68
+    },
+    {
+      "word": "ADHS",
+      "start": 52.68,
+      "end": 53.18
+    },
+    {
+      "word": "unterstützen",
+      "start": 53.18,
+      "end": 53.8
+    },
+    {
+      "word": "können.",
+      "start": 53.8,
+      "end": 54.64
+    },
+    {
+      "word": "Heute",
+      "start": 54.44,
+      "end": 54.68
+    },
+    {
+      "word": "klären",
+      "start": 54.68,
+      "end": 55.08
+    },
+    {
+      "word": "was",
+      "start": 55,
+      "end": 55.4
+    },
+    {
+      "word": "wir,",
+      "start": 55.08,
+      "end": 55.4
+    },
+    {
+      "word": "was",
+      "start": 55.4,
+      "end": 55.56
+    },
+    {
+      "word": "genau",
+      "start": 55.4,
+      "end": 55.9
+    },
+    {
+      "word": "genau",
+      "start": 55.56,
+      "end": 55.9
+    },
+    {
+      "word": "meint",
+      "start": 55.9,
+      "end": 56.3
+    },
+    {
+      "word": "meint",
+      "start": 55.9,
+      "end": 56.32
+    },
+    {
+      "word": "Segen",
+      "start": 56.3,
+      "end": 56.88
+    },
+    {
+      "word": "Segen",
+      "start": 56.32,
+      "end": 56.9
+    },
+    {
+      "word": "und",
+      "start": 56.88,
+      "end": 57.34
+    },
+    {
+      "word": "und",
+      "start": 56.9,
+      "end": 57.36
+    },
+    {
+      "word": "Fluch.",
+      "start": 57.34,
+      "end": 57.78
+    },
+    {
+      "word": "Fluch?",
+      "start": 57.36,
+      "end": 57.78
+    },
+    {
+      "word": "Wie",
+      "start": 57.78,
+      "end": 58.52
+    },
+    {
+      "word": "Wie",
+      "start": 58.44,
+      "end": 58.56
+    },
+    {
+      "word": "lassen",
+      "start": 58.52,
+      "end": 58.88
+    },
+    {
+      "word": "lassen",
+      "start": 58.56,
+      "end": 58.9
+    },
+    {
+      "word": "sich",
+      "start": 58.88,
+      "end": 59.12
+    },
+    {
+      "word": "sich",
+      "start": 58.9,
+      "end": 59.14
+    },
+    {
+      "word": "Neurobiologie,",
+      "start": 59.12,
+      "end": 60.14
+    },
+    {
+      "word": "Neurobiologie",
+      "start": 59.14,
+      "end": 60.02
+    },
+    {
+      "word": "Ernährung",
+      "start": 60.14,
+      "end": 60.5
+    },
+    {
+      "word": "und",
+      "start": 60.5,
+      "end": 60.64
+    },
+    {
+      "word": "Alltagspraxis",
+      "start": 60.64,
+      "end": 61.519999999999996
+    },
+    {
+      "word": "verbinden?",
+      "start": 61.6,
+      "end": 63
+    },
+    {
+      "word": "Und",
+      "start": 63,
+      "end": 63.14
+    },
+    {
+      "word": "welche",
+      "start": 63.14,
+      "end": 63.4
+    },
+    {
+      "word": "ersten",
+      "start": 63.4,
+      "end": 63.9
+    },
+    {
+      "word": "Schritte",
+      "start": 63.9,
+      "end": 64.3
+    },
+    {
+      "word": "helfen",
+      "start": 64.3,
+      "end": 64.76
+    },
+    {
+      "word": "Betroffenen",
+      "start": 64.76,
+      "end": 65.52
+    },
+    {
+      "word": "wirklich?",
+      "start": 65.52,
+      "end": 65.82
+    }
+  ],
+  "api_name": "groq"
+}

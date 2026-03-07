@@ -20,6 +20,8 @@ class TestOutputFormatFallback:
             pytest.skip("No OpenAI API key available")
 
         api = get_api_instance("openai_extended", api_key)
+        if not api.check_api_key():
+            pytest.skip("OpenAI API key is invalid/expired")
 
         # Test with model that only supports text/json (gpt-4o-transcribe)
         result = api.transcribe(
@@ -42,6 +44,8 @@ class TestOutputFormatFallback:
             pytest.skip("No Gemini API key available")
 
         api = get_api_instance("gemini", api_key)
+        if not api.check_api_key():
+            pytest.skip("Gemini API key is invalid/expired")
 
         result = api.transcribe(sample_audio_file)
 

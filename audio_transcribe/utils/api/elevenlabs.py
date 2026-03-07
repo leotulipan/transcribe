@@ -38,29 +38,13 @@ class ElevenLabsAPI(TranscriptionAPI):
             
     def list_models(self) -> List[str]:
         """
-        List available models for ElevenLabs API.
-        
-        Returns:
-            List of model IDs available for use
+        List available transcription (Scribe) models for ElevenLabs API.
+
+        Returns models from MODEL_REGISTRY (single source of truth).
+        The /v1/models endpoint only returns TTS models, not Scribe STT models.
         """
-        if not self.api_key:
-            return []
-            
-        headers = {"xi-api-key": self.api_key}
-        try:
-            response = requests.get(f"{self.base_url}/models", headers=headers)
-            if response.status_code == 200:
-                models = response.json()
-                # Extract model IDs (filtering for speech-to-text if possible, but ElevenLabs models are mostly TTS)
-                # Scribe is their STT model, checking if it's in the list or just returning known ones
-                # Actually ElevenLabs /v1/models returns TTS models. 
-                # Scribe is a separate endpoint/service. 
-                # However, we can still use this endpoint to validate the key.
-                return [m["model_id"] for m in models]
-            return []
-        except Exception as e:
-            logger.error(f"Failed to list ElevenLabs models: {e}")
-            return []
+        from audio_transcribe.utils.models import get_available_models
+        return get_available_models("elevenlabs")
 
     def check_api_key(self) -> bool:
         """Check if ElevenLabs API key is valid."""

@@ -192,19 +192,32 @@ ElevenLabs supports speaker diarization (--diarize flag). When enabled:
 - Normalizes to lowercase for API compatibility
 - Different APIs expect different code formats
 
-## Testing Approach
+## Testing
 
-No framework is used. Manual testing with test files:
+Uses **pytest** with Red/Green TDD workflow. Full guide: `docs/red_green_tdd.md`
 
-1. Place test audio/video files in `test/files/`
-2. Run CLI with test file and check output in current directory
-3. Document test cases and expected results in `test/ACCEPTANCE_CRITERIA.md`
-4. Output files are generated in the same directory as the input file (or specified with --output-dir)
+```bash
+# Unit tests (fast, no API keys needed)
+uv run python -m pytest tests/unit/ -v
 
-When testing DaVinci features, import the generated `.srt` into DaVinci Resolve and verify:
-- Pause markers are recognized as auto-cut points
-- Filler words are highlighted in UPPERCASE
-- Timing is frame-accurate
+# Integration tests (needs API keys + ffmpeg)
+uv run python -m pytest tests/integration/ -v
+
+# All tests, stop on first failure
+uv run python -m pytest tests/ -v -x
+
+# Run by marker
+uv run python -m pytest tests/ -m unit
+uv run python -m pytest tests/ -m integration
+```
+
+**Structure**: `tests/unit/` (fast, no externals), `tests/integration/` (API keys, ffmpeg), `tests/fixtures/` (sample audio + expected outputs), `tests/conftest.py` (shared fixtures, LLM judge).
+
+**Markers**: `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.slow`, `@pytest.mark.requires_ffmpeg`
+
+Integration tests auto-skip when API keys are missing or invalid. Tests requiring ffmpeg auto-skip when it's not on PATH.
+
+For DaVinci SRT validation, import generated `.srt` into DaVinci Resolve and verify pause markers, filler word formatting, and timing accuracy.
 
 ## Building & Distribution
 
@@ -306,18 +319,18 @@ Managed via `pyproject.toml` with UV (never pip directly).
 5. Register in `get_api_instance()` factory function
 6. Update MODEL_REGISTRY with available models
 7. Update CLI help text and README
-8. Test with manual test files
+8. Add unit tests in `tests/unit/test_parsers.py` and integration tests in `tests/integration/test_api_integration_newapi.py` (see `docs/red_green_tdd.md`)
 
 ### Adding a New Output Format
 
 1. Add formatter function to `formatters.py` (e.g., `create_custom_format_file()`)
 2. Update `create_output_files()` to handle the new format
 3. Add option to CLI in cli.py (e.g., `--custom-format`)
-4. Test with sample TranscriptionResult
+4. Add tests in `tests/unit/test_formatters.py` and CLI test in `tests/integration/test_cli.py`
 
 ### API Limit or Model Changes
 
 - Update `get_api_file_size_limit()` in audio_processing.py for size limits
-- Update MODEL_REGISTRY in models.py for available models
+- Update MODEL_REGISTRY in models.py for available models (single source of truth)
 - Update README.md with new feature description
-- Test with real API responses to ensure parsers still work
+- Run `uv run python -m pytest tests/ -v` to verify parsers still work

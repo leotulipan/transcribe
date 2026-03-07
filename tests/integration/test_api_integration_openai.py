@@ -20,6 +20,16 @@ from pathlib import Path
 from audio_transcribe.utils.api import get_api_instance
 
 
+@pytest.fixture(autouse=True)
+def _skip_on_openai_auth_error(request, api_keys):
+    """Skip all tests in this module if OpenAI key is invalid."""
+    api_key = api_keys.get("openai")
+    if api_key:
+        api = get_api_instance("openai", api_key)
+        if not api.check_api_key():
+            pytest.skip("OpenAI API key is invalid/expired")
+
+
 @pytest.mark.integration
 class TestOpenAIAPIIntegration:
     """Integration tests for OpenAI API."""

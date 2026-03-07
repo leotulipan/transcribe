@@ -1,9 +1,11 @@
 {
   "language_code": "de",
-  "audio_url": "https://cdn.assemblyai.com/upload/7c549803e6658f2ca11e41c3c15c5bc9504705f500600bd805e09afaac445482/db7bae5c-3e88-4fd3-8dc4-008c8999d02b",
+  "audio_url": "https://cdn.assemblyai.com/upload/d2af7c86caa77755050c18096cf8465d0e451b0e3f20a80788f22cbaad0529dc/e794282d-bc1b-42e1-a489-8858b78fe29e",
   "punctuate": true,
   "format_text": true,
   "dual_channel": false,
+  "multichannel": null,
+  "audio_channels": null,
   "webhook_url": null,
   "webhook_auth_header_name": null,
   "webhook_auth_header_value": null,
@@ -19,6 +21,7 @@
   "redact_pii_sub": null,
   "speaker_labels": true,
   "speakers_expected": null,
+  "speaker_options": null,
   "content_safety": false,
   "content_safety_confidence": null,
   "iab_categories": false,
@@ -33,237 +36,280 @@
   "auto_highlights": false,
   "language_detection": true,
   "language_confidence_threshold": null,
+  "language_detection_options": null,
   "language_confidence": 0.9882,
+  "language_codes": null,
+  "language_detection_results": null,
   "speech_threshold": null,
-  "speech_model": "best",
-  "id": "c538f21d-1afe-4df1-ba2b-5fe185c7e8e3",
+  "speech_model": null,
+  "speech_models": [
+    "universal-3-pro",
+    "universal-2"
+  ],
+  "prompt": null,
+  "temperature": null,
+  "keyterms_prompt": [],
+  "speech_understanding": null,
+  "id": "af2d76f9-5640-4572-a176-bf9bb0f1ba23",
   "status": "completed",
   "error": null,
-  "text": "Lieber Timo, herzlich willkommen zur Evolution Radio Show. Vielen lieben Dank, Julia, dass ich heute dein Gast sein darf zu einem ganz speziellen Thema. Ja, ich freue mich sehr, dass du heute.",
+  "text": "Lieber Timo, herzlich willkommen zur Evolution Radio Show. Vielen lieben Dank, Julia, dass ich heute dein Gast sein darf zu einem ganz speziellen Thema. Ja, ich freue mich sehr, dass du heute",
   "words": [
     {
       "text": "Lieber",
       "start": 400,
       "end": 640,
-      "confidence": 0.907959,
-      "speaker": "B"
+      "confidence": 0.5320095,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "Timo,",
       "start": 640,
       "end": 1040,
-      "confidence": 0.99365234,
-      "speaker": "B"
+      "confidence": 0.99633956,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "herzlich",
       "start": 1120,
       "end": 1440,
-      "confidence": 0.9995117,
-      "speaker": "B"
+      "confidence": 0.99995184,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "willkommen",
       "start": 1440,
       "end": 1840,
-      "confidence": 0.8929036,
-      "speaker": "B"
+      "confidence": 0.99995077,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "zur",
       "start": 1840,
       "end": 2080,
-      "confidence": 0.45141602,
-      "speaker": "B"
+      "confidence": 0.8326195,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "Evolution",
       "start": 2080,
       "end": 2640,
-      "confidence": 0.9737956,
-      "speaker": "B"
+      "confidence": 0.9974916,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "Radio",
       "start": 2640,
       "end": 3200,
-      "confidence": 0.998291,
-      "speaker": "B"
+      "confidence": 0.9131881,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "Show.",
       "start": 3200,
       "end": 3520,
-      "confidence": 0.99902344,
-      "speaker": "B"
+      "confidence": 0.8199633,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "Vielen",
       "start": 4800,
       "end": 5200,
-      "confidence": 0.9921875,
-      "speaker": "A"
+      "confidence": 0.9762822,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "lieben",
       "start": 5200,
       "end": 5360,
-      "confidence": 0.9941406,
-      "speaker": "A"
+      "confidence": 0.99772805,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "Dank,",
       "start": 5360,
       "end": 5520,
-      "confidence": 1.0,
-      "speaker": "A"
+      "confidence": 0.9859292,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "Julia,",
       "start": 5520,
       "end": 5920,
-      "confidence": 0.93847656,
-      "speaker": "A"
+      "confidence": 0.99894047,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "dass",
       "start": 5920,
       "end": 6080,
-      "confidence": 0.99853516,
-      "speaker": "A"
+      "confidence": 0.9998754,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "ich",
       "start": 6080,
       "end": 6200,
-      "confidence": 0.99560547,
-      "speaker": "A"
+      "confidence": 0.9999584,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "heute",
       "start": 6200,
       "end": 6440,
-      "confidence": 0.9992676,
-      "speaker": "A"
+      "confidence": 0.99990773,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "dein",
       "start": 6440,
       "end": 6720,
-      "confidence": 0.9963379,
-      "speaker": "A"
+      "confidence": 0.981545,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "Gast",
       "start": 6720,
       "end": 6920,
-      "confidence": 1.0,
-      "speaker": "A"
+      "confidence": 0.99998677,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "sein",
       "start": 6920,
       "end": 7080,
-      "confidence": 0.99853516,
-      "speaker": "A"
+      "confidence": 0.99981874,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "darf",
       "start": 7080,
       "end": 7320,
-      "confidence": 0.9992676,
-      "speaker": "A"
+      "confidence": 0.9997799,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "zu",
       "start": 7320,
       "end": 7480,
-      "confidence": 0.99853516,
-      "speaker": "A"
+      "confidence": 0.95852697,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "einem",
       "start": 7480,
       "end": 7680,
-      "confidence": 0.77490234,
-      "speaker": "A"
+      "confidence": 0.9958782,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "ganz",
       "start": 7680,
       "end": 8000,
-      "confidence": 0.9995117,
-      "speaker": "A"
+      "confidence": 0.99962735,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "speziellen",
       "start": 8000,
       "end": 8640,
-      "confidence": 0.9458984,
-      "speaker": "A"
+      "confidence": 0.99957126,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "Thema.",
       "start": 8640,
       "end": 8960,
-      "confidence": 0.99975586,
-      "speaker": "A"
+      "confidence": 0.99808586,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "Ja,",
       "start": 9200,
       "end": 9600,
-      "confidence": 0.9765625,
-      "speaker": "B"
+      "confidence": 0.98869395,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "ich",
       "start": 9600,
       "end": 9840,
-      "confidence": 0.9995117,
-      "speaker": "B"
+      "confidence": 0.9997156,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "freue",
       "start": 9840,
       "end": 10120,
-      "confidence": 0.86376953,
-      "speaker": "B"
+      "confidence": 0.98911303,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "mich",
       "start": 10120,
       "end": 10280,
-      "confidence": 0.9995117,
-      "speaker": "B"
+      "confidence": 0.999954,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "sehr,",
       "start": 10280,
       "end": 10480,
-      "confidence": 0.9995117,
-      "speaker": "B"
+      "confidence": 0.9975375,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "dass",
       "start": 10480,
       "end": 10680,
-      "confidence": 0.99902344,
-      "speaker": "B"
+      "confidence": 0.99872977,
+      "speaker": "B",
+      "channel": null
     },
     {
       "text": "du",
       "start": 10680,
       "end": 10800,
-      "confidence": 0.99902344,
-      "speaker": "B"
+      "confidence": 0.9968368,
+      "speaker": "B",
+      "channel": null
     },
     {
-      "text": "heute.",
+      "text": "heute",
       "start": 10800,
       "end": 11120,
-      "confidence": 0.99902344,
-      "speaker": "B"
+      "confidence": 0.9974663,
+      "speaker": "B",
+      "channel": null
     }
   ],
   "utterances": [
@@ -271,7 +317,7 @@
       "text": "Lieber Timo, herzlich willkommen zur Evolution Radio Show.",
       "start": 400,
       "end": 3520,
-      "confidence": 0.9020691,
+      "confidence": 0.88643926,
       "speaker": "B",
       "channel": null,
       "words": [
@@ -279,7 +325,7 @@
           "text": "Lieber",
           "start": 400,
           "end": 640,
-          "confidence": 0.907959,
+          "confidence": 0.5320095,
           "speaker": "B",
           "channel": null
         },
@@ -287,7 +333,7 @@
           "text": "Timo,",
           "start": 640,
           "end": 1040,
-          "confidence": 0.99365234,
+          "confidence": 0.99633956,
           "speaker": "B",
           "channel": null
         },
@@ -295,7 +341,7 @@
           "text": "herzlich",
           "start": 1120,
           "end": 1440,
-          "confidence": 0.9995117,
+          "confidence": 0.99995184,
           "speaker": "B",
           "channel": null
         },
@@ -303,7 +349,7 @@
           "text": "willkommen",
           "start": 1440,
           "end": 1840,
-          "confidence": 0.8929036,
+          "confidence": 0.99995077,
           "speaker": "B",
           "channel": null
         },
@@ -311,7 +357,7 @@
           "text": "zur",
           "start": 1840,
           "end": 2080,
-          "confidence": 0.45141602,
+          "confidence": 0.8326195,
           "speaker": "B",
           "channel": null
         },
@@ -319,7 +365,7 @@
           "text": "Evolution",
           "start": 2080,
           "end": 2640,
-          "confidence": 0.9737956,
+          "confidence": 0.9974916,
           "speaker": "B",
           "channel": null
         },
@@ -327,7 +373,7 @@
           "text": "Radio",
           "start": 2640,
           "end": 3200,
-          "confidence": 0.998291,
+          "confidence": 0.9131881,
           "speaker": "B",
           "channel": null
         },
@@ -335,17 +381,18 @@
           "text": "Show.",
           "start": 3200,
           "end": 3520,
-          "confidence": 0.99902344,
+          "confidence": 0.8199633,
           "speaker": "B",
           "channel": null
         }
-      ]
+      ],
+      "translated_texts": null
     },
     {
       "text": "Vielen lieben Dank, Julia, dass ich heute dein Gast sein darf zu einem ganz speziellen Thema.",
       "start": 4800,
       "end": 8960,
-      "confidence": 0.9769348,
+      "confidence": 0.9932151,
       "speaker": "A",
       "channel": null,
       "words": [
@@ -353,7 +400,7 @@
           "text": "Vielen",
           "start": 4800,
           "end": 5200,
-          "confidence": 0.9921875,
+          "confidence": 0.9762822,
           "speaker": "A",
           "channel": null
         },
@@ -361,7 +408,7 @@
           "text": "lieben",
           "start": 5200,
           "end": 5360,
-          "confidence": 0.9941406,
+          "confidence": 0.99772805,
           "speaker": "A",
           "channel": null
         },
@@ -369,7 +416,7 @@
           "text": "Dank,",
           "start": 5360,
           "end": 5520,
-          "confidence": 1.0,
+          "confidence": 0.9859292,
           "speaker": "A",
           "channel": null
         },
@@ -377,7 +424,7 @@
           "text": "Julia,",
           "start": 5520,
           "end": 5920,
-          "confidence": 0.93847656,
+          "confidence": 0.99894047,
           "speaker": "A",
           "channel": null
         },
@@ -385,7 +432,7 @@
           "text": "dass",
           "start": 5920,
           "end": 6080,
-          "confidence": 0.99853516,
+          "confidence": 0.9998754,
           "speaker": "A",
           "channel": null
         },
@@ -393,7 +440,7 @@
           "text": "ich",
           "start": 6080,
           "end": 6200,
-          "confidence": 0.99560547,
+          "confidence": 0.9999584,
           "speaker": "A",
           "channel": null
         },
@@ -401,7 +448,7 @@
           "text": "heute",
           "start": 6200,
           "end": 6440,
-          "confidence": 0.9992676,
+          "confidence": 0.99990773,
           "speaker": "A",
           "channel": null
         },
@@ -409,7 +456,7 @@
           "text": "dein",
           "start": 6440,
           "end": 6720,
-          "confidence": 0.9963379,
+          "confidence": 0.981545,
           "speaker": "A",
           "channel": null
         },
@@ -417,7 +464,7 @@
           "text": "Gast",
           "start": 6720,
           "end": 6920,
-          "confidence": 1.0,
+          "confidence": 0.99998677,
           "speaker": "A",
           "channel": null
         },
@@ -425,7 +472,7 @@
           "text": "sein",
           "start": 6920,
           "end": 7080,
-          "confidence": 0.99853516,
+          "confidence": 0.99981874,
           "speaker": "A",
           "channel": null
         },
@@ -433,7 +480,7 @@
           "text": "darf",
           "start": 7080,
           "end": 7320,
-          "confidence": 0.9992676,
+          "confidence": 0.9997799,
           "speaker": "A",
           "channel": null
         },
@@ -441,7 +488,7 @@
           "text": "zu",
           "start": 7320,
           "end": 7480,
-          "confidence": 0.99853516,
+          "confidence": 0.95852697,
           "speaker": "A",
           "channel": null
         },
@@ -449,7 +496,7 @@
           "text": "einem",
           "start": 7480,
           "end": 7680,
-          "confidence": 0.77490234,
+          "confidence": 0.9958782,
           "speaker": "A",
           "channel": null
         },
@@ -457,7 +504,7 @@
           "text": "ganz",
           "start": 7680,
           "end": 8000,
-          "confidence": 0.9995117,
+          "confidence": 0.99962735,
           "speaker": "A",
           "channel": null
         },
@@ -465,7 +512,7 @@
           "text": "speziellen",
           "start": 8000,
           "end": 8640,
-          "confidence": 0.9458984,
+          "confidence": 0.99957126,
           "speaker": "A",
           "channel": null
         },
@@ -473,17 +520,18 @@
           "text": "Thema.",
           "start": 8640,
           "end": 8960,
-          "confidence": 0.99975586,
+          "confidence": 0.99808586,
           "speaker": "A",
           "channel": null
         }
-      ]
+      ],
+      "translated_texts": null
     },
     {
-      "text": "Ja, ich freue mich sehr, dass du heute.",
+      "text": "Ja, ich freue mich sehr, dass du heute",
       "start": 9200,
       "end": 11120,
-      "confidence": 0.9794922,
+      "confidence": 0.9960059,
       "speaker": "B",
       "channel": null,
       "words": [
@@ -491,7 +539,7 @@
           "text": "Ja,",
           "start": 9200,
           "end": 9600,
-          "confidence": 0.9765625,
+          "confidence": 0.98869395,
           "speaker": "B",
           "channel": null
         },
@@ -499,7 +547,7 @@
           "text": "ich",
           "start": 9600,
           "end": 9840,
-          "confidence": 0.9995117,
+          "confidence": 0.9997156,
           "speaker": "B",
           "channel": null
         },
@@ -507,7 +555,7 @@
           "text": "freue",
           "start": 9840,
           "end": 10120,
-          "confidence": 0.86376953,
+          "confidence": 0.98911303,
           "speaker": "B",
           "channel": null
         },
@@ -515,7 +563,7 @@
           "text": "mich",
           "start": 10120,
           "end": 10280,
-          "confidence": 0.9995117,
+          "confidence": 0.999954,
           "speaker": "B",
           "channel": null
         },
@@ -523,7 +571,7 @@
           "text": "sehr,",
           "start": 10280,
           "end": 10480,
-          "confidence": 0.9995117,
+          "confidence": 0.9975375,
           "speaker": "B",
           "channel": null
         },
@@ -531,7 +579,7 @@
           "text": "dass",
           "start": 10480,
           "end": 10680,
-          "confidence": 0.99902344,
+          "confidence": 0.99872977,
           "speaker": "B",
           "channel": null
         },
@@ -539,22 +587,23 @@
           "text": "du",
           "start": 10680,
           "end": 10800,
-          "confidence": 0.99902344,
+          "confidence": 0.9968368,
           "speaker": "B",
           "channel": null
         },
         {
-          "text": "heute.",
+          "text": "heute",
           "start": 10800,
           "end": 11120,
-          "confidence": 0.99902344,
+          "confidence": 0.9974663,
           "speaker": "B",
           "channel": null
         }
-      ]
+      ],
+      "translated_texts": null
     }
   ],
-  "confidence": 0.9588577,
+  "confidence": 0.9672188,
   "audio_duration": 12,
   "webhook_status_code": null,
   "webhook_auth": false,
@@ -565,5 +614,7 @@
   "chapters": null,
   "sentiment_analysis_results": null,
   "entities": null,
+  "speech_model_used": "universal-3-pro",
+  "translated_texts": null,
   "api_name": "assemblyai"
 }

@@ -8,162 +8,162 @@
       "start": 1.1,
       "end": 1.339,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -0.00037067217635922134
     },
     {
       "text": " ",
       "start": 1.339,
       "end": 1.359,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -7.962863310240209e-05
     },
     {
       "text": "testen",
       "start": 1.36,
       "end": 1.939,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -5.384074673505287e-05
     },
     {
       "text": " ",
       "start": 1.939,
       "end": 1.939,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -0.00011455356434453279
     },
     {
       "text": "nun",
       "start": 1.939,
       "end": 2.22,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -0.00011455356434453279
     },
     {
       "text": " ",
       "start": 2.22,
       "end": 2.259,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -9.131014667218551e-05
     },
     {
       "text": "das",
       "start": 2.259,
       "end": 2.659,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -9.131014667218551e-05
     },
     {
       "text": " ",
       "start": 2.659,
       "end": 2.719,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -0.6885807514190674
     },
     {
       "text": "Audiotranskript",
       "start": 2.72,
       "end": 3.819,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -0.14186131372504557
     },
     {
       "text": " ",
       "start": 3.819,
       "end": 3.859,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -8.21318244561553e-05
     },
     {
       "text": "und",
       "start": 3.859,
-      "end": 4.038,
+      "end": 4.039,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -8.21318244561553e-05
     },
     {
       "text": " ",
-      "start": 4.038,
-      "end": 4.078,
+      "start": 4.039,
+      "end": 4.079,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -0.025619665160775185
     },
     {
       "text": "ob",
-      "start": 4.078,
+      "start": 4.079,
       "end": 4.239,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -0.025619665160775185
     },
     {
       "text": " ",
       "start": 4.239,
       "end": 4.259,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -7.10462118149735e-05
     },
     {
       "text": "die",
       "start": 4.259,
       "end": 4.379,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -7.10462118149735e-05
     },
     {
       "text": " ",
       "start": 4.379,
       "end": 4.4,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -0.0003351603518240154
     },
     {
       "text": "Textdatei",
       "start": 4.4,
       "end": 5.079,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -0.0008474810099162116
     },
     {
       "text": " ",
       "start": 5.079,
       "end": 5.099,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -0.000639710808172822
     },
     {
       "text": "korrekt",
       "start": 5.099,
       "end": 5.659,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -0.00027927072135623476
     },
     {
       "text": " ",
       "start": 5.659,
       "end": 5.719,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -0.0004021312633994967
     },
     {
       "text": "angelegt",
       "start": 5.719,
       "end": 6.259,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -0.000209350609111425
     },
     {
       "text": " ",
       "start": 6.259,
       "end": 6.299,
       "type": "spacing",
-      "logprob": 0.0
+      "logprob": -0.00022313489171210676
     },
     {
       "text": "wird.",
       "start": 6.299,
       "end": 8.779,
       "type": "word",
-      "logprob": 0.0
+      "logprob": -0.0001894271859782748
     }
   ],
-  "transcription_id": "YdnqkDrDz8zDVt94LgQu"
+  "transcription_id": "mXJXtHdAjs7K33LI2jxo"
 }

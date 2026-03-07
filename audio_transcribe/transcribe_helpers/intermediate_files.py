@@ -4,11 +4,20 @@ Intermediate file management for audio processing.
 Provides consistent naming and deferred cleanup for intermediate files
 created during audio optimization (extraction, conversion, chunking).
 """
+import hashlib
+import sys
 from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Optional
 from loguru import logger
+
+# Windows MAX_PATH is 260; reserve space for intermediate file names
+_MAX_PATH = 260
+# Longest intermediate filename: {stem}_intermediate_extracted.flac = stem + 27 chars
+_INTERMEDIATE_SUFFIX_MAX = 30
+# Prefix for temp dir: .transcribe_temp_ = 17 chars
+_TEMP_DIR_PREFIX = ".transcribe_temp_"
 
 
 class FileOperation(Enum):
@@ -57,9 +66,38 @@ class IntermediateFileManager:
             original_path: Path to the original input file
         """
         self.original_path = Path(original_path)
-        self.temp_dir = self.original_path.parent / f".transcribe_temp_{self.original_path.stem}"
+        self._short_stem = self._make_short_stem()
+        self.temp_dir = self.original_path.parent / f"{_TEMP_DIR_PREFIX}{self._short_stem}"
         self._files: Dict[FileOperation, IntermediateFile] = {}
         self._preserve = False
+
+    def _make_short_stem(self) -> str:
+        """Return a stem short enough to keep full intermediate paths under MAX_PATH on Windows."""
+        stem = self.original_path.stem
+        if sys.platform != "win32":
+            return stem
+
+        # Budget: MAX_PATH - parent_dir - separators - temp_dir_prefix - intermediate_suffix
+        parent_len = len(str(self.original_path.parent))
+        # temp_dir path = parent / .transcribe_temp_{stem} / {stem}_intermediate_xxx.ext
+        # total = parent + 1 + prefix + stem + 1 + stem + _intermediate_suffix
+        # so stem appears twice, plus fixed overhead
+        overhead = parent_len + 1 + len(_TEMP_DIR_PREFIX) + 1 + _INTERMEDIATE_SUFFIX_MAX
+        available = _MAX_PATH - overhead
+        # stem appears twice (dir name + file name)
+        max_stem = available // 2
+
+        if max_stem < 8:
+            # Extremely long parent path; use just a hash
+            return hashlib.md5(stem.encode()).hexdigest()[:16]
+
+        if len(stem) <= max_stem:
+            return stem
+
+        # Truncate and append short hash for uniqueness
+        hash_suffix = hashlib.md5(stem.encode()).hexdigest()[:8]
+        truncated = stem[:max_stem - 9]  # 9 = 1 underscore + 8 hash chars
+        return f"{truncated}_{hash_suffix}"
 
     def setup(self) -> None:
         """Create the temporary directory for intermediate files."""
@@ -76,7 +114,7 @@ class IntermediateFileManager:
         Returns:
             Path for the intermediate file
         """
-        return self.temp_dir / f"{self.original_path.stem}_intermediate_{operation.value}.{ext}"
+        return self.temp_dir / f"{self._short_stem}_intermediate_{operation.value}.{ext}"
 
     def register(self, path: Path, operation: FileOperation, source: Path) -> IntermediateFile:
         """
@@ -100,6 +138,9 @@ class IntermediateFileManager:
         self._preserve = True
         logger.info(f"Preserving intermediates in: {self.temp_dir}")
 
+    # Files that can be safely deleted during cleanup (OS/cloud-generated)
+    _IGNORABLE_FILES = {"desktop.ini", "thumbs.db", ".ds_store"}
+
     def cleanup(self) -> None:
         """Clean up all registered intermediate files and temp directory."""
         if self._preserve:
@@ -114,10 +155,22 @@ class IntermediateFileManager:
                 except Exception as e:
                     logger.warning(f"Failed to delete intermediate file {f.path}: {e}")
 
-        # Remove temp directory if empty
-        if self.temp_dir.exists() and not any(self.temp_dir.iterdir()):
-            try:
-                self.temp_dir.rmdir()
-                logger.debug(f"Removed temporary directory: {self.temp_dir}")
-            except Exception as e:
-                logger.warning(f"Failed to remove temporary directory {self.temp_dir}: {e}")
+        # Remove temp directory, cleaning up OS-generated files first
+        if self.temp_dir.exists():
+            remaining = list(self.temp_dir.iterdir())
+            # Delete ignorable OS/cloud-generated files (desktop.ini, Thumbs.db, etc.)
+            for item in remaining:
+                if item.name.lower() in self._IGNORABLE_FILES:
+                    try:
+                        item.unlink()
+                        logger.debug(f"Deleted OS-generated file: {item}")
+                    except Exception as e:
+                        logger.debug(f"Could not delete {item}: {e}")
+
+            # Now try to remove the directory
+            if not any(self.temp_dir.iterdir()):
+                try:
+                    self.temp_dir.rmdir()
+                    logger.debug(f"Removed temporary directory: {self.temp_dir}")
+                except Exception as e:
+                    logger.warning(f"Failed to remove temporary directory {self.temp_dir}: {e}")

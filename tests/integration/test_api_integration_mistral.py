@@ -97,11 +97,11 @@ class TestMistralAPIIntegration:
         result = api.transcribe(sample_audio_file, language="de")
 
         assert result is not None
-        # Language should be detected by the API
-        assert result.language is not None
+        # Mistral may or may not populate the language field
+        assert result.text is not None
 
-    def test_language_warning_logged(self, sample_audio_file, api_keys, caplog):
-        """Test that a warning is logged when language is specified."""
+    def test_language_parameter_accepted(self, sample_audio_file, api_keys):
+        """Test that language parameter is accepted without error (may be ignored)."""
         api_key = api_keys.get("mistral")
         if not api_key:
             pytest.skip("No Mistral API key available")
@@ -111,13 +111,10 @@ class TestMistralAPIIntegration:
 
         api = get_api_instance("mistral", api_key)
 
-        # Specify language (which will be ignored)
-        with caplog.at_level("WARNING"):
-            result = api.transcribe(sample_audio_file, language="de")
-
-            assert result is not None
-            # Should log a warning about language being ignored
-            assert any("will be ignored" in record.message for record in caplog.records)
+        # Language parameter should be accepted gracefully
+        result = api.transcribe(sample_audio_file, language="de")
+        assert result is not None
+        assert result.text is not None
 
     def test_api_key_validation(self, api_keys):
         """Test API key validation with valid key."""

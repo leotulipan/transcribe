@@ -1,9 +1,11 @@
 {
   "language_code": "en",
-  "audio_url": "https://cdn.assemblyai.com/upload/03936912570a84cc02b822be9ba7958ab2f8229dfb4f96509a19059ead1246a6/afba229d-7b33-452f-b49f-a46f8dd2c4d4",
+  "audio_url": "https://cdn.assemblyai.com/upload/5cfb6822c10fb7913655f4dae7d8d59c9130c61ee2c4d0b02dfb373f02d87d6f/6392f0bc-1e9c-4467-b1ac-11eb3f999d3a",
   "punctuate": true,
   "format_text": true,
   "dual_channel": false,
+  "multichannel": null,
+  "audio_channels": null,
   "webhook_url": null,
   "webhook_auth_header_name": null,
   "webhook_auth_header_value": null,
@@ -19,6 +21,7 @@
   "redact_pii_sub": null,
   "speaker_labels": true,
   "speakers_expected": null,
+  "speaker_options": null,
   "content_safety": false,
   "content_safety_confidence": null,
   "iab_categories": false,
@@ -33,105 +36,128 @@
   "auto_highlights": false,
   "language_detection": true,
   "language_confidence_threshold": null,
+  "language_detection_options": null,
   "language_confidence": 0.9934,
+  "language_codes": null,
+  "language_detection_results": null,
   "speech_threshold": null,
-  "speech_model": "best",
-  "id": "36814cd2-39da-48fd-92e8-071405ca0ac8",
+  "speech_model": null,
+  "speech_models": [
+    "universal-3-pro",
+    "universal-2"
+  ],
+  "prompt": null,
+  "temperature": null,
+  "keyterms_prompt": [],
+  "speech_understanding": null,
+  "id": "e5346f18-7028-4e10-9dc9-93ee04748d0e",
   "status": "completed",
   "error": null,
-  "text": "This is a short, clear and distinct audio sample with one speaker.",
+  "text": "This is a short, clear, and distinct audio sample with one speaker.",
   "words": [
     {
       "text": "This",
       "start": 1440,
       "end": 1680,
-      "confidence": 0.9995117,
-      "speaker": "A"
+      "confidence": 0.978518,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "is",
       "start": 1680,
       "end": 2000,
-      "confidence": 0.9980469,
-      "speaker": "A"
+      "confidence": 0.9951912,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "a",
       "start": 2000,
       "end": 2240,
-      "confidence": 0.9980469,
-      "speaker": "A"
+      "confidence": 0.99825925,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "short,",
       "start": 2240,
       "end": 2560,
-      "confidence": 1.0,
-      "speaker": "A"
+      "confidence": 0.98323596,
+      "speaker": "A",
+      "channel": null
     },
     {
-      "text": "clear",
+      "text": "clear,",
       "start": 2720,
       "end": 3120,
-      "confidence": 0.9995117,
-      "speaker": "A"
+      "confidence": 0.86646134,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "and",
       "start": 3120,
       "end": 3520,
-      "confidence": 0.9243164,
-      "speaker": "A"
+      "confidence": 0.99863404,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "distinct",
       "start": 3680,
       "end": 4560,
-      "confidence": 0.96777344,
-      "speaker": "A"
+      "confidence": 0.9999217,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "audio",
       "start": 4560,
       "end": 5120,
-      "confidence": 0.7766113,
-      "speaker": "A"
+      "confidence": 0.99653,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "sample",
       "start": 5120,
       "end": 5760,
-      "confidence": 0.9996745,
-      "speaker": "A"
+      "confidence": 0.9996569,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "with",
       "start": 5760,
       "end": 6160,
-      "confidence": 0.53125,
-      "speaker": "A"
+      "confidence": 0.95346814,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "one",
       "start": 6240,
       "end": 6600,
-      "confidence": 0.9995117,
-      "speaker": "A"
+      "confidence": 0.8167395,
+      "speaker": "A",
+      "channel": null
     },
     {
       "text": "speaker.",
       "start": 6600,
       "end": 7200,
-      "confidence": 0.9977214,
-      "speaker": "A"
+      "confidence": 0.97216815,
+      "speaker": "A",
+      "channel": null
     }
   ],
   "utterances": [
     {
-      "text": "This is a short, clear and distinct audio sample with one speaker.",
+      "text": "This is a short, clear, and distinct audio sample with one speaker.",
       "start": 1440,
       "end": 7200,
-      "confidence": 0.93266463,
+      "confidence": 0.96323204,
       "speaker": "A",
       "channel": null,
       "words": [
@@ -139,7 +165,7 @@
           "text": "This",
           "start": 1440,
           "end": 1680,
-          "confidence": 0.9995117,
+          "confidence": 0.978518,
           "speaker": "A",
           "channel": null
         },
@@ -147,7 +173,7 @@
           "text": "is",
           "start": 1680,
           "end": 2000,
-          "confidence": 0.9980469,
+          "confidence": 0.9951912,
           "speaker": "A",
           "channel": null
         },
@@ -155,7 +181,7 @@
           "text": "a",
           "start": 2000,
           "end": 2240,
-          "confidence": 0.9980469,
+          "confidence": 0.99825925,
           "speaker": "A",
           "channel": null
         },
@@ -163,15 +189,15 @@
           "text": "short,",
           "start": 2240,
           "end": 2560,
-          "confidence": 1.0,
+          "confidence": 0.98323596,
           "speaker": "A",
           "channel": null
         },
         {
-          "text": "clear",
+          "text": "clear,",
           "start": 2720,
           "end": 3120,
-          "confidence": 0.9995117,
+          "confidence": 0.86646134,
           "speaker": "A",
           "channel": null
         },
@@ -179,7 +205,7 @@
           "text": "and",
           "start": 3120,
           "end": 3520,
-          "confidence": 0.9243164,
+          "confidence": 0.99863404,
           "speaker": "A",
           "channel": null
         },
@@ -187,7 +213,7 @@
           "text": "distinct",
           "start": 3680,
           "end": 4560,
-          "confidence": 0.96777344,
+          "confidence": 0.9999217,
           "speaker": "A",
           "channel": null
         },
@@ -195,7 +221,7 @@
           "text": "audio",
           "start": 4560,
           "end": 5120,
-          "confidence": 0.7766113,
+          "confidence": 0.99653,
           "speaker": "A",
           "channel": null
         },
@@ -203,7 +229,7 @@
           "text": "sample",
           "start": 5120,
           "end": 5760,
-          "confidence": 0.9996745,
+          "confidence": 0.9996569,
           "speaker": "A",
           "channel": null
         },
@@ -211,7 +237,7 @@
           "text": "with",
           "start": 5760,
           "end": 6160,
-          "confidence": 0.53125,
+          "confidence": 0.95346814,
           "speaker": "A",
           "channel": null
         },
@@ -219,7 +245,7 @@
           "text": "one",
           "start": 6240,
           "end": 6600,
-          "confidence": 0.9995117,
+          "confidence": 0.8167395,
           "speaker": "A",
           "channel": null
         },
@@ -227,14 +253,15 @@
           "text": "speaker.",
           "start": 6600,
           "end": 7200,
-          "confidence": 0.9977214,
+          "confidence": 0.97216815,
           "speaker": "A",
           "channel": null
         }
-      ]
+      ],
+      "translated_texts": null
     }
   ],
-  "confidence": 0.93266463,
+  "confidence": 0.96323204,
   "audio_duration": 8,
   "webhook_status_code": null,
   "webhook_auth": false,
@@ -245,5 +272,7 @@
   "chapters": null,
   "sentiment_analysis_results": null,
   "entities": null,
+  "speech_model_used": "universal-3-pro",
+  "translated_texts": null,
   "api_name": "assemblyai"
 }

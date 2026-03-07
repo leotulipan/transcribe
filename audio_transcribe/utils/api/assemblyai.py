@@ -47,11 +47,10 @@ class AssemblyAIAPI(TranscriptionAPI):
         """
         List available models for AssemblyAI API.
 
-        Returns:
-            List of model IDs available for use
+        Returns models from MODEL_REGISTRY (single source of truth).
         """
-        # AssemblyAI has static model names
-        return ["universal-3-pro", "universal-2", "best", "nano"]
+        from audio_transcribe.utils.models import get_available_models
+        return get_available_models("assemblyai")
 
     def check_api_key(self) -> bool:
         """Check if AssemblyAI API key is valid."""

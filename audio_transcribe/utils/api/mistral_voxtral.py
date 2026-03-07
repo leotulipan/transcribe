@@ -54,12 +54,12 @@ class MistralVoxtralAPI(TranscriptionAPI):
             self.client = None
 
     def list_models(self) -> List[str]:
-        """List available models for Mistral Voxtral API."""
-        # Voxtral models - use the correct model names
-        return [
-            "voxtral-mini-2507",
-            "pixtral-12b-2409"  # Also supports audio
-        ]
+        """List available models for Mistral Voxtral API.
+
+        Returns models from MODEL_REGISTRY (single source of truth).
+        """
+        from audio_transcribe.utils.models import get_available_models
+        return get_available_models("mistral")
 
     def check_api_key(self) -> bool:
         """Check if Mistral API key is valid."""

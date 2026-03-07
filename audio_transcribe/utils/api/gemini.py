@@ -75,7 +75,7 @@ class GeminiAPI(TranscriptionAPI):
             return audio_models
         except Exception as e:
             logger.error(f"Failed to list Gemini models: {e}")
-            return ["gemini-2.0-flash-exp", "gemini-1.5-flash"]
+            return ["gemini-2.5-flash", "gemini-1.5-flash"]
 
     def check_api_key(self) -> bool:
         """Check if Gemini API key is valid."""
@@ -105,7 +105,7 @@ class GeminiAPI(TranscriptionAPI):
         Args:
             audio_path: Path to the audio file
             **kwargs: Additional Gemini-specific parameters:
-                - model: Model to use (default: gemini-2.0-flash-exp)
+                - model: Model to use (default: gemini-2.5-flash)
                 - language: Language code (optional)
                 - original_path: Original source file path before conversion
 
@@ -118,7 +118,7 @@ class GeminiAPI(TranscriptionAPI):
         if isinstance(audio_path, Path):
             audio_path = str(audio_path)
 
-        model = kwargs.get("model", "gemini-2.0-flash-exp")
+        model = kwargs.get("model", "gemini-2.5-flash")
         language = kwargs.get("language")
 
         logger.info(f"Transcribing {audio_path} with Gemini (model: {model})")
@@ -126,14 +126,16 @@ class GeminiAPI(TranscriptionAPI):
         # Check file size to determine method
         file_size = os.path.getsize(audio_path)
 
+        original_path = kwargs.get("original_path")
+
         if file_size <= self.INLINE_SIZE_LIMIT:
             logger.debug(f"File size ({file_size / 1024 / 1024:.2f}MB) <= 20MB limit, using inline audio")
-            return self._transcribe_inline(audio_path, model, language)
+            return self._transcribe_inline(audio_path, model, language, original_path=original_path)
         else:
             logger.debug(f"File size ({file_size / 1024 / 1024:.2f}MB) > 20MB limit, using Files API")
-            return self._transcribe_with_files_api(audio_path, model, language)
+            return self._transcribe_with_files_api(audio_path, model, language, original_path=original_path)
 
-    def _transcribe_inline(self, audio_path: str, model: str, language: Optional[str]) -> TranscriptionResult:
+    def _transcribe_inline(self, audio_path: str, model: str, language: Optional[str], original_path: Optional[str] = None) -> TranscriptionResult:
         """
         Transcribe with inline audio (≤20MB).
 
@@ -187,7 +189,6 @@ class GeminiAPI(TranscriptionAPI):
                 "api_name": self.api_name,
                 "method": "inline"
             }
-            original_path = kwargs.get('original_path')
             self.save_result(raw_data, audio_path, original_path=original_path)
 
             # Generate approximate word timings (no timestamps from Gemini)
@@ -207,7 +208,7 @@ class GeminiAPI(TranscriptionAPI):
             logger.error(f"Gemini inline transcription failed: {str(e)}")
             raise
 
-    def _transcribe_with_files_api(self, audio_path: str, model: str, language: Optional[str]) -> TranscriptionResult:
+    def _transcribe_with_files_api(self, audio_path: str, model: str, language: Optional[str], original_path: Optional[str] = None) -> TranscriptionResult:
         """
         Transcribe with Files API upload (>20MB).
 
@@ -260,7 +261,6 @@ class GeminiAPI(TranscriptionAPI):
                 "method": "files_api",
                 "file_uri": file_uri
             }
-            original_path = kwargs.get('original_path')
             self.save_result(raw_data, audio_path, original_path=original_path)
 
             # Generate approximate word timings (no timestamps from Gemini)

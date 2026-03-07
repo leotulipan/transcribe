@@ -127,9 +127,6 @@ class TestAssemblyAIAPIIntegration:
 
         assert isinstance(models, list)
         assert len(models) > 0
-        # AssemblyAI has static model names
-        assert "best" in models
-        assert "nano" in models
 
     def test_word_timestamps(self, sample_audio_file, api_keys):
         """Test that word timestamps are returned."""
@@ -262,8 +259,8 @@ class TestAssemblyAIAPIIntegration:
         assert result is not None
         assert result.api_name == "assemblyai"
 
-    def test_model_selection_best(self, sample_audio_file, api_keys):
-        """Test model selection with 'best' model."""
+    def test_model_selection_universal_3_pro(self, sample_audio_file, api_keys):
+        """Test model selection with 'universal-3-pro' model."""
         api_key = api_keys.get("assemblyai")
         if not api_key:
             pytest.skip("No AssemblyAI API key available")
@@ -273,13 +270,13 @@ class TestAssemblyAIAPIIntegration:
 
         api = get_api_instance("assemblyai", api_key)
 
-        result = api.transcribe(sample_audio_file, model="best")
+        result = api.transcribe(sample_audio_file, model="universal-3-pro")
 
         assert result is not None
         assert result.api_name == "assemblyai"
 
-    def test_model_selection_nano(self, sample_audio_file, api_keys):
-        """Test model selection with 'nano' model."""
+    def test_model_selection_universal_2(self, sample_audio_file, api_keys):
+        """Test model selection with 'universal-2' model."""
         api_key = api_keys.get("assemblyai")
         if not api_key:
             pytest.skip("No AssemblyAI API key available")
@@ -289,7 +286,7 @@ class TestAssemblyAIAPIIntegration:
 
         api = get_api_instance("assemblyai", api_key)
 
-        result = api.transcribe(sample_audio_file, model="nano")
+        result = api.transcribe(sample_audio_file, model="universal-2")
 
         assert result is not None
         assert result.api_name == "assemblyai"

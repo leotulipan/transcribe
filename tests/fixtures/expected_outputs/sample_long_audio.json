@@ -1,5 +1,5 @@
 {
-  "text": "Ich freue mich sehr auf dieses Gespräch mit Timo Konzelmann. Er ist Content Creator, Autor, Keto-Coach und Speaker. Timo erhielt seine ADHS-Diagnose erst im erwachsenen Alter und hat daraus ein starkes Projekt gemacht. Sein Buch und Hörbuch ADHS gesegnet und verflucht, das er in bemerkenswerter Geschwindigkeit geschrieben und eingesprochen hat. Er beschreibt ADHS nicht nur als Herausforderung, sondern auch als Potenzial. Anders denken, hören und sehen und nutzt genau diese Perspektive, Betroffenen Orientierung zu geben. Gleichzeitig teilt er, wie ihm ketogene Ernährung half, Energie und Struktur in den Alltag zu bringen, ohne daraus ein Dogma zu machen. Ein Angebot, kein Evangelium. Außerdem zeigt Timo, wie digitale Tools bis hin zu KI im Alltag mit ADHS unterstützen können. Heute klären wir, was genau meint Segen und Fluch. Wie lassen sich Neurobiologie, Ernährung und Alltagspraxis verbinden? Und welche ersten Schritte helfen Betroffenen wirklich?",
+  "text": "Ich freue mich sehr auf dieses Gespräch mit Timo Konzelmann. Er ist Content Creator, Autor, Keto Coach und Speaker. Timo erhielt seine ADHS-Diagnose erst im erwachsenen Alter und hat daraus ein starkes Projekt gemacht. Sein Buch und Hörbuch „ADHS gesegnet und verflucht, das er in bemerkenswerter Geschwindigkeit geschrieben und eingesprochen hat. Er beschreibt ADHS nicht nur als Herausforderung, sondern auch als Potenzial. Anders denken, hören und sehen und nutzt genau diese Perspektive, Betroffenen Orientierung zu geben. Gleichzeitig teilt er, wie ihm ketogene Ernährung half, Energie und Struktur in den Alltag zu bringen, ohne daraus ein Dogma zu machen. Ein Angebot, kein Evangelium. Außerdem zeigt Timo, wie digitale Tools bis hin zu KI im Alltag mit ADHS unterstützen können. Heute klären wir, was genau meint Segen und Fluch. Wie lassen sich Neurobiologie, Ernährung und Alltagspraxis verbinden? Und welche ersten Schritte helfen Betroffenen wirklich?",
   "confidence": 0.0,
   "language": "deu",
   "speakers": [],
@@ -187,8 +187,20 @@
       "type": "spacing"
     },
     {
-      "text": "Keto-Coach",
+      "text": "Keto",
       "start": 7.079,
+      "end": 7.439,
+      "type": "word"
+    },
+    {
+      "text": " ",
+      "start": 7.439,
+      "end": 7.479,
+      "type": "spacing"
+    },
+    {
+      "text": "Coach",
+      "start": 7.480,
       "end": 7.839,
       "type": "word"
     },
@@ -447,18 +459,18 @@
     {
       "text": " ",
       "start": 17.200,
-      "end": 17.619,
+      "end": 17.559,
       "type": "spacing"
     },
     {
-      "text": "ADHS",
-      "start": 17.619,
-      "end": 18.299,
+      "text": "„ADHS",
+      "start": 17.559,
+      "end": 18.279,
       "type": "word"
     },
     {
       "text": " ",
-      "start": 18.299,
+      "start": 18.279,
       "end": 18.419,
       "type": "spacing"
     },
@@ -489,12 +501,12 @@
     {
       "text": "verflucht,",
       "start": 19.219,
-      "end": 20.179,
+      "end": 20.159,
       "type": "word"
     },
     {
       "text": " ",
-      "start": 20.179,
+      "start": 20.159,
       "end": 20.219,
       "type": "spacing"
     },
@@ -681,12 +693,12 @@
     {
       "text": "Herausforderung,",
       "start": 27.099,
-      "end": 28.200,
+      "end": 28.199,
       "type": "word"
     },
     {
       "text": " ",
-      "start": 28.200,
+      "start": 28.199,
       "end": 28.260,
       "type": "spacing"
     },
@@ -789,12 +801,12 @@
     {
       "text": "sehen",
       "start": 31.719,
-      "end": 32.040,
+      "end": 32.099,
       "type": "word"
     },
     {
       "text": " ",
-      "start": 32.040,
+      "start": 32.099,
       "end": 32.159,
       "type": "spacing"
     },

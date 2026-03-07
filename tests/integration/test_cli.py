@@ -47,7 +47,7 @@ class TestCLIArguments:
             assert result.exit_code == 0 or "transcribing" in result.output.lower() or "processing" in result.output.lower()
 
     def test_folder_option(self, sample_audio_files, tmp_path):
-        """Test that folder option processes all audio files."""
+        """Test that directory as positional arg processes audio files."""
         if not sample_audio_files:
             pytest.skip("No sample audio files available")
 
@@ -66,9 +66,9 @@ class TestCLIArguments:
                 'api_name': 'test'
             })
 
-            result = runner.invoke(main, ['--folder', str(folder_path), '--api', 'groq'])
+            result = runner.invoke(main, ['--api', 'groq', str(folder_path)])
 
-            assert result.exit_code == 0 or "folder" in result.output.lower() or "processing" in result.output.lower()
+            assert result.exit_code == 0 or "processing" in result.output.lower()
 
     def test_api_selection(self, sample_audio_file):
         """Test --api option for API selection."""
@@ -177,7 +177,7 @@ class TestCLIArguments:
         if not sample_audio_file:
             pytest.skip("No sample audio file available")
 
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
 
         with patch('audio_transcribe.cli.get_api_instance') as mock_get_api:
             mock_api = mock_get_api.return_value
@@ -196,7 +196,7 @@ class TestCLIArguments:
         if not sample_audio_file:
             pytest.skip("No sample audio file available")
 
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
 
         with patch('audio_transcribe.cli.get_api_instance') as mock_get_api:
             mock_api = mock_get_api.return_value
@@ -241,7 +241,7 @@ class TestCLIWorkflow:
             assert result.exit_code == 0
 
     def test_batch_process_folder(self, sample_audio_files):
-        """Test batch processing of a folder."""
+        """Test batch processing of a directory via positional arg."""
         if not sample_audio_files:
             pytest.skip("No sample audio files available")
 
@@ -259,7 +259,7 @@ class TestCLIWorkflow:
                 'api_name': 'test'
             })
 
-            result = runner.invoke(main, ['--api', 'groq', '--folder', str(folder_path)])
+            result = runner.invoke(main, ['--api', 'groq', str(folder_path)])
 
             assert result.exit_code == 0 or "processing" in result.output.lower()
 

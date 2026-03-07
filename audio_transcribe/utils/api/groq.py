@@ -232,8 +232,8 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
         language = kwargs.get("language")
         model = kwargs.get("model", "whisper-large-v3")
         
-        chunk_length = kwargs.get("chunk_length", 600)  # seconds
-        overlap = kwargs.get("overlap", 10)  # seconds
+        chunk_length = kwargs.pop("chunk_length", 600)  # seconds
+        overlap = kwargs.pop("overlap", 10)  # seconds
         
         # Convert Path to string if needed
         if isinstance(audio_path, Path):

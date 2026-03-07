@@ -81,20 +81,19 @@ def check_json_exists(file_dir: Union[str, Path], file_name: str, api_name: str)
     
     return False, None
 
-def check_transcript_exists(file_path: Union[str, Path], file_name: str) -> bool:
+def check_srt_exists(file_dir: Union[str, Path], file_name: str) -> bool:
     """
-    Check if transcript files already exist for a given file.
-    
+    Check if an SRT file already exists for a given file.
+
     Args:
-        file_path: Directory containing the file
+        file_dir: Directory containing the file
         file_name: Base name of the file without extension
-        
+
     Returns:
-        True if transcript exists, False otherwise
+        True if SRT exists, False otherwise
     """
-    transcript_path = os.path.join(file_path, f"{file_name}.txt")
-    srt_path = os.path.join(file_path, f"{file_name}.srt")
-    return os.path.exists(transcript_path) or os.path.exists(srt_path)
+    srt_path = os.path.join(file_dir, f"{file_name}.srt")
+    return os.path.exists(srt_path)
 
 def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
     """
@@ -110,15 +109,15 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
     # Get parameters
     api_name = kwargs.get("api_name", "groq").lower()
     force = kwargs.get("force", False)
+    regenerate = kwargs.get("regenerate", False)
     save_cleaned_json = kwargs.get("save_cleaned_json", False)
     use_json_input = kwargs.get("use_json_input", False)
-    check_existing = not force
     verbose = kwargs.get("verbose", False)
     debug = kwargs.get("debug", False)
     keep_optimized = kwargs.get("keep", False)
-    
+
     logger.debug(f"Processing file: {file_path}")
-    logger.debug(f"API: {api_name}, Force: {force}, Save JSON: {save_cleaned_json}, Use JSON input: {use_json_input}")
+    logger.debug(f"API: {api_name}, Force: {force}, Regenerate: {regenerate}, Save JSON: {save_cleaned_json}, Use JSON input: {use_json_input}")
     
     # Track temporary files for cleanup
     temp_files_to_cleanup = []
@@ -140,13 +139,19 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
         
         # Initialize transcription_result to None
         transcription_result = None
-        
+
+        # Skip check: if not --force and not --regenerate, check for existing SRT
+        if not use_json_input and not force and not regenerate:
+            if check_srt_exists(file_dir, file_name_stem):
+                logger.info(f"[SKIP] {original_input_path.name} — SRT already exists (use --regenerate to recreate from JSON, --force to re-transcribe)")
+                return "skipped"
+
         # If using a JSON file directly as input
         if use_json_input:
             logger.info(f"Attempting to load and parse provided JSON input: {original_input_path}")
             if not original_input_path.exists():
                 logger.error(f"Provided JSON input file not found: {original_input_path}")
-                return []
+                return "failed"
 
             try:
                 loaded_json_data = load_json_data(original_input_path)
@@ -159,7 +164,7 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                             logger.info(f"Auto-detected API from JSON filename: {current_api_name}")
                         else:
                             logger.error(f"API is 'auto' but could not detect from filename: {original_input_path.name}. Please specify --api.")
-                            return []
+                            return "failed"
                     
                     # Assume loaded JSON is RAW and needs parsing
                     logger.info(f"Assuming provided JSON {original_input_path} is a raw API response for {current_api_name}.")
@@ -184,11 +189,11 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                 logger.error(f"Error processing JSON input file {original_input_path}: {e}")
                 transcription_result = None
 
-        elif check_existing: # Not --force and not --use-json-input
+        elif not force: # Not --force and not --use-json-input: reuse JSON if available
             # Try to load RAW API JSON (BASENAME_apiname.json)
             raw_json_path = file_dir / f"{file_name_stem}_{api_name}.json" 
             if raw_json_path.exists():
-                logger.info(f"Found existing raw API JSON: {raw_json_path}")
+                logger.info(f"[REUSE] {original_input_path.name} — regenerating outputs from existing JSON")
                 try:
                     loaded_raw_data = load_json_data(raw_json_path)
                     if loaded_raw_data:
@@ -219,7 +224,7 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
         if transcription_result is None and not use_json_input:
             if not original_input_path.exists():
                 logger.error(f"Audio file for transcription not found: {original_input_path}")
-                return []
+                return "failed"
             
             current_audio_file_path = original_input_path 
 
@@ -228,10 +233,10 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
             api_instance = get_api_instance(api_name, api_key=kwargs.get('api_key'))
             if not api_instance:
                  logger.error(f"Could not initialize API: {api_name}. Skipping file.")
-                 return []
+                 return "failed"
             if not api_instance.check_api_key():
                 logger.error(f"Invalid or missing API key for {api_name}.")
-                return []
+                return "failed"
 
             # Warn about API capability limitations
             output_formats = kwargs.get("output_formats", [])
@@ -286,14 +291,14 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                         opt_result.cleanup()
                     logger.error(f"Audio optimization failed: File ({opt_result.size_mb:.2f}MB) exceeds "
                                f"{max_size_mb}MB limit and API does not support chunking.")
-                    return []
+                    return "failed"
                 
                 current_audio_file_path = opt_result.path
                 if opt_result.is_temporary:
                     temp_files_to_cleanup.append(current_audio_file_path)
             except Exception as e:
                 logger.error(f"Audio optimization failed: {e}")
-                return []
+                return "failed"
 
             # Pass all kwargs to the API instance's transcribe method
             transcribe_kwargs = kwargs.copy()
@@ -332,7 +337,7 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
 
         if not transcription_result or not isinstance(transcription_result, TranscriptionResult):
             logger.error(f"Failed to obtain a valid transcription result for {original_input_path}.")
-            return []
+            return "failed"
 
         logger.success(f"Successfully obtained transcription. Words count: {len(transcription_result.words)}")
 
@@ -353,11 +358,11 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
 
         elapsed_time = time.time() - start_time
         logger.success(f"Processing completed in {elapsed_time:.2f}s")
-        return output_files
+        return "processed"
 
     except Exception as e:
         logger.exception(f"An error occurred while processing {file_path}: {e}")
-        return []
+        return "failed"
     finally:
         # Cleanup intermediate manager (temp dirs) on any exit path
         if 'opt_result' in locals() and opt_result and opt_result.intermediate_manager:
@@ -403,6 +408,7 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 
         total_files = len(files)
         success_count = 0
+        skipped_count = 0
         failed_count = 0
 
         for idx, file in enumerate(files, 1):
@@ -410,8 +416,10 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 
             try:
                 result = process_file(file, **kwargs)
-                if result:
+                if result == "processed":
                     success_count += 1
+                elif result == "skipped":
+                    skipped_count += 1
                 else:
                     failed_count += 1
                     logger.error(f"[PROCESSING] ✗ {file.name}")
@@ -419,8 +427,12 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
                 failed_count += 1
                 logger.error(f"[PROCESSING] ✗ {file.name}: {e}")
 
+        summary_parts = [f"{success_count} processed"]
+        if skipped_count > 0:
+            summary_parts.append(f"{skipped_count} skipped")
         if failed_count > 0:
-            logger.error(f"[PROCESSING] {success_count} ok, {failed_count} failed")
+            summary_parts.append(f"{failed_count} failed")
+        logger.info(f"[SUMMARY] {', '.join(summary_parts)}")
 
     else:
         logger.error(f"[PROCESSING] Path not found")
@@ -458,7 +470,8 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 @click.option("--size-threshold", type=float, default=100.0, help="Files under this size (MB) skip processing if format compatible (default: 100)")
 @click.option("--chunk-length", type=int, default=600, help="Length of each chunk in seconds for long audio")
 @click.option("--overlap", type=int, default=10, help="Overlap between chunks in seconds")
-@click.option("--force", "-r", is_flag=True, help="Force re-transcription even if transcript exists")
+@click.option("--regenerate", "-R", is_flag=True, help="Regenerate outputs from existing JSON (skip SRT check, avoid API call if JSON exists)")
+@click.option("--force", "-r", is_flag=True, help="Force full re-transcription via API (ignore all existing files)")
 @click.option("--save-cleaned-json", "-J", is_flag=True, help="Save the cleaned and consistent pre-processed JSON file")
 @click.option("--use-json-input", "-j", is_flag=True, help="Accept JSON files as input")
 @click.option("--extensions", "-e", type=str, default=None, help="Comma-separated file extensions to process (e.g. '.wav,.mp3'). Default: all supported formats.")
@@ -475,7 +488,7 @@ def main(ctx, input_path, api, language, output, chars_per_line, words_per_subti
          filler_lines, filler_words, remove_fillers, speaker_labels, fps, fps_offset_start,
          fps_offset_end, diarize, num_speakers, use_input, use_pcm, keep_flac, keep, model,
          prompt, keyterms_prompt, speech_models,
-         size_threshold, chunk_length, overlap, force, save_cleaned_json, use_json_input, extensions, debug, verbose, start_hour,
+         size_threshold, chunk_length, overlap, regenerate, force, save_cleaned_json, use_json_input, extensions, debug, verbose, start_hour,
          list_models, setup, api_key):
     """Unified Audio Transcription Tool."""
 
@@ -654,6 +667,7 @@ def main(ctx, input_path, api, language, output, chars_per_line, words_per_subti
         "size_threshold": size_threshold,
         "chunk_length": chunk_length,
         "overlap": overlap,
+        "regenerate": regenerate,
         "force": force,
         "save_cleaned_json": save_cleaned_json,
         "use_json_input": use_json_input,
