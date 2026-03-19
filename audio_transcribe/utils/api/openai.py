@@ -75,7 +75,7 @@ class OpenAIAPI(TranscriptionAPI, ChunkingMixin):
     def check_api_key(self) -> bool:
         """Check if OpenAI API key is valid."""
         if not self.api_key:
-            logger.error("No OpenAI API key provided")
+            logger.error("No OpenAI API key provided. Run 'transcribe --setup' to configure API keys.")
             return False
             
         if not self.client:
@@ -128,12 +128,7 @@ class OpenAIAPI(TranscriptionAPI, ChunkingMixin):
             transcription_response = self.with_retry(lambda: self.client.audio.transcriptions.create(**params))
             
             # Extract data from response object
-            if hasattr(transcription_response, "model_dump"):
-                raw_data = transcription_response.model_dump()
-            elif hasattr(transcription_response, "__dict__"):
-                raw_data = transcription_response.__dict__
-            else:
-                raw_data = {"text": str(transcription_response)}
+            raw_data = self.response_to_dict(transcription_response)
 
             # Save the raw response for this chunk
             chunk_file_path = Path(audio_chunk_path)
@@ -292,9 +287,5 @@ class OpenAIAPI(TranscriptionAPI, ChunkingMixin):
                     raise
         finally:
             # Clean up temporary FLAC file if we created it and don't want to keep it
-            if is_converted and not keep_flac and flac_path and os.path.exists(flac_path):
-                try:
-                    os.unlink(flac_path)
-                    logger.info(f"Deleted temporary FLAC file: {flac_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to delete temporary FLAC file: {e}")
+            if is_converted and not keep_flac:
+                self.cleanup_temp_file(flac_path)

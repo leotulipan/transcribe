@@ -10,6 +10,23 @@ from loguru import logger
 
 from audio_transcribe.utils.parsers import TranscriptionResult
 
+# Shared MIME type mapping for audio file extensions
+AUDIO_MIME_TYPES: Dict[str, str] = {
+    '.wav': 'audio/wav',
+    '.mp3': 'audio/mpeg',
+    '.flac': 'audio/flac',
+    '.m4a': 'audio/mp4',
+    '.mp4': 'audio/mp4',
+    '.webm': 'audio/webm',
+    '.ogg': 'audio/ogg',
+    '.oga': 'audio/ogg',
+    '.opus': 'audio/opus',
+    '.amr': 'audio/amr',
+    '.awb': 'audio/amr-wb',
+    '.3gp': 'audio/3gpp',
+}
+
+
 class TranscriptionAPI(ABC):
     """Base class for all transcription API implementations."""
 
@@ -60,10 +77,14 @@ class TranscriptionAPI(ABC):
         """
         List available models for this API.
 
+        Returns models from MODEL_REGISTRY (single source of truth).
+        Subclasses may override to fetch from the live API instead.
+
         Returns:
             List of model IDs available for use
         """
-        return []
+        from audio_transcribe.utils.models import get_available_models
+        return get_available_models(self.api_name)
 
     def get_best_response_format(self, preferred_formats: List[str]) -> str:
         """
@@ -175,6 +196,43 @@ class TranscriptionAPI(ABC):
                 
         return masked
         
+    @staticmethod
+    def cleanup_temp_file(path: Optional[Union[str, Path]]) -> None:
+        """
+        Delete a temporary file with logging.
+
+        Args:
+            path: Path to temporary file (no-op if None or doesn't exist)
+        """
+        if path and os.path.exists(str(path)):
+            try:
+                os.unlink(str(path))
+                logger.info(f"Deleted temporary file: {path}")
+            except Exception as e:
+                logger.warning(f"Failed to delete temporary file {path}: {e}")
+
+    @staticmethod
+    def response_to_dict(response) -> dict:
+        """
+        Convert an SDK response object to a plain dictionary.
+
+        Handles Pydantic v2 (model_dump), Pydantic v1 (dict), generic __dict__,
+        and falls back to wrapping as {"text": str(response)}.
+
+        Args:
+            response: SDK response object
+
+        Returns:
+            Plain dictionary representation
+        """
+        if hasattr(response, 'model_dump'):
+            return response.model_dump()
+        elif hasattr(response, 'dict'):
+            return response.dict()
+        elif hasattr(response, '__dict__'):
+            return response.__dict__.copy()
+        return {"text": str(response)}
+
     def with_retry(self, func, *args, **kwargs):
         """
         Execute a function with retry logic.

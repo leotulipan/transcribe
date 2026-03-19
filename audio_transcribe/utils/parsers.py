@@ -147,7 +147,7 @@ class TranscriptionResult:
         }
         
         # Use a custom JSON serialization approach to prevent scientific notation for small numbers
-        class CustomJSONEncoder(json.JSONEncoder):
+        class _TimestampJSONEncoder(json.JSONEncoder):
             def iterencode(self, obj, **kwargs):
                 # Special handling for TranscriptionResult's words list
                 if obj == data and "words" in obj and obj["words"]:
@@ -213,7 +213,7 @@ class TranscriptionResult:
             with open(file_path, 'w', encoding='utf-8') as f:
                 # Use our custom encoder
                 logger.debug(f"Saving transcription result with custom JSON encoder to preserve decimal precision")
-                for chunk in CustomJSONEncoder(ensure_ascii=False, indent=2).iterencode(data):
+                for chunk in _TimestampJSONEncoder(ensure_ascii=False, indent=2).iterencode(data):
                     f.write(chunk)
         except Exception as e:
             logger.error(f"Failed to save transcription result: {str(e)}")

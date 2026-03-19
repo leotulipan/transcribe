@@ -67,7 +67,7 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
     def check_api_key(self) -> bool:
         """Check if Groq API key is valid."""
         if not self.api_key:
-            logger.error("No Groq API key provided")
+            logger.error("No Groq API key provided. Run 'transcribe --setup' to configure API keys.")
             return False
             
         if not self.client:
@@ -139,18 +139,13 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
                 if language:
                     api_kwargs["language"] = language
                 
-                result = self.client.audio.transcriptions.create(**api_kwargs)
+                result = self.with_retry(lambda: self.client.audio.transcriptions.create(**api_kwargs))
                 
                 transcription_time = time.time() - start_time_perf
                 logger.info(f"Chunk processed in {transcription_time:.2f}s")
                 
                 # Extract data from the result
-                if hasattr(result, 'model_dump'):
-                    # Handle Pydantic model response (newer Groq SDK)
-                    raw_data = result.model_dump()
-                else:
-                    # Handle dict-like response
-                    raw_data = dict(result)
+                raw_data = self.response_to_dict(result)
                 
                 # Save the raw response for this chunk
                 chunk_file_path = Path(audio_chunk_path)
@@ -288,8 +283,5 @@ class GroqAPI(TranscriptionAPI, ChunkingMixin):
         finally:
             # Clean up temporary FLAC file
             keep_flac = kwargs.get("keep_flac", False)
-            if not keep_flac and flac_path and os.path.exists(flac_path) and os.path.basename(flac_path) != os.path.basename(audio_path):
-                try:
-                    os.unlink(flac_path)
-                except:
-                    pass
+            if not keep_flac and flac_path and os.path.basename(flac_path) != os.path.basename(audio_path):
+                self.cleanup_temp_file(flac_path)

@@ -235,7 +235,7 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                  logger.error(f"Could not initialize API: {api_name}. Skipping file.")
                  return "failed"
             if not api_instance.check_api_key():
-                logger.error(f"Invalid or missing API key for {api_name}.")
+                logger.error(f"Invalid or missing API key for {api_name}. Run 'transcribe --setup' to configure API keys.")
                 return "failed"
 
             # Warn about API capability limitations
@@ -252,6 +252,10 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                     f"Mistral Voxtral auto-detects language. "
                     f"Requested language '{kwargs['language']}' will be ignored."
                 )
+
+            # Prepare transcribe kwargs early (needed by chunking logic below)
+            transcribe_kwargs = kwargs.copy()
+            transcribe_kwargs['original_path'] = original_input_path
 
             # Optimize audio file size if needed
             try:
@@ -300,10 +304,6 @@ def process_file(file_path: Union[str, Path], **kwargs) -> List[str]:
                 logger.error(f"Audio optimization failed: {e}")
                 return "failed"
 
-            # Pass all kwargs to the API instance's transcribe method
-            transcribe_kwargs = kwargs.copy()
-            transcribe_kwargs['original_path'] = original_input_path # Pass original path for metadata
-            
             # Handle model parameters
             # DefaultsManager should have already populated 'model' with default if needed
             model_used = kwargs.get('model', '(default)')

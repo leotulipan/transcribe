@@ -1014,7 +1014,7 @@ def export_subtitles(transcript_id: str, headers: Dict[str, str],
     url = f"https://api.assemblyai.com/v2/transcript/{transcript_id}/{subtitle_format}"
 
     # Send a GET request to the API to get the subtitle data
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=300)
 
     # Check if the response status code is successful (200)
     if response.status_code == 200:
@@ -1068,7 +1068,7 @@ def custom_export_subtitles(transcript_id: str, headers: Dict[str, str],
     
     # Get words from the transcript
     words_url = f"https://api.assemblyai.com/v2/transcript/{transcript_id}/words"
-    words_response = requests.get(words_url, headers=headers)
+    words_response = requests.get(words_url, headers=headers, timeout=300)
     
     if words_response.status_code != 200:
         # Fallback to direct API export if words endpoint fails

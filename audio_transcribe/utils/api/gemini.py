@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional, Union
 from loguru import logger
 
 from audio_transcribe.utils.parsers import TranscriptionResult, generate_words_from_text
-from audio_transcribe.utils.api.base import TranscriptionAPI
+from audio_transcribe.utils.api.base import TranscriptionAPI, AUDIO_MIME_TYPES
 
 
 class GeminiAPI(TranscriptionAPI):
@@ -80,7 +80,7 @@ class GeminiAPI(TranscriptionAPI):
     def check_api_key(self) -> bool:
         """Check if Gemini API key is valid."""
         if not self.api_key:
-            logger.error("No Gemini API key provided")
+            logger.error("No Gemini API key provided. Run 'transcribe --setup' to configure API keys.")
             return False
 
         if not self.genai:
@@ -323,21 +323,7 @@ class GeminiAPI(TranscriptionAPI):
             MIME type string
         """
         ext = Path(audio_path).suffix.lower()
-        mime_types = {
-            '.wav': 'audio/wav',
-            '.mp3': 'audio/mp3',
-            '.flac': 'audio/flac',
-            '.m4a': 'audio/mp4',
-            '.mp4': 'audio/mp4',
-            '.webm': 'audio/webm',
-            '.ogg': 'audio/ogg',
-            '.oga': 'audio/ogg',
-            '.opus': 'audio/opus',
-            '.amr': 'audio/amr',
-            '.awb': 'audio/amr-wb',
-            '.3gp': 'audio/3gpp',
-        }
-        return mime_types.get(ext, 'audio/mpeg')
+        return AUDIO_MIME_TYPES.get(ext, 'audio/mpeg')
 
     def _get_language_name(self, language_code: str) -> str:
         """

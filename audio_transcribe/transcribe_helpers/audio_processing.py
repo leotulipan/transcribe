@@ -258,7 +258,7 @@ def extract_audio_from_mp4(input_path: Union[str, Path]) -> Optional[str]:
         if output_path.exists():
             try:
                 os.unlink(output_path)
-            except:
+            except Exception:
                 pass
         return None
 
@@ -662,7 +662,7 @@ def optimize_audio_for_api(
                     if temp_extracted.exists():
                         try:
                             temp_extracted.unlink()
-                        except:
+                        except Exception:
                             pass
 
             if extracted_success and extracted_path.exists():

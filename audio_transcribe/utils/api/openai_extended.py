@@ -87,7 +87,7 @@ class OpenAIExtendedAPI(TranscriptionAPI):
     def check_api_key(self) -> bool:
         """Check if OpenAI API key is valid."""
         if not self.api_key:
-            logger.error("No OpenAI API key provided")
+            logger.error("No OpenAI API key provided. Run 'transcribe --setup' to configure API keys.")
             return False
 
         if not self.client:
@@ -187,14 +187,7 @@ class OpenAIExtendedAPI(TranscriptionAPI):
                 )
 
                 # Extract data from response object
-                if hasattr(transcription_response, "model_dump"):
-                    raw_data = transcription_response.model_dump()
-                elif hasattr(transcription_response, "dict"):  # Pydantic v1
-                    raw_data = transcription_response.dict()
-                elif hasattr(transcription_response, "__dict__"):
-                    raw_data = transcription_response.__dict__.copy()
-                else:
-                    raw_data = {"text": str(transcription_response)}
+                raw_data = self.response_to_dict(transcription_response)
 
                 # Add API name and model
                 raw_data["api_name"] = self.api_name

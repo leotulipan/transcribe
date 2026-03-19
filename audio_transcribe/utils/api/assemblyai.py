@@ -43,19 +43,10 @@ class AssemblyAIAPI(TranscriptionAPI):
             logger.error("AssemblyAI package not found. Please install it: uv add assemblyai")
             self.aai = None
             
-    def list_models(self) -> List[str]:
-        """
-        List available models for AssemblyAI API.
-
-        Returns models from MODEL_REGISTRY (single source of truth).
-        """
-        from audio_transcribe.utils.models import get_available_models
-        return get_available_models("assemblyai")
-
     def check_api_key(self) -> bool:
         """Check if AssemblyAI API key is valid."""
         if not self.api_key:
-            logger.error("No AssemblyAI API key provided")
+            logger.error("No AssemblyAI API key provided. Run 'transcribe --setup' to configure API keys.")
             return False
             
         if not self.aai:
@@ -164,10 +155,4 @@ class AssemblyAIAPI(TranscriptionAPI):
             logger.error(f"AssemblyAI transcription failed: {str(e)}")
             raise
         finally:
-            # Clean up temporary file if created
-            if temp_audio_path and os.path.exists(temp_audio_path):
-                try:
-                    os.unlink(temp_audio_path)
-                    logger.info(f"Deleted temporary audio file: {temp_audio_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to delete temporary file {temp_audio_path}: {e}")
+            self.cleanup_temp_file(temp_audio_path)

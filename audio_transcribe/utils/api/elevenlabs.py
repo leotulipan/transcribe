@@ -36,26 +36,16 @@ class ElevenLabsAPI(TranscriptionAPI):
             masked_key = self.mask_api_key(self.api_key)
             logger.debug(f"Initializing ElevenLabs client with API key: {masked_key}")
             
-    def list_models(self) -> List[str]:
-        """
-        List available transcription (Scribe) models for ElevenLabs API.
-
-        Returns models from MODEL_REGISTRY (single source of truth).
-        The /v1/models endpoint only returns TTS models, not Scribe STT models.
-        """
-        from audio_transcribe.utils.models import get_available_models
-        return get_available_models("elevenlabs")
-
     def check_api_key(self) -> bool:
         """Check if ElevenLabs API key is valid."""
         if not self.api_key:
-            logger.error("No ElevenLabs API key provided")
+            logger.error("No ElevenLabs API key provided. Run 'transcribe --setup' to configure API keys.")
             return False
             
         headers = {"xi-api-key": self.api_key}
         try:
             # Use user info endpoint for validation as it's most reliable
-            response = requests.get(f"{self.base_url}/user", headers=headers)
+            response = requests.get(f"{self.base_url}/user", headers=headers, timeout=30)
             if response.status_code == 200:
                 logger.debug("ElevenLabs API key is valid")
                 return True
@@ -167,7 +157,7 @@ class ElevenLabsAPI(TranscriptionAPI):
                 logger.debug(f"Sending request to {url}")
                 logger.debug(f"Headers: {masked_headers}")
                 
-                response = requests.post(url, headers=headers, data=data, files=files)
+                response = requests.post(url, headers=headers, data=data, files=files, timeout=300)
                 
                 if response.status_code != 200:
                     logger.error(f"Error {response.status_code}: {response.text}")
@@ -195,10 +185,4 @@ class ElevenLabsAPI(TranscriptionAPI):
             logger.error(f"ElevenLabs transcription failed: {str(e)}")
             raise
         finally:
-            # Clean up temporary file if created
-            if temp_audio_path and os.path.exists(temp_audio_path):
-                try:
-                    os.unlink(temp_audio_path)
-                    logger.info(f"Deleted temporary audio file: {temp_audio_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to delete temporary file {temp_audio_path}: {e}")
+            self.cleanup_temp_file(temp_audio_path)

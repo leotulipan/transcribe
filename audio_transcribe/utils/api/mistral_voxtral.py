@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional, Union
 from loguru import logger
 
 from audio_transcribe.utils.parsers import TranscriptionResult, generate_words_from_text
-from audio_transcribe.utils.api.base import TranscriptionAPI
+from audio_transcribe.utils.api.base import TranscriptionAPI, AUDIO_MIME_TYPES
 
 
 class MistralVoxtralAPI(TranscriptionAPI):
@@ -53,18 +53,10 @@ class MistralVoxtralAPI(TranscriptionAPI):
             logger.error("Mistral package not found. Please install it: uv add mistralai")
             self.client = None
 
-    def list_models(self) -> List[str]:
-        """List available models for Mistral Voxtral API.
-
-        Returns models from MODEL_REGISTRY (single source of truth).
-        """
-        from audio_transcribe.utils.models import get_available_models
-        return get_available_models("mistral")
-
     def check_api_key(self) -> bool:
         """Check if Mistral API key is valid."""
         if not self.api_key:
-            logger.error("No Mistral API key provided")
+            logger.error("No Mistral API key provided. Run 'transcribe --setup' to configure API keys.")
             return False
 
         if not self.client:
@@ -153,18 +145,7 @@ class MistralVoxtralAPI(TranscriptionAPI):
             )
 
             # Extract data from response object
-            if hasattr(response, "model_dump"):
-                raw_data = response.model_dump()
-            elif hasattr(response, "dict"):  # Pydantic v1
-                raw_data = response.dict()
-            elif hasattr(response, "__dict__"):
-                raw_data = response.__dict__.copy()
-            else:
-                # Fallback to basic structure
-                raw_data = {
-                    "text": str(response),
-                    "segments": []
-                }
+            raw_data = self.response_to_dict(response)
 
             # Add API name and model
             raw_data["api_name"] = self.api_name
@@ -286,18 +267,5 @@ class MistralVoxtralAPI(TranscriptionAPI):
         Returns:
             MIME type string
         """
-        path = Path(audio_path)
-        ext = path.suffix.lower()
-
-        mime_types = {
-            '.wav': 'audio/wav',
-            '.mp3': 'audio/mpeg',
-            '.flac': 'audio/flac',
-            '.m4a': 'audio/mp4',
-            '.mp4': 'audio/mp4',
-            '.webm': 'audio/webm',
-            '.ogg': 'audio/ogg',
-            '.oga': 'audio/ogg',
-            '.opus': 'audio/opus',
-        }
-        return mime_types.get(ext, 'audio/mpeg')
+        ext = Path(audio_path).suffix.lower()
+        return AUDIO_MIME_TYPES.get(ext, 'audio/mpeg')
