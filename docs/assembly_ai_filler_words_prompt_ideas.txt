@@ -1,0 +1,38 @@
+# Assembly-ai
+
+Transcribe verbatim:
+- Fillers: yes (um, uh, like, you know)
+- Repetitions: yes (I I, the the)
+- False starts: yes (I was- I went)
+- Stutters: yes (th-that, b-but)
+
+ "prompt": "Produce a transcript with every disfluency data. Additionally, label speakers with their 
+ respective roles. 1. Place [Speaker:role] at the start of each speaker turn. Example format: 
+ [Speaker:NURSE] Hello there. How can I help you today? [Speaker:PATIENT] I'm feeling unwell. I have a 
+ headache."
+}
+
+"prompt": "Produce a transcript for a clinical history evaluation. It's important to capture medication and 
+dosage accurately. Every disfluency is meaningful data. Include: fillers (um, uh, er, erm, ah, hmm, mhm, 
+like, you know, I mean), repetitions (I I I, the the), restarts (I was- I went), stutters (th-that, b-but,
+no-not), and informal speech (gonna, wanna, gotta)"
+
+
+# You can set additional parameters for the transcription
+config = {
+  "audio_url": FILE_URL,
+  "speech_models": [
+  "universal-3-pro"
+],
+  "language_code": "de",
+  "keyterms_prompt": [
+  "Transcribe verbatim: - Fillers: yes (um",
+  "uh",
+  "like",
+  "you know) - Repetitions: yes (I I",
+  "the the) - False starts: yes (I was- I went) - Stutters: yes (th-that",
+  "b-but)"
+],
+  "temperature": 0
+}
+  

@@ -176,6 +176,11 @@ dmypy.json
 cython_debug/
 
 
+# Scratch workspace and local scripts (may contain private paths)
+temp/
+*.bat
+*.cmd
+
 # Test files
 compare_audio-test.*
 test/*
