@@ -6,7 +6,6 @@ Supports:
 - Files API upload for larger files
 - Text-only output (no timestamps)
 """
-import base64
 import os
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
@@ -30,12 +29,6 @@ class GeminiAPI(TranscriptionAPI):
     INLINE_SIZE_LIMIT = 20 * 1024 * 1024  # 20MB in bytes
 
     def __init__(self, api_key: Optional[str] = None):
-        """
-        Initialize the Gemini API.
-
-        Args:
-            api_key: API key for Google Gemini (if not provided, will try to load from environment)
-        """
         super().__init__(api_key)
         self.api_name = "gemini"
 
@@ -47,29 +40,26 @@ class GeminiAPI(TranscriptionAPI):
                 return
 
         try:
-            import google.generativeai as genai
+            from google import genai
 
-            genai.configure(api_key=self.api_key)
-            self.genai = genai
+            self.client = genai.Client(api_key=self.api_key)
 
             masked_key = self.mask_api_key(self.api_key)
             logger.debug(f"Initialized Gemini client with API key: {masked_key}")
         except ImportError:
-            logger.error("google-generativeai package not found. Please install it: uv add google-generativeai")
+            logger.error("google-genai package not found. Please install it: uv add google-genai")
             self.client = None
-            self.genai = None
 
     def list_models(self) -> List[str]:
         """List available models for Gemini API."""
-        if not self.genai:
+        if not self.client:
             return []
 
         try:
-            models = list(self.genai.list_models())
-            # Filter for models that support audio
+            models = list(self.client.models.list())
             audio_models = [
                 m.name for m in models
-                if "generateContent" in m.supported_generation_methods
+                if "generateContent" in (m.supported_actions or [])
                 and "flash" in m.name.lower()
             ]
             return audio_models
@@ -83,12 +73,11 @@ class GeminiAPI(TranscriptionAPI):
             logger.error("No Gemini API key provided. Run 'transcribe --setup' to configure API keys.")
             return False
 
-        if not self.genai:
+        if not self.client:
             logger.error("Gemini client not initialized")
             return False
 
         try:
-            # Try to list models as a validation check
             models = self.list_models()
             if models:
                 logger.debug(f"Gemini API key valid. Available models: {len(models)}")
@@ -112,7 +101,7 @@ class GeminiAPI(TranscriptionAPI):
         Returns:
             Standardized TranscriptionResult object
         """
-        if not self.genai:
+        if not self.client:
             raise ValueError("Gemini client not initialized")
 
         if isinstance(audio_path, Path):
@@ -123,9 +112,7 @@ class GeminiAPI(TranscriptionAPI):
 
         logger.info(f"Transcribing {audio_path} with Gemini (model: {model})")
 
-        # Check file size to determine method
         file_size = os.path.getsize(audio_path)
-
         original_path = kwargs.get("original_path")
 
         if file_size <= self.INLINE_SIZE_LIMIT:
@@ -136,53 +123,30 @@ class GeminiAPI(TranscriptionAPI):
             return self._transcribe_with_files_api(audio_path, model, language, original_path=original_path)
 
     def _transcribe_inline(self, audio_path: str, model: str, language: Optional[str], original_path: Optional[str] = None) -> TranscriptionResult:
-        """
-        Transcribe with inline audio (≤20MB).
-
-        Args:
-            audio_path: Path to audio file
-            model: Gemini model name
-            language: Language code (optional)
-
-        Returns:
-            TranscriptionResult
-        """
+        """Transcribe with inline audio (≤20MB)."""
         try:
-            # Read and encode audio
+            from google.genai import types
+
             with open(audio_path, 'rb') as f:
-                audio_data = base64.b64encode(f.read()).decode('utf-8')
+                audio_bytes = f.read()
 
             mime_type = self._get_mime_type(audio_path)
+            part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
 
-            # Build prompt
             prompt = "Generate a detailed transcript of this audio. Include punctuation and capitalize appropriately."
             if language:
                 prompt += f" The audio is in {self._get_language_name(language)}."
 
-            # Create model instance
-            genai_model = self.genai.GenerativeModel(model)
-
-            # Prepare content with inline audio
-            content = [
-                {
-                    "inline_data": {
-                        "mime_type": mime_type,
-                        "data": audio_data
-                    }
-                },
-                {"text": prompt}
-            ]
-
-            # Generate transcription with retry logic
             response = self.with_retry(
-                lambda: genai_model.generate_content(content)
+                lambda: self.client.models.generate_content(
+                    model=model,
+                    contents=[part, prompt]
+                )
             )
 
-            # Extract text from response
             text = response.text
             logger.debug(f"Received transcription: {len(text)} characters")
 
-            # Save raw response
             raw_data = {
                 "text": text,
                 "model": model,
@@ -191,7 +155,6 @@ class GeminiAPI(TranscriptionAPI):
             }
             self.save_result(raw_data, audio_path, original_path=original_path)
 
-            # Generate approximate word timings (no timestamps from Gemini)
             words = generate_words_from_text(text)
 
             return TranscriptionResult(
@@ -209,61 +172,34 @@ class GeminiAPI(TranscriptionAPI):
             raise
 
     def _transcribe_with_files_api(self, audio_path: str, model: str, language: Optional[str], original_path: Optional[str] = None) -> TranscriptionResult:
-        """
-        Transcribe with Files API upload (>20MB).
-
-        Args:
-            audio_path: Path to audio file
-            model: Gemini model name
-            language: Language code (optional)
-
-        Returns:
-            TranscriptionResult
-        """
+        """Transcribe with Files API upload (>20MB)."""
         try:
-            # Upload file first
-            file_uri = self._upload_file(audio_path)
+            uploaded_file = self._upload_file(audio_path)
 
-            # Build prompt
             prompt = "Generate a detailed transcript of this audio. Include punctuation and capitalize appropriately."
             if language:
                 prompt += f" The audio is in {self._get_language_name(language)}."
 
-            # Create model instance
-            genai_model = self.genai.GenerativeModel(model)
-
-            # Prepare content with file reference
-            mime_type = self._get_mime_type(audio_path)
-            content = [
-                {
-                    "file_data": {
-                        "file_uri": file_uri,
-                        "mime_type": mime_type
-                    }
-                },
-                {"text": prompt}
-            ]
-
-            # Generate transcription with retry logic
             response = self.with_retry(
-                lambda: genai_model.generate_content(content)
+                lambda: self.client.models.generate_content(
+                    model=model,
+                    contents=[uploaded_file, prompt]
+                )
             )
 
-            # Extract text from response
             text = response.text
             logger.debug(f"Received transcription: {len(text)} characters")
 
-            # Save raw response
             raw_data = {
                 "text": text,
                 "model": model,
                 "api_name": self.api_name,
                 "method": "files_api",
-                "file_uri": file_uri
+                "file_name": uploaded_file.name,
+                "file_uri": uploaded_file.uri,
             }
             self.save_result(raw_data, audio_path, original_path=original_path)
 
-            # Generate approximate word timings (no timestamps from Gemini)
             words = generate_words_from_text(text)
 
             return TranscriptionResult(
@@ -280,61 +216,38 @@ class GeminiAPI(TranscriptionAPI):
             logger.error(f"Gemini Files API transcription failed: {str(e)}")
             raise
 
-    def _upload_file(self, audio_path: str) -> str:
-        """
-        Upload file to Gemini Files API.
-
-        Args:
-            audio_path: Path to audio file
-
-        Returns:
-            File URI for use in generateContent
-        """
+    def _upload_file(self, audio_path: str):
+        """Upload file to Gemini Files API. Returns the uploaded file object."""
         try:
-            # Upload file using Gemini's upload_file method
+            from google.genai import types
+
             file_display_name = Path(audio_path).name
             mime_type = self._get_mime_type(audio_path)
 
             logger.info(f"Uploading {file_display_name} to Gemini Files API...")
 
-            uploaded_file = self.genai.upload_file(
-                path=audio_path,
-                display_name=file_display_name,
-                mime_type=mime_type
+            uploaded_file = self.client.files.upload(
+                file=audio_path,
+                config=types.UploadFileConfig(
+                    display_name=file_display_name,
+                    mime_type=mime_type
+                )
             )
 
             logger.info(f"File uploaded successfully: {uploaded_file.name}")
             logger.debug(f"File URI: {uploaded_file.uri}")
 
-            return uploaded_file.uri
+            return uploaded_file
 
         except Exception as e:
             logger.error(f"Failed to upload file to Gemini Files API: {str(e)}")
             raise
 
     def _get_mime_type(self, audio_path: str) -> str:
-        """
-        Get MIME type for audio file.
-
-        Args:
-            audio_path: Path to audio file
-
-        Returns:
-            MIME type string
-        """
         ext = Path(audio_path).suffix.lower()
         return AUDIO_MIME_TYPES.get(ext, 'audio/mpeg')
 
     def _get_language_name(self, language_code: str) -> str:
-        """
-        Convert language code to full language name.
-
-        Args:
-            language_code: ISO-639-1 or ISO-639-3 language code
-
-        Returns:
-            Full language name
-        """
         language_names = {
             'en': 'English',
             'es': 'Spanish',

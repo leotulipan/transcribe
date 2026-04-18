@@ -21,7 +21,7 @@ dependencies = [
     "assemblyai",
     "groq",
     "openai>=1.78.0",
-    "google-generativeai>=0.8.0",
+    "google-genai>=1.0.0",
     "mistralai>=1.0.0",
     "questionary>=2.1.0",
     "rich>=14.2.0",
@@ -52,6 +52,7 @@ hiddenimports = [
     "python-dotenv",
     "requests",
     "pydub",
-    "google.generativeai",
+    "google.genai",
+    "google.genai.types",
     "mistralai"
 ]
