@@ -40,9 +40,6 @@ var _ ports.AudioProcessor = (*FFmpeg)(nil)
 // errInternal is a placeholder so unimplemented methods compile in early tasks.
 var errInternal = errors.New("not implemented")
 
-func (f *FFmpeg) ExtractAudio(ctx context.Context, videoPath, workDir string) (domain.AudioFile, error) {
-	return domain.AudioFile{}, errInternal
-}
 func (f *FFmpeg) Transcode(ctx context.Context, in domain.AudioFile, t ports.TargetFormat, workDir string) (domain.AudioFile, error) {
 	return domain.AudioFile{}, errInternal
 }
