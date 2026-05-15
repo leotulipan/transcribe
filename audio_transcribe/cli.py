@@ -602,8 +602,8 @@ def main(input_path, api, language, output, chars_per_line, words_per_subtitle,
     if should_run_interactive:
         logger.info("Entering interactive mode...")
         
-        # Run interactive wizard
-        options = run_interactive_mode(target_path)
+        # Run interactive wizard — pass CLI-supplied output so it isn't overridden
+        options = run_interactive_mode(target_path, cli_output=list(output) if output else None)
         
         if not options:
             sys.exit(0)

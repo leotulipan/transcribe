@@ -14,7 +14,7 @@ from audio_transcribe.utils.models import MODEL_REGISTRY, get_available_models, 
 
 console = Console()
 
-def run_interactive_mode(file_path: str = None) -> Dict[str, Any]:
+def run_interactive_mode(file_path: str = None, cli_output: List[str] = None) -> Dict[str, Any]:
     """
     Run the interactive configuration mode.
     
@@ -132,25 +132,37 @@ def run_interactive_mode(file_path: str = None) -> Dict[str, Any]:
         options["language"] = None
         
     # 5. Output Formats
-    default_outputs = config.get("default_output_formats", ["text", "srt"])
-    
-    format_choices = [
-        questionary.Choice("text", checked="text" in default_outputs),
-        questionary.Choice("srt", checked="srt" in default_outputs),
-        questionary.Choice("word_srt", checked="word_srt" in default_outputs),
-        questionary.Choice("davinci_srt", checked="davinci_srt" in default_outputs),
-        questionary.Choice("json", checked="json" in default_outputs)
-    ]
-    
-    selected_formats = questionary.checkbox(
-        "Select Output Formats:",
-        choices=format_choices
-    ).ask()
-    
-    if not selected_formats:
-        console.print("[yellow]No output format selected. Defaulting to text and srt.[/yellow]")
-        options["output"] = ["text", "srt"]
+    if cli_output:
+        # Caller already specified formats via -o; honour them without prompting
+        options["output"] = list(cli_output)
     else:
+        default_outputs = config.get("default_output_formats", ["text", "srt"])
+
+        format_choices = [
+            questionary.Choice("text", checked="text" in default_outputs),
+            questionary.Choice("srt", checked="srt" in default_outputs),
+            questionary.Choice("word_srt", checked="word_srt" in default_outputs),
+            questionary.Choice("davinci_srt", checked="davinci_srt" in default_outputs),
+            questionary.Choice("json", checked="json" in default_outputs)
+        ]
+
+        console.print("[dim](use <space> to toggle, <enter> to confirm)[/dim]")
+        selected_formats = questionary.checkbox(
+            "Select Output Formats:",
+            choices=format_choices
+        ).ask()
+
+        if not selected_formats:
+            console.print("[yellow]No format selected — please pick at least one.[/yellow]")
+            console.print("[dim](use <space> to toggle, <enter> to confirm)[/dim]")
+            selected_formats = questionary.checkbox(
+                "Select Output Formats:",
+                choices=format_choices
+            ).ask()
+            if not selected_formats:
+                console.print("[red]Still no format selected. Aborting.[/red]")
+                return None
+
         options["output"] = selected_formats
         
     # 6. Advanced Options (Optional)
