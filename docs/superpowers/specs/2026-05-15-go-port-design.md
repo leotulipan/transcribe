@@ -139,9 +139,16 @@ type AudioFile struct {
     Path      string
     SizeBytes int64
     Duration  time.Duration
-    Codec     string
-    IsTemp    bool          // managed-temp file; cleanup deletes
+    Container string        // "mp4", "m4a", "wav", "mp3", "flac", "ogg", "webm"
+    Codec     string        // "aac", "mp3", "pcm_s16le", "flac", "opus"
+    IsTemp    bool          // managed-temp file; subject to cleanup policy
+    Complete  bool          // ffmpeg returned 0 and file is fully on disk
     Chunks    []Chunk       // populated only when chunking applied
+}
+
+type AudioFormat struct {
+    Container string        // "" = any container accepted
+    Codec     string
 }
 
 type Chunk struct {
@@ -239,8 +246,9 @@ type Provider interface {
 type ModelCapabilities struct {
     WordTimestamps    bool
     SegmentTimestamps bool
-    Diarization       bool         // informational in v1
+    Diarization       bool                  // informational in v1
     LanguageHint      bool
+    AcceptedInputs    []domain.AudioFormat  // formats this model ingests directly
 }
 
 type ProviderOpts struct {
@@ -250,10 +258,25 @@ type ProviderOpts struct {
 
 type AudioProcessor interface {
     Probe(path string) (domain.AudioFile, error)
-    ExtractAudio(ctx context.Context, videoPath string) (domain.AudioFile, error)
-    Transcode(ctx context.Context, in domain.AudioFile, target TargetFormat) (domain.AudioFile, error)
-    Chunk(ctx context.Context, in domain.AudioFile, maxBytes int64) ([]domain.Chunk, error)
-    Cleanup(f domain.AudioFile)                           // removes IsTemp files
+
+    // CopyAudio stream-copies the audio track into a container without re-encoding.
+    // Used when the source codec is already accepted by the model and the size is
+    // (or will be after demuxing) within budget. Output container is derived from
+    // the source codec (aac → m4a, mp3 → mp3, opus → ogg, etc.).
+    CopyAudio(ctx context.Context, in domain.AudioFile, workDir string) (domain.AudioFile, error)
+
+    // ExtractAudio decodes to 16-bit PCM WAV — the lossless fallback when stream
+    // copy isn't viable (e.g., need to discard a non-accepted codec).
+    ExtractAudio(ctx context.Context, videoPath string, workDir string) (domain.AudioFile, error)
+
+    // Transcode re-encodes to the chosen lossy/lossless target for size reduction.
+    Transcode(ctx context.Context, in domain.AudioFile, target TargetFormat, workDir string) (domain.AudioFile, error)
+
+    Chunk(ctx context.Context, in domain.AudioFile, maxBytes int64, workDir string) ([]domain.Chunk, error)
+
+    // Cleanup deletes one tempfile. Callers decide *when* to call based on the
+    // policy in section 6.3.
+    Cleanup(f domain.AudioFile) error
 }
 
 type TargetFormat struct {
@@ -348,21 +371,42 @@ type job struct {
 
 Run inside the job goroutine, in order. Each emits a `ProgressEvent` at entry.
 
-0. **Capability check.** Lookup `provider.Capabilities(model)`. If any `req.Formats` needs timestamps and `caps.WordTimestamps == false`, return `domain.ErrIncompatible` immediately. No file work happens on a misconfigured request.
-1. **Probe.** `audio.Probe(req.InputPath)` → metadata.
-2. **Cache lookup.** If `req.UseCache`, `cache.Lookup`. Hit → skip to step 7 with the cached `Result`.
-3. **Extract.** If input is video, `audio.ExtractAudio` → WAV (tracked `IsTemp`).
-4. **Compress.** Pick `TargetFormat` per provider (FLAC for AssemblyAI/ElevenLabs, MP3 128k for Groq/OpenAI), call `audio.Transcode`.
-5. **Chunk.** If size > `provider.MaxUploadBytes()`, `audio.Chunk` → `[]Chunk`. Otherwise single-chunk path.
-6. **Transcribe.** For each chunk sequentially, `provider.Transcribe(ctx, chunk, opts)`. Merge results: concatenate `Text`, offset `Words/Segments` timestamps by `chunk.StartOffset`, concatenate `RawJSON` into a JSON array. Emits `Percent = i/total` per chunk.
-7. **Post-process.** If `DavinciSRT` requested, `davinci.Apply(result, opts)` inserts synthetic `(...)` words for gaps ≥ `SilentPortionThreshold` and tags filler-word matches for the writer.
-8. **Cache write.** `cache.Save(req.InputPath, result)`. Skipped on cache-hit path.
+0. **Capability check.** Lookup `caps := provider.Capabilities(model)`. If any `req.Formats` needs timestamps and `caps.WordTimestamps == false`, return `domain.ErrIncompatible` immediately. No file work happens on a misconfigured request.
+1. **Probe.** `audio.Probe(req.InputPath)` → metadata (container, codec, size, duration).
+2. **Result-cache lookup.** If `req.UseCache`, `cache.Lookup(req.InputPath, req.Provider)`. Hit → skip to step 7 with the cached `Result`.
+3. **Working directory.** Resolve `workDir = <input_dir>/.transcribe-tmp/<input-basename>/`. If unwritable, fall back to `<os.TempDir()>/transcribe-<jobid>/` (and log that resume-on-retry is disabled for this run).
+4. **Intermediate-cache lookup.** Scan `workDir` for an existing intermediate whose sidecar `<file>.meta.json` matches `{provider, model, target_codec_or_copy, max_bytes, source_size, source_mtime}` and whose `Complete == true`. Hit → set `audio = <that file>`, skip to step 6.
+5. **Pick the cheapest preparation path** and execute it:
+    - **5a. Already acceptable as-is.** If the source's `(Container, Codec)` matches any entry in `caps.AcceptedInputs` *and* `SizeBytes ≤ provider.MaxUploadBytes()` → use the source directly. No temp file, no cleanup concerns.
+    - **5b. Stream copy.** If the source contains an audio track whose `Codec` is in `caps.AcceptedInputs` and the demuxed size will be ≤ budget → `audio.CopyAudio(ctx, source, workDir)`. Container chosen by codec (`aac → m4a`, `mp3 → mp3`, `opus → ogg`).
+    - **5c. Transcode.** Pick `TargetFormat` per provider (FLAC for AssemblyAI/ElevenLabs, MP3 128k for Groq/OpenAI; constrained to a codec in `caps.AcceptedInputs`) and `audio.Transcode(ctx, source, target, workDir)`. If the source is video, this also drops the video stream.
+    - **5d. Chunk.** If the prepared file still exceeds budget after 5c, `audio.Chunk(ctx, prepared, MaxUploadBytes, workDir)` → `[]Chunk`. Each chunk inherits the prepared file's codec; chunks are also tracked as `IsTemp` with `Complete = true` once written.
+
+    Write a `<intermediate>.meta.json` sidecar after every successful 5b/5c describing the operation, so step 4 can pick it up on the next run.
+
+6. **Transcribe.** For each chunk sequentially (single-chunk path is `len(chunks) == 1`), `provider.Transcribe(ctx, chunk, opts)`. Merge results: concatenate `Text`, offset `Words/Segments` timestamps by `chunk.StartOffset`, accumulate `RawJSON` into a JSON array when multi-chunk. Emits `Percent = i/total` per chunk.
+7. **Post-process.** If `FormatDavinciSRT` is in `req.Formats`, `davinci.Apply(result, opts)` inserts synthetic `(...)` words for gaps ≥ `SilentPortionThreshold` and tags filler-word matches for the writer.
+8. **Result-cache write.** `cache.Save(req.InputPath, result)`. Skipped on cache-hit path.
 9. **Write outputs.** For each `Format`, look up writer, call `Write`. Emits `Percent = i/total`.
 10. **Done.** Close `progress` channel.
 
-**Cleanup**: `defer` at the top of `pipeline.Run` collects every `IsTemp` file and calls `audio.Cleanup` even on error / cancel.
+#### 6.3.1 Cleanup policy
 
-**Cancellation**: every blocking call takes the job's `ctx`. `Cancel()` cancels the context; in-flight HTTP requests abort; ffmpeg subprocesses are killed via `exec.Cmd.Cancel`.
+A `defer` at the top of `pipeline.Run` runs the cleanup pass with the final `(result, err)` in scope. For each intermediate the pipeline created:
+
+```
+for each tracked tempfile tf in workDir:
+    if !tf.Complete:                delete   (partial; useless to anyone)
+    elif err == nil:                delete   (job succeeded; intermediates not needed)
+    elif transient(err):            KEEP     (next run reuses via step 4)
+    else:                           KEEP     (permanent error — let user inspect or wipe)
+```
+
+`transient(err)` returns true for: `ErrProvider` with `Retryable == true` (after retries exhausted), `net.Error` with `Timeout()`, HTTP 5xx, 429, context-deadline. Everything else — auth failure, validation error, `ErrIncompatible`, audio decode error, `ErrCanceled`, panic recovery — is permanent.
+
+If `workDir` was the source-adjacent path and ends up empty after cleanup, remove the `.transcribe-tmp/<basename>/` directory itself. Don't touch the parent `.transcribe-tmp/` so it stays cheap to reuse.
+
+**Cancellation**: every blocking call takes the job's `ctx`. `Cancel()` cancels the context; in-flight HTTP requests abort; ffmpeg subprocesses are killed via `exec.Cmd.Cancel`. Cancellation is treated as a permanent error for cleanup purposes — partial intermediates are deleted, complete ones are kept (a user who hits Ctrl-C probably wants their work preserved for the next try).
 
 **Panic safety**: `pipeline.Run` recovers panics inside the job goroutine and converts them to an error with stack trace logged at error level.
 
@@ -466,12 +510,35 @@ Retry policy in `internal/adapters/api/internal/retry/`: `Do(ctx, attempts=3, ba
 
 `New(ffmpegPath, ffprobePath string, log ports.Logger) (*FFmpeg, error)` — empty paths fall through to `exec.LookPath`; both-missing returns `ErrFFmpegMissing` from `BuildService`, before any UI launches.
 
-- `Probe` shells `ffprobe -v error -show_streams -show_format -of json`.
-- `ExtractAudio` shells `ffmpeg -i <in> -vn -acodec pcm_s16le -ac 1 -ar 16000 <tmp.wav>`.
-- `Transcode` builds args from `TargetFormat`.
-- `Chunk` computes per-chunk duration to stay under `maxBytes`, then `ffmpeg -ss <off> -t <dur> -c copy`.
-- Temp files in `os.TempDir()/transcribe-<jobid>/`, tracked by `IsTemp`.
-- All `exec.Cmd` honor `ctx` — cancellation kills subprocesses.
+All four file-producing operations (`CopyAudio`, `ExtractAudio`, `Transcode`, `Chunk`) take a `workDir` argument decided by the service (per section 6.3 step 3) — the adapter does not pick its own temp location.
+
+- **`Probe`** — `ffprobe -v error -show_streams -show_format -of json <path>`, JSON-parsed. Populates `AudioFile{Container, Codec, SizeBytes, Duration}`.
+- **`CopyAudio`** — derives an output container from the source codec (`aac`/`alac` → `.m4a`, `mp3` → `.mp3`, `opus`/`vorbis` → `.ogg`, `flac` → `.flac`, `pcm_*` → `.wav`); shells `ffmpeg -i <in> -vn -c:a copy <workDir>/<basename>.<ext>`. Sets `Complete = true` only on a clean `ffmpeg` exit, after `os.Rename` from a `*.partial` filename to the final filename (atomic-on-same-volume semantics so a crash can't leave a "complete-looking" half-written file).
+- **`ExtractAudio`** — `ffmpeg -i <in> -vn -acodec pcm_s16le -ac 1 -ar 16000 <workDir>/<basename>.wav`. Same atomic-rename pattern.
+- **`Transcode`** — builds args from `TargetFormat` (e.g. `-c:a flac` or `-c:a libmp3lame -b:a 128k`), writes to `<workDir>/<basename>.<target-ext>`. Same atomic-rename pattern.
+- **`Chunk`** — computes per-chunk duration from the source bitrate so each chunk stays under `maxBytes` with margin, then loops `ffmpeg -ss <off> -t <dur> -c copy <workDir>/<basename>-chunkNN.<ext>`. Each chunk file gets the atomic-rename treatment.
+- **`Cleanup`** — `os.Remove(f.Path)` plus the matching `<path>.meta.json` if present. Returns the os error so the caller can log; never returns an error for "file already gone".
+
+**Metadata sidecar.** After a successful `CopyAudio` or `Transcode`, the adapter writes `<workDir>/<basename>.<ext>.meta.json`:
+
+```json
+{
+  "schema_version": 1,
+  "operation": "copy" | "transcode",
+  "source_path": "C:\\\\videos\\\\interview.mp4",
+  "source_size": 1234567890,
+  "source_mtime": "2026-05-15T14:30:00Z",
+  "target_codec": "aac" | "flac" | "mp3",
+  "target_container": "m4a",
+  "max_bytes_budget": 26214400,
+  "provider": "groq",
+  "model": "whisper-large-v3"
+}
+```
+
+Step 4 of the pipeline reads these to decide whether a found intermediate is reusable. Mismatches → ignore (don't delete; another provider's pipeline may want it).
+
+- All `exec.Cmd` honor `ctx` — cancellation kills subprocesses. Partial output files keep their `*.partial` extension so the cleanup pass treats them as `Complete = false`.
 
 ### 8.3 Config (`internal/adapters/config/`)
 
