@@ -413,6 +413,8 @@ class OptimizationResult:
     size_mb: float
     bytes_per_second: float  # Calculated from file size and audio duration
     intermediate_manager: Optional['IntermediateFileManager'] = field(default=None, compare=False, repr=False)
+    attempted_strategies: List[str] = field(default_factory=list)
+    failure_reason: Optional[str] = None
 
     def fits_limit(self, max_size_mb: float) -> bool:
         """Check if the optimized file fits within the size limit."""
@@ -597,6 +599,8 @@ def optimize_audio_for_api(
     current_path = input_path
     is_current_temp = False
     original_size_mb = os.path.getsize(input_path) / (1024 * 1024)
+    attempted: List[str] = []
+    failure_notes: List[str] = []
 
     try:
         # 1. Check passthrough (new)
@@ -696,23 +700,36 @@ def optimize_audio_for_api(
         if reqs.get("requires_flac") or current_path.suffix.lower() != '.flac':
             if current_size_mb > max_size_mb or reqs.get("requires_flac"):
                 logger.info("Strategy 2: Converting to FLAC...")
+                attempted.append("flac")
 
                 flac_path = manager.get_path_for(FileOperation.CONVERTED_FLAC, "flac")
 
                 # Try PyAV first
                 flac_success = False
+                pyav_tried = False
                 if is_pyav_available():
+                    pyav_tried = True
                     logger.debug("Using PyAV for FLAC conversion")
                     flac_success = convert_to_flac_pyav(current_path, flac_path)
 
                 # Fallback to ffmpeg subprocess via existing function
                 if not flac_success:
-                    logger.debug("PyAV FLAC conversion failed, using ffmpeg fallback")
-                    flac_temp = convert_to_flac(current_path)
-                    if flac_temp:
-                        import shutil
-                        shutil.move(str(flac_temp), str(flac_path))
-                        flac_success = True
+                    if pyav_tried:
+                        logger.debug("PyAV FLAC conversion failed, using ffmpeg fallback")
+                    try:
+                        require_ffmpeg()
+                        flac_temp = convert_to_flac(current_path)
+                        if flac_temp:
+                            import shutil
+                            shutil.move(str(flac_temp), str(flac_path))
+                            flac_success = True
+                    except Exception as e:
+                        failure_notes.append(f"flac ffmpeg fallback: {e}")
+
+                if not flac_success:
+                    msg = "FLAC conversion failed via PyAV and ffmpeg — original file will be retained"
+                    logger.warning(msg)
+                    failure_notes.append("flac: both backends failed")
 
                 if flac_success and flac_path.exists():
                     size_mb = os.path.getsize(flac_path) / (1024 * 1024)
@@ -737,23 +754,36 @@ def optimize_audio_for_api(
         current_size_mb = os.path.getsize(current_path) / (1024 * 1024)
         if current_size_mb > max_size_mb:
             logger.info("Strategy 3: Converting to MP3 (128k mono)...")
+            attempted.append("mp3")
 
             mp3_path = manager.get_path_for(FileOperation.CONVERTED_MP3, "mp3")
 
             # Try PyAV first
             mp3_success = False
+            pyav_tried_mp3 = False
             if is_pyav_available():
+                pyav_tried_mp3 = True
                 logger.debug("Using PyAV for MP3 conversion")
                 mp3_success = convert_to_mp3_pyav(current_path, mp3_path)
 
             # Fallback to ffmpeg subprocess via existing function
             if not mp3_success:
-                logger.debug("PyAV MP3 conversion failed, using ffmpeg fallback")
-                mp3_temp = convert_to_mp3(current_path, bitrate="128k")
-                if mp3_temp:
-                    import shutil
-                    shutil.move(str(mp3_temp), str(mp3_path))
-                    mp3_success = True
+                if pyav_tried_mp3:
+                    logger.debug("PyAV MP3 conversion failed, using ffmpeg fallback")
+                try:
+                    require_ffmpeg()
+                    mp3_temp = convert_to_mp3(current_path, bitrate="128k")
+                    if mp3_temp:
+                        import shutil
+                        shutil.move(str(mp3_temp), str(mp3_path))
+                        mp3_success = True
+                except Exception as e:
+                    failure_notes.append(f"mp3 ffmpeg fallback: {e}")
+
+            if not mp3_success:
+                msg = "MP3 conversion failed via PyAV and ffmpeg — original file will be retained"
+                logger.warning(msg)
+                failure_notes.append("mp3: both backends failed")
 
             if mp3_success and mp3_path.exists():
                 size_mb = os.path.getsize(mp3_path) / (1024 * 1024)
@@ -784,12 +814,23 @@ def optimize_audio_for_api(
         bytes_per_sec = _calculate_bytes_per_second(current_path)
         final_size_mb = os.path.getsize(current_path) / (1024 * 1024)
 
+        failure_reason = "; ".join(failure_notes) if failure_notes else None
+        if final_size_mb > max_size_mb:
+            logger.error(
+                f"Optimization could not bring file under {max_size_mb}MB after trying "
+                f"{attempted or ['none']}. Returning {current_path.name} at {final_size_mb:.2f}MB — "
+                f"expect API-side rejection unless chunking rescues it. "
+                f"Failures: {failure_reason or 'none recorded'}"
+            )
+
         return OptimizationResult(
             path=current_path,
             is_temporary=is_current_temp,
             size_mb=final_size_mb,
             bytes_per_second=bytes_per_sec,
-            intermediate_manager=manager if is_current_temp else None
+            intermediate_manager=manager if is_current_temp else None,
+            attempted_strategies=attempted,
+            failure_reason=failure_reason,
         )
 
     except Exception as e:

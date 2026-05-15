@@ -632,3 +632,57 @@ class TestOptimizationResult:
 
         # Should not raise an error
         result.cleanup()
+
+
+class TestOptimizationFailureSurfacing:
+    """All conversion backends fail — optimizer must surface error and metadata."""
+
+    def test_silent_fallthrough_now_surfaces_error(self, tmp_path, caplog):
+        # Create a fake 40MB audio file for an API with a 25MB limit (groq).
+        big = tmp_path / "big.wav"
+        big.write_bytes(b"\0" * (40 * 1024 * 1024))
+
+        with patch(
+            "audio_transcribe.transcribe_helpers.audio_processing.is_pyav_available",
+            return_value=True,
+        ), patch(
+            "audio_transcribe.transcribe_helpers.audio_processing.convert_to_flac_pyav",
+            return_value=False,
+        ), patch(
+            "audio_transcribe.transcribe_helpers.audio_processing.convert_to_mp3_pyav",
+            return_value=False,
+        ), patch(
+            "audio_transcribe.transcribe_helpers.audio_processing.convert_to_flac",
+            return_value=None,
+        ), patch(
+            "audio_transcribe.transcribe_helpers.audio_processing.convert_to_mp3",
+            return_value=None,
+        ), patch(
+            "audio_transcribe.transcribe_helpers.audio_processing.require_ffmpeg",
+            return_value=None,
+        ), patch(
+            "audio_transcribe.transcribe_helpers.audio_processing._calculate_bytes_per_second",
+            return_value=1000.0,
+        ):
+            import logging
+            from loguru import logger as _loguru
+
+            # Bridge loguru -> caplog so pytest can capture error-level records.
+            handler_id = _loguru.add(
+                lambda m: logging.getLogger("loguru").error(m.rstrip()),
+                level="ERROR",
+            )
+            try:
+                with caplog.at_level(logging.ERROR, logger="loguru"):
+                    result = optimize_audio_for_api(big, "groq", size_threshold_mb=10.0)
+            finally:
+                _loguru.remove(handler_id)
+
+        assert result.size_mb > 25  # original returned, still oversize
+        assert "flac" in result.attempted_strategies
+        assert "mp3" in result.attempted_strategies
+        assert result.failure_reason is not None
+        assert any(
+            "could not bring file under" in rec.getMessage()
+            for rec in caplog.records
+        )
