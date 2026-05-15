@@ -1,0 +1,10 @@
+{
+  "text": "Bonjour monde this is Mistral.",
+  "model": "voxtral-mini-latest",
+  "language": "en",
+  "duration": 3.5,
+  "segments": [
+    {"start": 0.0, "end": 1.8, "text": "Bonjour monde"},
+    {"start": 2.0, "end": 3.5, "text": "this is Mistral."}
+  ]
+}
