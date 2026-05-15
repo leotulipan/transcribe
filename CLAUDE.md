@@ -292,6 +292,15 @@ Uses `loguru` configured in `transcribe_helpers/utils.py`:
 - `--debug` flag: DEBUG with additional internal logging
 - Logs go to stderr (rich colors preserved)
 
+## Shell Commands
+
+Do NOT prefix Bash commands with `cd` to the project root — the working directory is already set to the project root. Run commands directly with relative paths.
+
+**Wrong:** `cd "G:\Meine Ablage\_2_Areas\Scripts\Transcribe" && uv run pytest`
+**Right:** `uv run pytest`
+
+This is important because the project path contains spaces, and `cd` with such paths triggers backslash-escaped whitespace security warnings in Claude Code.
+
 ## Git Workflow
 
 - Main branch: production releases
