@@ -59,9 +59,3 @@ func generateJobID() string {
 	// crypto/rand-backed in real life; for v1 a timestamp is fine
 	return time.Now().UTC().Format("20060102T150405.000000000")
 }
-
-// pipelineRun is implemented in pipeline.go (Task K6). This stub keeps the
-// build green for K2 tests that don't drive the real pipeline.
-func pipelineRun(_ context.Context, _ domain.Request, _ Deps, _ func(domain.ProgressEvent)) (*domain.Result, error) {
-	return &domain.Result{}, nil
-}
