@@ -1,8 +1,21 @@
 package main
 
-import "context"
+import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+)
 
-// installSignals is fleshed out in L5. Stub keeps the build green.
+// installSignals returns a context that cancels on SIGINT or SIGTERM.
 func installSignals(parent context.Context) (context.Context, context.CancelFunc) {
-	return context.WithCancel(parent)
+	ctx, cancel := context.WithCancel(parent)
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-ch
+		cancel()
+		signal.Stop(ch)
+	}()
+	return ctx, cancel
 }
