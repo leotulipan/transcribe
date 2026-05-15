@@ -386,7 +386,17 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 
     if path_obj.is_file():
         logger.info(f"[PROCESSING] {path_obj.name}")
-        process_file(path_obj, **kwargs)
+        try:
+            result = process_file(path_obj, **kwargs)
+            if result == "skipped":
+                logger.info("[SUMMARY] 0 processed, 1 skipped")
+            elif result == "processed":
+                logger.info("[SUMMARY] 1 processed")
+            else:
+                logger.error(f"[SUMMARY] 0 processed, 1 failed")
+        except Exception as e:
+            logger.error(f"[PROCESSING] ✗ {path_obj.name}: {e}")
+            logger.error("[SUMMARY] 0 processed, 1 failed")
 
     elif path_obj.is_dir():
         extensions_filter = kwargs.get('extensions')
@@ -438,8 +448,8 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
     else:
         logger.error(f"[PROCESSING] Path not found")
 
-@click.group(invoke_without_command=True)
-@click.argument("input_path", required=False, type=NormalizedPath(exists=False))
+@click.command()
+@click.argument("input_path", required=False, nargs=-1, type=NormalizedPath(exists=False))
 @click.option("--api", "-a", help="API to use (groq, openai, assemblyai, elevenlabs)")
 @click.option("--language", "-l", help="Language code (e.g., en, de, fr)")
 @click.option("--output", "-o", type=click.Choice(["text", "srt", "word_srt", "davinci_srt", "json", "all"], case_sensitive=False), multiple=True, help="Output format(s) to generate (default: text,srt)")
@@ -483,8 +493,7 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
 @click.option("--setup", is_flag=True, help="Run setup wizard or configure defaults non-interactively")
 @click.option("--api-key", help="Set API key for the specified API (requires --setup)")
 @click.version_option()
-@click.pass_context
-def main(ctx, input_path, api, language, output, chars_per_line, words_per_subtitle,
+def main(input_path, api, language, output, chars_per_line, words_per_subtitle,
          word_srt, davinci_srt, silent_portions, padding_start, padding_end, show_pauses,
          filler_lines, filler_words, remove_fillers, speaker_labels, fps, fps_offset_start,
          fps_offset_end, diarize, num_speakers, use_input, use_pcm, keep_flac, keep, model,
@@ -492,10 +501,6 @@ def main(ctx, input_path, api, language, output, chars_per_line, words_per_subti
          size_threshold, chunk_length, overlap, regenerate, force, save_cleaned_json, use_json_input, extensions, debug, verbose, start_hour,
          list_models, setup, api_key):
     """Unified Audio Transcription Tool."""
-
-    # If a subcommand is invoked, do nothing here (let the subcommand handle it)
-    if ctx.invoked_subcommand is not None:
-        return
 
     # Handle --list flag
     if list_models:
@@ -580,17 +585,19 @@ def main(ctx, input_path, api, language, output, chars_per_line, words_per_subti
         # (not for --setup, --help, etc.)
         pass  # Will fail later with clear error when needed
 
-    # Determine target path from positional argument
-    target_path = input_path
+    # input_path is a tuple (nargs=-1); normalize to None / single / list
+    if not input_path:
+        target_path = None
+        extra_paths = []
+    elif len(input_path) == 1:
+        target_path = input_path[0]
+        extra_paths = []
+    else:
+        target_path = input_path[0]
+        extra_paths = list(input_path[1:])
 
-    # Determine if we should run in interactive mode
-    should_run_interactive = False
-    
-    if not target_path:
-        should_run_interactive = True
-    
-    if target_path and not api:
-        should_run_interactive = True
+    # Determine if we should run in interactive mode (only when no path given)
+    should_run_interactive = target_path is None
         
     if should_run_interactive:
         logger.info("Entering interactive mode...")
@@ -688,23 +695,10 @@ def main(ctx, input_path, api, language, output, chars_per_line, words_per_subti
     if "output" in kwargs and not isinstance(kwargs["output"], list):
         kwargs["output"] = list(kwargs["output"])
     
-    # Run processing
-    # Check if target_path is a directory or file
-    target_path_obj = Path(target_path)
-    if target_path_obj.is_dir():
-        process_audio_path(target_path, **kwargs)
-    else:
-        process_audio_path(target_path, **kwargs)
-
-@main.group()
-def tools():
-    """Auxiliary tools."""
-    pass
-
-@tools.command()
-def join_srt():
-    """Join SRT files."""
-    click.echo("Join SRT tool not implemented yet.")
+    # Run processing — handle single or multiple paths
+    all_paths = [target_path] + extra_paths
+    for path in all_paths:
+        process_audio_path(path, **kwargs)
 
 if __name__ == "__main__":
     main()
