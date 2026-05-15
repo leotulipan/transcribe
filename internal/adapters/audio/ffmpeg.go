@@ -1,8 +1,6 @@
 package audio
 
 import (
-	"context"
-	"errors"
 	"os/exec"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
@@ -36,11 +34,3 @@ func New(ffmpegPath, ffprobePath string, log ports.Logger) (*FFmpeg, error) {
 
 // compile-time check
 var _ ports.AudioProcessor = (*FFmpeg)(nil)
-
-// errInternal is a placeholder so unimplemented methods compile in early tasks.
-var errInternal = errors.New("not implemented")
-
-func (f *FFmpeg) Chunk(ctx context.Context, in domain.AudioFile, maxBytes int64, workDir string) ([]domain.Chunk, error) {
-	return nil, errInternal
-}
-func (f *FFmpeg) Cleanup(file domain.AudioFile) error { return errInternal }
