@@ -36,3 +36,12 @@ go test -tags integration ./tests/integration/...
 - v1 ships Windows-only. macOS/Linux are v2 and require additional toolchain
   setup (Fyne CGO + macOS signing).
 - The TUI/GUI delivery layers are not yet wired (Plans 3 and 4).
+
+## Reproducible build
+
+```powershell
+./scripts/build.ps1                          # version from git describe
+./scripts/build.ps1 -Version v1.0.0          # explicit version
+```
+
+`./bin/transcribe.exe --version` will report the embedded version.
