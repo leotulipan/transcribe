@@ -181,9 +181,10 @@ def extract_audio_from_mp4(input_path: Union[str, Path]) -> Optional[str]:
     if isinstance(input_path, str):
         input_path = Path(input_path)
         
-    # Only process MP4 files
-    if input_path.suffix.lower() != '.mp4':
-        logger.debug(f"File is not MP4, skipping extraction: {input_path}")
+    # Only process video files
+    VIDEO_EXTS = {'.mp4', '.mov', '.mkv', '.avi', '.webm'}
+    if input_path.suffix.lower() not in VIDEO_EXTS:
+        logger.debug(f"File is not a supported video format, skipping extraction: {input_path}")
         return None
         
     logger.info(f"Extracting audio from MP4: {input_path.name}")

@@ -394,7 +394,8 @@ def process_audio_path(path: Union[str, Path], **kwargs) -> None:
             extensions = [ext.strip() if ext.startswith('.') else f'.{ext.strip()}'
                          for ext in extensions_filter.split(',')]
         else:
-            extensions = ['.mp3', '.wav', '.m4a', '.mp4', '.mkv', '.flac', '.ogg', '.webm']
+            extensions = ['.mp3', '.wav', '.m4a', '.flac', '.ogg',
+                          '.mp4', '.mkv', '.mov', '.avi', '.webm']
 
         files = []
         for ext in extensions:
