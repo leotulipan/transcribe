@@ -198,3 +198,18 @@ parser_log.txt
 /tests/fixtures/audio_files/empty.*
 /tests/fixtures/audio_files/invalid.*
 /tests/fixtures/audio_files/.*temp*
+
+# Go build artifacts
+/dist/
+/bin/
+transcribe
+transcribe-gui
+
+# Go test artifacts
+*.test
+*.out
+coverage.out
+
+# Go runtime
+*.transcribe.*.json
+.transcribe-tmp/
