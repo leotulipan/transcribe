@@ -91,12 +91,16 @@ class ElevenLabsAPI(TranscriptionAPI):
                 processing_path = extracted_path
                 temp_audio_path = extracted_path
                 logger.info(f"Successfully extracted audio to: {processing_path}")
-                
+
                 # Check file size of extracted audio
                 file_size_mb = os.path.getsize(processing_path) / (1024 * 1024)
                 logger.info(f"Extracted audio size: {file_size_mb:.2f} MB")
             else:
-                logger.warning("Failed to extract audio, attempting to upload original file")
+                logger.warning(
+                    f"Failed to extract audio from {Path(audio_path).name}. "
+                    "Both ffmpeg and pydub extraction returned no output. "
+                    "Attempting to upload original file — this may fail if the codec is unsupported."
+                )
         
         # Check file size limit (approx 1GB for ElevenLabs Scribe)
         limit_mb = get_api_file_size_limit("elevenlabs")
