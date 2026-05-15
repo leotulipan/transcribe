@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/leotulipan/transcribe/internal/adapters/audio"
 	"github.com/leotulipan/transcribe/internal/core/domain"
 	"github.com/leotulipan/transcribe/internal/ports"
 )
@@ -76,13 +77,38 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 		// Stage 3 — working dir
 		workDir, _ := resolveWorkDir(req.InputPath)
 
-		// Stage 5 — prepare
+		// Stage 4 — intermediate cache
+		var prepared domain.AudioFile
+		srcMTime := int64(0)
+		if info, statErr := os.Stat(req.InputPath); statErr == nil {
+			srcMTime = info.ModTime().Unix()
+		}
 		targetCodec := preferredCodecFor(req.Provider, caps)
-		emit(domain.ProgressEvent{Stage: domain.StageCompressing})
-		prepared, perr := prepare(ctx, deps.Audio, src, caps, prov.MaxUploadBytes(), workDir, ports.TargetFormat{Codec: targetCodec})
-		if perr != nil {
-			err = perr
-			return nil, fmt.Errorf("prepare: %w", err)
+		if hit := lookupIntermediate(workDir, src, srcMTime, req.Provider, model, prov.MaxUploadBytes(), targetCodec); hit != nil {
+			prepared = *hit
+		} else {
+			// Stage 5 — prepare
+			emit(domain.ProgressEvent{Stage: domain.StageCompressing})
+			p, perr := prepare(ctx, deps.Audio, src, caps, prov.MaxUploadBytes(), workDir, ports.TargetFormat{Codec: targetCodec})
+			if perr != nil {
+				err = perr
+				return nil, fmt.Errorf("prepare: %w", err)
+			}
+			prepared = p
+			// Write meta sidecar so future runs find it
+			if prepared.IsTemp {
+				_ = audio.WriteMeta(prepared.Path, audio.MetaInfo{
+					Operation:       "transcode-or-copy",
+					SourcePath:      req.InputPath,
+					SourceSize:      src.SizeBytes,
+					SourceMTimeUnix: srcMTime,
+					TargetCodec:     prepared.Codec,
+					TargetContainer: prepared.Container,
+					MaxBytesBudget:  prov.MaxUploadBytes(),
+					Provider:        req.Provider,
+					Model:           model,
+				})
+			}
 		}
 		if prepared.IsTemp {
 			tempFiles = append(tempFiles, prepared)
