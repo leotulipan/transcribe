@@ -1,4 +1,7 @@
 {
+  "env": {
+    "UV_PROJECT_ENVIRONMENT": "C:\\local\\venvs\\Transcribe"
+  },
   "permissions": {
     "allow": [
       "WebSearch",
@@ -11,7 +14,11 @@
       "Bash(uv venv:*)",
       "Bash(uv:*)",
       "Bash(tasklist:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:platform.openai.com)",
+      "Bash(uv tool:*)",
+      "Skill(update-config)",
+      "Bash(git check-ignore *)"
     ]
   }
 }
