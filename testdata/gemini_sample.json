@@ -1,0 +1,5 @@
+{
+  "candidates": [
+    {"content": {"parts": [{"text": "Hello world"}]}, "finishReason": "STOP"}
+  ]
+}
