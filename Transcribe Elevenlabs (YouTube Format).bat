@@ -1,6 +1,6 @@
 @echo off
 
-transcribe -l DE -a assemblyai -m universal-3-pro -o srt -c 55 -v "%~1"
+transcribe -l DE -a elevenlabs -o srt -c 55 -v "%~1"
 
 REM transcribe -a elevenlabs -o srt -c 55 -v "%~1"
 
