@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
 	"github.com/leotulipan/transcribe/internal/ports"
@@ -46,9 +47,17 @@ func (s *Service) Submit(ctx context.Context, req domain.Request) (ports.Job, er
 	return s.submit(ctx, req)
 }
 
-// submit is implemented in job.go (Task K2). This stub keeps the build green.
-func (s *Service) submit(_ context.Context, _ domain.Request) (ports.Job, error) {
-	return nil, nil // implemented in K2
+func (s *Service) submit(parent context.Context, req domain.Request) (ports.Job, error) {
+	j := newJob(parent, req, generateJobID())
+	go j.run(func(emit func(domain.ProgressEvent)) (*domain.Result, error) {
+		return pipelineRun(j.ctx, req, s.deps, emit)
+	})
+	return j, nil
+}
+
+func generateJobID() string {
+	// crypto/rand-backed in real life; for v1 a timestamp is fine
+	return time.Now().UTC().Format("20060102T150405.000000000")
 }
 
 // pipelineRun is implemented in pipeline.go (Task K6). This stub keeps the
