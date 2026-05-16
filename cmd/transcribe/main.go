@@ -13,7 +13,9 @@ import (
 	"github.com/leotulipan/transcribe/internal/core/domain"
 	"github.com/leotulipan/transcribe/internal/delivery"
 	"github.com/leotulipan/transcribe/internal/delivery/cli"
+	"github.com/leotulipan/transcribe/internal/delivery/gui"
 	"github.com/leotulipan/transcribe/internal/delivery/tui"
+	"github.com/leotulipan/transcribe/internal/ports"
 )
 
 var version = "dev"
@@ -56,11 +58,14 @@ func decideMode(args []string) uiMode {
 		return modeCLI
 	}
 	if len(args) == 1 {
-		// Zero args: Linux headless → TUI; Windows/other → TUI until Plan 4 (GUI).
+		// Zero args: Linux headless → TUI; Windows → GUI.
 		if runtime.GOOS == "linux" && os.Getenv("DISPLAY") == "" {
 			return modeTUI
 		}
-		return modeTUI // Plan 4 will change this to modeGUI for Windows
+		if runtime.GOOS == "windows" {
+			return modeGUI
+		}
+		return modeTUI
 	}
 	return modeCLI
 }
@@ -84,8 +89,16 @@ func main() {
 
 	mode := decideMode(os.Args)
 	switch mode {
-	case modeTUI, modeGUI:
-		// modeGUI falls back to TUI until Plan 4 wires up Fyne.
+	case modeGUI:
+		saveCfg := func(c ports.Config) error { return config.New().Save(c) }
+		err = gui.Run(ctx, gui.Deps{
+			Service: svc, Config: cfg, Logger: log, SaveConfig: saveCfg,
+		})
+		if err != nil && !errors.Is(err, context.Canceled) {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(cli.ExitCodeFor(err))
+		}
+	case modeTUI:
 		_, err = tui.Run(ctx, tui.Deps{Service: svc, Config: cfg, Logger: log}, tui.Prefill{})
 		if err != nil && !errors.Is(err, context.Canceled) {
 			fmt.Fprintln(os.Stderr, err)
