@@ -15,9 +15,9 @@ import (
 )
 
 func TestIntegration_AssemblyAI_Transcribe(t *testing.T) {
-	key := os.Getenv("TRANSCRIBE_ASSEMBLYAI_KEY")
+	key := os.Getenv("ASSEMBLYAI_API_KEY")
 	if key == "" {
-		t.Skip("TRANSCRIBE_ASSEMBLYAI_KEY not set")
+		t.Skip("ASSEMBLYAI_API_KEY not set")
 	}
 	c := New(key, http.DefaultClient)
 	res, err := c.Transcribe(context.Background(),

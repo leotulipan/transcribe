@@ -15,9 +15,9 @@ import (
 )
 
 func TestIntegration_Groq_Transcribe(t *testing.T) {
-	key := os.Getenv("TRANSCRIBE_GROQ_KEY")
+	key := os.Getenv("GROQ_API_KEY")
 	if key == "" {
-		t.Skip("TRANSCRIBE_GROQ_KEY not set")
+		t.Skip("GROQ_API_KEY not set")
 	}
 	c := New(key, http.DefaultClient)
 	res, err := c.Transcribe(context.Background(),

@@ -39,7 +39,7 @@ func TestStore_EnvOverride(t *testing.T) {
 		APIKeys: map[domain.ProviderID]string{domain.ProviderGroq: "from_file"},
 	}))
 
-	t.Setenv("TRANSCRIBE_GROQ_KEY", "from_env")
+	t.Setenv("GROQ_API_KEY", "from_env")
 	t.Setenv("TRANSCRIBE_FFMPEG_PATH", `C:\override\ffmpeg.exe`)
 
 	out, err := s.Load()

@@ -15,9 +15,9 @@ import (
 )
 
 func TestIntegration_ElevenLabs_Transcribe(t *testing.T) {
-	key := os.Getenv("TRANSCRIBE_ELEVENLABS_KEY")
+	key := os.Getenv("ELEVENLABS_API_KEY")
 	if key == "" {
-		t.Skip("TRANSCRIBE_ELEVENLABS_KEY not set")
+		t.Skip("ELEVENLABS_API_KEY not set")
 	}
 	c := New(key, http.DefaultClient)
 	res, err := c.Transcribe(context.Background(),

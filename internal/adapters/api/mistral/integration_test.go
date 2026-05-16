@@ -15,9 +15,9 @@ import (
 )
 
 func TestIntegration_Mistral_Transcribe(t *testing.T) {
-	key := os.Getenv("TRANSCRIBE_MISTRAL_KEY")
+	key := os.Getenv("MISTRAL_API_KEY")
 	if key == "" {
-		t.Skip("TRANSCRIBE_MISTRAL_KEY not set")
+		t.Skip("MISTRAL_API_KEY not set")
 	}
 	c := New(key, http.DefaultClient)
 	res, err := c.Transcribe(context.Background(),

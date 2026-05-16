@@ -13,14 +13,17 @@ import (
 	"github.com/leotulipan/transcribe/internal/ports"
 )
 
-// envKeys maps provider IDs to environment variable names.
+// envKeys maps provider IDs to their canonical SDK environment variable names.
+// These match the names each provider's own client libraries and CLI tools use,
+// so a user's existing .env file (e.g., from the OpenAI, Anthropic, or Groq
+// Python SDKs) works without modification.
 var envKeys = map[domain.ProviderID]string{
-	domain.ProviderAssemblyAI: "TRANSCRIBE_ASSEMBLYAI_KEY",
-	domain.ProviderElevenLabs: "TRANSCRIBE_ELEVENLABS_KEY",
-	domain.ProviderGroq:       "TRANSCRIBE_GROQ_KEY",
-	domain.ProviderOpenAI:     "TRANSCRIBE_OPENAI_KEY",
-	domain.ProviderGemini:     "TRANSCRIBE_GEMINI_KEY",
-	domain.ProviderMistral:    "TRANSCRIBE_MISTRAL_KEY",
+	domain.ProviderAssemblyAI: "ASSEMBLYAI_API_KEY",
+	domain.ProviderElevenLabs: "ELEVENLABS_API_KEY",
+	domain.ProviderGroq:       "GROQ_API_KEY",
+	domain.ProviderOpenAI:     "OPENAI_API_KEY",
+	domain.ProviderGemini:     "GEMINI_API_KEY",
+	domain.ProviderMistral:    "MISTRAL_API_KEY",
 }
 
 const envFFmpegPath = "TRANSCRIBE_FFMPEG_PATH"
@@ -82,7 +85,7 @@ func (s *Store) Load() (ports.Config, error) {
 		}
 	}
 
-	// Env overrides
+	// Env overrides: each provider's canonical SDK env var wins over the file.
 	for id, env := range envKeys {
 		if v := os.Getenv(env); v != "" {
 			cfg.APIKeys[id] = v

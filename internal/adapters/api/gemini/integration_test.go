@@ -15,9 +15,9 @@ import (
 )
 
 func TestIntegration_Gemini_Transcribe(t *testing.T) {
-	key := os.Getenv("TRANSCRIBE_GEMINI_KEY")
+	key := os.Getenv("GEMINI_API_KEY")
 	if key == "" {
-		t.Skip("TRANSCRIBE_GEMINI_KEY not set")
+		t.Skip("GEMINI_API_KEY not set")
 	}
 	c := New(key, http.DefaultClient)
 	res, err := c.Transcribe(context.Background(),

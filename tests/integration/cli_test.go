@@ -23,13 +23,13 @@ func TestCLI_JSONMode_HelpExits0(t *testing.T) {
 }
 
 func TestCLI_JSON_RejectsMissingApiKey(t *testing.T) {
-	if os.Getenv("TRANSCRIBE_GROQ_KEY") != "" {
-		t.Skip("real GROQ key present — this test expects missing key")
+	if os.Getenv("GROQ_API_KEY") != "" {
+		t.Skip("real GROQ_API_KEY present — this test expects missing key")
 	}
 	bin := buildBinary(t)
 	sample := mustTestdata(t, "short-sample.mp3")
 	cmd := exec.Command(bin, "transcribe", "--json", "--api", "groq", "--output", "text", sample)
-	cmd.Env = append(os.Environ(), "TRANSCRIBE_GROQ_KEY=")
+	cmd.Env = append(os.Environ(), "GROQ_API_KEY=")
 	// Capture stdout and stderr separately so that log output on stderr
 	// does not corrupt the JSON we expect on stdout.
 	var stdout, stderr bytes.Buffer

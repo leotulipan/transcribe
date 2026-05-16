@@ -26,9 +26,15 @@ go test ./...
 # With race detector (slower)
 go test -race ./...
 
-# Integration tests (skipped unless API keys present)
-$env:TRANSCRIBE_GROQ_KEY = "gsk_..."
-go test -tags integration ./tests/integration/...
+# Integration tests (skipped unless the matching provider API key is present)
+$env:GROQ_API_KEY        = "gsk_..."
+# Or any of: OPENAI_API_KEY, ASSEMBLYAI_API_KEY, ELEVENLABS_API_KEY,
+# GEMINI_API_KEY, MISTRAL_API_KEY
+go test -tags integration ./...
+
+# Or, using the helper scripts in tests/scripts/ that load from your .env:
+#   source tests/scripts/load_env.sh "$HOME/.transcribe/.env" GROQ_API_KEY
+#   go test -tags integration ./internal/adapters/api/groq/...
 ```
 
 ## Notes

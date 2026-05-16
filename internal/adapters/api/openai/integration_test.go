@@ -15,9 +15,9 @@ import (
 )
 
 func TestIntegration_OpenAI_Transcribe(t *testing.T) {
-	key := os.Getenv("TRANSCRIBE_OPENAI_KEY")
+	key := os.Getenv("OPENAI_API_KEY")
 	if key == "" {
-		t.Skip("TRANSCRIBE_OPENAI_KEY not set")
+		t.Skip("OPENAI_API_KEY not set")
 	}
 	c := New(key, http.DefaultClient)
 	res, err := c.Transcribe(context.Background(),
