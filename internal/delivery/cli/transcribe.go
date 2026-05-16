@@ -30,8 +30,19 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "transcribe [flags] <file> [<file>...]",
 		Short: "Transcribe one or more files",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
+			if len(args) == 0 && f.jsonMode {
+				return fmt.Errorf("at least one input file is required in --json mode")
+			}
+			if len(args) == 0 {
+				return &EscalateToTUI{
+					Provider: f.api,
+					Model:    f.model,
+					Language: f.language,
+					Formats:  mustFormats(f),
+				}
+			}
 			return runTranscribe(c.Context(), d, f, args)
 		},
 	}
@@ -52,6 +63,17 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 	formats, err := parseFormats(f.outputs, f.davinci)
 	if err != nil {
 		return err
+	}
+	if !f.jsonMode {
+		// Escalation rule: if no provider is configured at all, escalate to TUI.
+		if f.api == "" && d.Config.DefaultProvider == "" {
+			return &EscalateToTUI{
+				InputPath: firstOr(files, ""),
+				Model:     f.model,
+				Language:  f.language,
+				Formats:   formats,
+			}
+		}
 	}
 	provider := domain.ProviderID(f.api)
 	for _, file := range files {
@@ -131,3 +153,29 @@ func renderText(stderr *os.File, job interface {
 }
 
 func parseSilentMs(ms int) time.Duration { return time.Duration(ms) * time.Millisecond }
+
+// EscalateToTUI is returned by the CLI when required inputs are missing under
+// non-JSON mode. main.go catches it and launches the TUI prefilled with what
+// the user did pass.
+type EscalateToTUI struct {
+	InputPath string
+	Provider  string
+	Model     string
+	Language  string
+	Formats   []domain.OutputFormat
+}
+
+func (e *EscalateToTUI) Error() string { return "escalating to TUI for missing inputs" }
+
+func firstOr(s []string, def string) string {
+	if len(s) > 0 {
+		return s[0]
+	}
+	return def
+}
+
+// mustFormats parses formats from flags, returning an empty slice on error.
+func mustFormats(f *transcribeFlags) []domain.OutputFormat {
+	out, _ := parseFormats(f.outputs, f.davinci)
+	return out
+}
