@@ -121,6 +121,18 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 			err = cerr
 			return nil, fmt.Errorf("chunk: %w", err)
 		}
+		// Track chunk files for cleanup when chunking actually split the source.
+		// audio.Chunk returns a single chunk pointing at prepared.Path when no
+		// split was needed — that file is already in tempFiles via `prepared`.
+		if len(chunks) > 1 || (len(chunks) == 1 && chunks[0].Path != prepared.Path) {
+			for _, c := range chunks {
+				tempFiles = append(tempFiles, domain.AudioFile{
+					Path:     c.Path,
+					IsTemp:   true,
+					Complete: c.Complete,
+				})
+			}
+		}
 
 		// Stage 7 — transcribe each chunk
 		emit(domain.ProgressEvent{Stage: domain.StageTranscribing})
