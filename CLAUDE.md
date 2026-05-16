@@ -294,12 +294,43 @@ Uses `loguru` configured in `transcribe_helpers/utils.py`:
 
 ## Shell Commands
 
-Do NOT prefix Bash commands with `cd` to the project root — the working directory is already set to the project root. Run commands directly with relative paths.
+**Never prefix Bash commands with `cd`** unless you genuinely need to run a
+command in a directory *other* than the current working directory. The session's
+cwd is set at start and persists across every Bash invocation — `cd <our-cwd>
+&& cmd` is identical to `cmd`, just slower and noisier.
 
-**Wrong:** `cd "G:\Meine Ablage\_2_Areas\Scripts\Transcribe" && uv run pytest`
-**Right:** `uv run pytest`
+This applies in every situation the habit shows up:
 
-This is important because the project path contains spaces, and `cd` with such paths triggers backslash-escaped whitespace security warnings in Claude Code.
+- `cd <repo-root> && git status` → just `git status`. Git already operates on the worktree.
+- `cd <repo-root> && go build ./...` → just `go build ./...`.
+- `cd <worktree-path> && grep -rn foo` → just `grep -rn foo`.
+- `cd "<path with spaces>" && cmd` → never; spaces trigger a "may execute hooks
+  from target directory" approval prompt.
+
+**Worktree note:** When this session runs inside a git worktree (e.g.
+`.claude/worktrees/<branch>/`), that worktree path *is* your cwd. Don't `cd`
+into it — you're already there.
+
+**Subagent note:** Subagents inherit the dispatcher's cwd. If you're dispatching
+one, do *not* instruct it to `cd` anywhere either; trust the cwd. When a
+subagent genuinely needs a different directory, name it in the prompt and have
+the subagent use `git -C <path>`, `go -C <path>`, or absolute paths instead of
+`cd && ...`.
+
+The only legitimate use of `cd` is when a single sequenced command needs to
+start somewhere genuinely else (e.g. `cd /tmp/scratch && make-something && cp
+result ./`). Prefer absolute paths or per-command `-C`/`--cwd` flags over `cd`
+even there.
+
+**Wrong:** `cd "C:\local\cc\programming\python\transcribe" && go test ./...`
+**Right:** `go test ./...`
+
+**Wrong:** `cd .claude/worktrees/go-port && git log`
+**Right:** `git -C .claude/worktrees/go-port log` (only when actually targeting a
+different dir)
+
+Each `cd` to a path containing spaces costs the user a manual approval click on
+Windows. Don't make them click.
 
 ## Git Workflow
 
