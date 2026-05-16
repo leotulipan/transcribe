@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/pelletier/go-toml/v2"
 
@@ -77,21 +78,23 @@ func (s *Store) Load() (ports.Config, error) {
 		if err := toml.Unmarshal(data, &fs_); err != nil {
 			return cfg, err
 		}
-		cfg.DefaultProvider = domain.ProviderID(fs_.DefaultProvider)
-		cfg.DefaultLanguage = fs_.DefaultLanguage
-		cfg.FFmpegPath = fs_.FFmpegPath
+		cfg.DefaultProvider = domain.ProviderID(strings.TrimSpace(fs_.DefaultProvider))
+		cfg.DefaultLanguage = strings.TrimSpace(fs_.DefaultLanguage)
+		cfg.FFmpegPath = strings.TrimSpace(fs_.FFmpegPath)
 		for k, v := range fs_.APIKeys {
-			cfg.APIKeys[domain.ProviderID(k)] = v
+			cfg.APIKeys[domain.ProviderID(k)] = strings.TrimSpace(v)
 		}
 	}
 
 	// Env overrides: each provider's canonical SDK env var wins over the file.
+	// TrimSpace handles CRLF/trailing-whitespace artifacts from .env loaders
+	// that don't normalize line endings on Windows.
 	for id, env := range envKeys {
-		if v := os.Getenv(env); v != "" {
+		if v := strings.TrimSpace(os.Getenv(env)); v != "" {
 			cfg.APIKeys[id] = v
 		}
 	}
-	if v := os.Getenv(envFFmpegPath); v != "" {
+	if v := strings.TrimSpace(os.Getenv(envFFmpegPath)); v != "" {
 		cfg.FFmpegPath = v
 	}
 	return cfg, nil

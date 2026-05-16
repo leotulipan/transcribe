@@ -12,11 +12,15 @@ fi
 while IFS= read -r line || [ -n "$line" ]; do
     if [[ -z "$line" ]] || [[ "$line" == \#* ]]; then continue; fi
     
+    # Strip trailing CR (Windows CRLF) before any field splitting
+    line="${line%$'\r'}"
     key="${line%%=*}"
     value="${line#*=}"
-    
-    # Strip quotes and whitespace
+
+    # Strip quotes from value, trailing whitespace from value, whitespace from key
     value="${value%\"}"; value="${value#\"}"; value="${value%\'}"; value="${value#\'}"
+    # shellcheck disable=SC2001  # trailing whitespace removal needs sed
+    value="$(echo -n "$value" | sed 's/[[:space:]]*$//')"
     key=$(echo "$key" | xargs)
     
     if [ -z "$TARGET_KEY" ] || [ "$key" == "$TARGET_KEY" ]; then
