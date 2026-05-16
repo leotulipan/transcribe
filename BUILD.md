@@ -35,7 +35,6 @@ go test -tags integration ./tests/integration/...
 
 - v1 ships Windows-only. macOS/Linux are v2 and require additional toolchain
   setup (Fyne CGO + macOS signing).
-- The TUI/GUI delivery layers are not yet wired (Plans 3 and 4).
 
 ## Reproducible build
 
@@ -45,3 +44,15 @@ go test -tags integration ./tests/integration/...
 ```
 
 `./bin/transcribe.exe --version` will report the embedded version.
+
+## GUI flavor
+
+`scripts/build.ps1` produces two executables:
+
+- `bin/transcribe.exe` — full binary. Run from a terminal for CLI/TUI/JSON
+  modes; double-click to open the GUI.
+- `bin/transcribe-gui.exe` — GUI-only, built with `-H windowsgui` so launching
+  from Explorer never pops a console window. Identical functionality otherwise.
+
+Distribution: ship both side-by-side in the release ZIP. Most users will pin
+`transcribe-gui.exe` to their taskbar.
