@@ -29,6 +29,12 @@ var envKeys = map[domain.ProviderID]string{
 
 const envFFmpegPath = "TRANSCRIBE_FFMPEG_PATH"
 
+// LocalConfigName is the filename Load() looks for in (or above) the CWD as an
+// override layer for the user-level config. Same shape as the main TOML;
+// intended to carry per-checkout API keys for tests and dev runs.
+// Added to .gitignore.
+const LocalConfigName = ".transcribe.toml"
+
 // fileShape is the on-disk TOML schema.
 type fileShape struct {
 	DefaultProvider string            `toml:"default_provider"`
@@ -67,26 +73,21 @@ func (s *Store) Path() string { return s.path }
 func (s *Store) Load() (ports.Config, error) {
 	cfg := ports.Config{APIKeys: map[domain.ProviderID]string{}}
 
-	data, err := os.ReadFile(s.path)
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		// OK, empty config
-	case err != nil:
+	// Layer 1: user-level TOML at s.path (e.g. %LOCALAPPDATA%\transcribe\config.toml).
+	if err := mergeFile(s.path, &cfg); err != nil {
 		return cfg, err
-	default:
-		var fs_ fileShape
-		if err := toml.Unmarshal(data, &fs_); err != nil {
+	}
+
+	// Layer 2: repo-local override at .transcribe.toml in (or above) the CWD.
+	// Walks up from CWD to find the file, so running from a subdirectory still
+	// picks up the project's local keys.
+	if local := findLocalConfig(); local != "" {
+		if err := mergeFile(local, &cfg); err != nil {
 			return cfg, err
-		}
-		cfg.DefaultProvider = domain.ProviderID(strings.TrimSpace(fs_.DefaultProvider))
-		cfg.DefaultLanguage = strings.TrimSpace(fs_.DefaultLanguage)
-		cfg.FFmpegPath = strings.TrimSpace(fs_.FFmpegPath)
-		for k, v := range fs_.APIKeys {
-			cfg.APIKeys[domain.ProviderID(k)] = strings.TrimSpace(v)
 		}
 	}
 
-	// Env overrides: each provider's canonical SDK env var wins over the file.
+	// Layer 3: env vars (each provider's canonical SDK var) win over both files.
 	// TrimSpace handles CRLF/trailing-whitespace artifacts from .env loaders
 	// that don't normalize line endings on Windows.
 	for id, env := range envKeys {
@@ -98,6 +99,57 @@ func (s *Store) Load() (ports.Config, error) {
 		cfg.FFmpegPath = v
 	}
 	return cfg, nil
+}
+
+// mergeFile reads a TOML config file and merges its values into cfg.
+// Missing file is not an error.
+func mergeFile(path string, cfg *ports.Config) error {
+	data, err := os.ReadFile(path)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return nil
+	case err != nil:
+		return err
+	}
+	var fs_ fileShape
+	if err := toml.Unmarshal(data, &fs_); err != nil {
+		return err
+	}
+	if v := strings.TrimSpace(fs_.DefaultProvider); v != "" {
+		cfg.DefaultProvider = domain.ProviderID(v)
+	}
+	if v := strings.TrimSpace(fs_.DefaultLanguage); v != "" {
+		cfg.DefaultLanguage = v
+	}
+	if v := strings.TrimSpace(fs_.FFmpegPath); v != "" {
+		cfg.FFmpegPath = v
+	}
+	for k, v := range fs_.APIKeys {
+		if v := strings.TrimSpace(v); v != "" {
+			cfg.APIKeys[domain.ProviderID(k)] = v
+		}
+	}
+	return nil
+}
+
+// findLocalConfig walks up from the CWD looking for LocalConfigName. Returns
+// the absolute path or "" if not found / on any error.
+func findLocalConfig() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	for {
+		candidate := filepath.Join(dir, LocalConfigName)
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
 }
 
 func (s *Store) Save(cfg ports.Config) error {

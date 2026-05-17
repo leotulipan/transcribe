@@ -5,20 +5,23 @@ package openai
 import (
 	"context"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
+	"github.com/leotulipan/transcribe/internal/integration"
 	"github.com/leotulipan/transcribe/internal/ports"
 )
 
+func TestIntegration_OpenAI_CheckKey(t *testing.T) {
+	key := integration.Key(t, domain.ProviderOpenAI)
+	c := New(key, http.DefaultClient)
+	require.NoError(t, c.CheckKey(context.Background()))
+}
+
 func TestIntegration_OpenAI_Transcribe(t *testing.T) {
-	key := os.Getenv("OPENAI_API_KEY")
-	if key == "" {
-		t.Skip("OPENAI_API_KEY not set")
-	}
+	key := integration.Key(t, domain.ProviderOpenAI)
 	c := New(key, http.DefaultClient)
 	res, err := c.Transcribe(context.Background(),
 		domain.AudioFile{Path: "../../../../testdata/short-sample.mp3", Container: "mp3", Codec: "mp3"},

@@ -20,6 +20,11 @@ type Provider interface {
     // Transcribe ingests a file already within MaxUploadBytes() and an accepted
     // codec, returns a normalized Result.
     Transcribe(ctx context.Context, audio domain.AudioFile, opts ProviderOpts) (*domain.Result, error)
+
+    // CheckKey performs a non-consuming probe (e.g. GET /models) to verify the
+    // configured API key is valid. Returns nil on success. Adapters that do
+    // not yet implement a probe return errors.ErrUnsupported.
+    CheckKey(ctx context.Context) error
 }
 
 type ModelCapabilities struct {

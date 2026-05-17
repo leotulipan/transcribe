@@ -25,6 +25,7 @@ func (f fakeProvider) DefaultModel() string {
 	return f.models[0]
 }
 func (fakeProvider) Capabilities(string) ports.ModelCapabilities { return ports.ModelCapabilities{} }
+func (fakeProvider) CheckKey(_ context.Context) error            { return nil }
 func (fakeProvider) Transcribe(_ context.Context, _ domain.AudioFile, _ ports.ProviderOpts) (*domain.Result, error) {
 	panic("not called in this test")
 }

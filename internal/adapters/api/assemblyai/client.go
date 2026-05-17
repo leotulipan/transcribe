@@ -20,7 +20,9 @@ const (
 	maxUploadBytes  = 200 * 1024 * 1024
 	uploadPath      = "/v2/upload"
 	transcriptPath  = "/v2/transcript"
+	checkKeyPath    = "/v2/transcript?limit=1"
 	requestTimeout  = 10 * time.Minute
+	checkKeyTimeout = 10 * time.Second
 )
 
 // pollInterval is the delay between transcript status polls.
@@ -54,6 +56,33 @@ func (c *Client) Models() []string      { return Models() }
 func (c *Client) DefaultModel() string  { return DefaultModel() }
 func (c *Client) Capabilities(m string) ports.ModelCapabilities {
 	return Capabilities(m)
+}
+
+// CheckKey verifies the API key by listing one transcript (free, non-consuming).
+// AssemblyAI has no dedicated /user endpoint; transcript listing is the cheapest
+// authenticated GET. The Python client skipped validation entirely.
+func (c *Client) CheckKey(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, checkKeyTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", c.endpoint+checkKeyPath, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", c.apiKey) // raw key, no Bearer prefix
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return &domain.ErrProvider{Provider: domain.ProviderAssemblyAI, Cause: err}
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return &domain.ErrProvider{
+			Provider:   domain.ProviderAssemblyAI,
+			StatusCode: resp.StatusCode,
+			Cause:      fmt.Errorf("%s", string(body)),
+		}
+	}
+	return nil
 }
 
 func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts ports.ProviderOpts) (*domain.Result, error) {

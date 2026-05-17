@@ -108,6 +108,7 @@ func (f *fakeProviderFull) Capabilities(m string) ports.ModelCapabilities {
 	}
 	return ports.ModelCapabilities{}
 }
+func (f *fakeProviderFull) CheckKey(_ context.Context) error { return nil }
 func (f *fakeProviderFull) Transcribe(ctx context.Context, a domain.AudioFile, o ports.ProviderOpts) (*domain.Result, error) {
 	if f.transcribeFn != nil {
 		return f.transcribeFn(ctx, a, o)

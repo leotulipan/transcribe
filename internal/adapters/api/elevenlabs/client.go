@@ -3,6 +3,7 @@ package elevenlabs
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -19,7 +20,9 @@ const (
 	defaultEndpoint = "https://api.elevenlabs.io"
 	maxUploadBytes  = 1000 * 1024 * 1024 // 1 GB
 	transcribePath  = "/v1/speech-to-text"
+	userPath        = "/v1/user"
 	requestTimeout  = 10 * time.Minute
+	checkKeyTimeout = 10 * time.Second
 )
 
 // Client implements ports.Provider against ElevenLabs' speech-to-text endpoint.
@@ -49,6 +52,31 @@ func (c *Client) Models() []string      { return Models() }
 func (c *Client) DefaultModel() string  { return DefaultModel() }
 func (c *Client) Capabilities(m string) ports.ModelCapabilities {
 	return Capabilities(m)
+}
+
+// CheckKey verifies the API key with a non-consuming GET /v1/user.
+func (c *Client) CheckKey(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, checkKeyTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", c.endpoint+userPath, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("xi-api-key", c.apiKey)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return &domain.ErrProvider{Provider: domain.ProviderElevenLabs, Cause: err}
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return &domain.ErrProvider{
+			Provider:   domain.ProviderElevenLabs,
+			StatusCode: resp.StatusCode,
+			Cause:      fmt.Errorf("%s", string(body)),
+		}
+	}
+	return nil
 }
 
 func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts ports.ProviderOpts) (*domain.Result, error) {

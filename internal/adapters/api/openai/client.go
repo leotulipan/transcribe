@@ -3,6 +3,7 @@ package openai
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -19,7 +20,9 @@ const (
 	defaultEndpoint = "https://api.openai.com"
 	maxUploadBytes  = 25 * 1024 * 1024
 	transcribePath  = "/v1/audio/transcriptions"
+	modelsPath      = "/v1/models"
 	requestTimeout  = 5 * time.Minute
+	checkKeyTimeout = 10 * time.Second
 )
 
 // Client implements ports.Provider against OpenAI's audio transcription endpoint.
@@ -48,6 +51,31 @@ func (c *Client) Models() []string      { return Models() }
 func (c *Client) DefaultModel() string  { return DefaultModel() }
 func (c *Client) Capabilities(m string) ports.ModelCapabilities {
 	return Capabilities(m)
+}
+
+// CheckKey verifies the API key with a non-consuming GET /v1/models.
+func (c *Client) CheckKey(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, checkKeyTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", c.endpoint+modelsPath, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return &domain.ErrProvider{Provider: domain.ProviderOpenAI, Cause: err}
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return &domain.ErrProvider{
+			Provider:   domain.ProviderOpenAI,
+			StatusCode: resp.StatusCode,
+			Cause:      fmt.Errorf("%s", string(body)),
+		}
+	}
+	return nil
 }
 
 func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts ports.ProviderOpts) (*domain.Result, error) {

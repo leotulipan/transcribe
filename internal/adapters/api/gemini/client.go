@@ -22,7 +22,9 @@ const (
 	maxUploadBytes  = 2 * 1024 * 1024 * 1024 // 2 GB (Files API limit)
 	uploadBasePath  = "/upload/v1beta/files"
 	generatePath    = "/v1beta/models/%s:generateContent"
+	modelsPath      = "/v1beta/models"
 	requestTimeout  = 10 * time.Minute
+	checkKeyTimeout = 10 * time.Second
 	transcribePrompt = "Transcribe the audio. Return only the spoken text, with no commentary."
 )
 
@@ -57,6 +59,31 @@ func (c *Client) Models() []string      { return Models() }
 func (c *Client) DefaultModel() string  { return DefaultModel() }
 func (c *Client) Capabilities(m string) ports.ModelCapabilities {
 	return Capabilities(m)
+}
+
+// CheckKey verifies the API key with a non-consuming GET /v1beta/models.
+func (c *Client) CheckKey(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, checkKeyTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", c.endpoint+modelsPath, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("x-goog-api-key", c.apiKey)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return &domain.ErrProvider{Provider: domain.ProviderGemini, Cause: err}
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return &domain.ErrProvider{
+			Provider:   domain.ProviderGemini,
+			StatusCode: resp.StatusCode,
+			Cause:      fmt.Errorf("%s", string(body)),
+		}
+	}
+	return nil
 }
 
 func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts ports.ProviderOpts) (*domain.Result, error) {

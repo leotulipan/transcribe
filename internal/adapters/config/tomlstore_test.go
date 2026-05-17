@@ -11,6 +11,7 @@ import (
 )
 
 func TestStore_RoundTrip(t *testing.T) {
+	t.Chdir(t.TempDir()) // isolate from any repo-local .transcribe.toml
 	dir := t.TempDir()
 	s := newWithPath(filepath.Join(dir, "config.toml"))
 
@@ -33,6 +34,7 @@ func TestStore_RoundTrip(t *testing.T) {
 }
 
 func TestStore_EnvOverride(t *testing.T) {
+	t.Chdir(t.TempDir())
 	dir := t.TempDir()
 	s := newWithPath(filepath.Join(dir, "config.toml"))
 	require.NoError(t, s.Save(ports_Config{
@@ -49,11 +51,38 @@ func TestStore_EnvOverride(t *testing.T) {
 }
 
 func TestStore_LoadMissingFileReturnsEmpty(t *testing.T) {
+	t.Chdir(t.TempDir())
 	s := newWithPath(filepath.Join(t.TempDir(), "missing.toml"))
 	out, err := s.Load()
 	require.NoError(t, err)
 	require.NotNil(t, out.APIKeys)
 	require.Empty(t, out.APIKeys)
+}
+
+func TestStore_LocalConfigOverridesUserConfig(t *testing.T) {
+	// User-level TOML in one tempdir, repo-local .transcribe.toml in another
+	// that we cd into. Repo-local should win.
+	userDir := t.TempDir()
+	repoDir := t.TempDir()
+	t.Chdir(repoDir)
+
+	s := newWithPath(filepath.Join(userDir, "config.toml"))
+	require.NoError(t, s.Save(ports_Config{
+		APIKeys:         map[domain.ProviderID]string{domain.ProviderGroq: "user_groq"},
+		DefaultLanguage: "en",
+	}))
+
+	require.NoError(t, os.WriteFile(
+		filepath.Join(repoDir, LocalConfigName),
+		[]byte(`[api_keys]`+"\n"+`groq = "local_groq"`+"\n"+`openai = "local_openai"`+"\n"),
+		0o600,
+	))
+
+	out, err := s.Load()
+	require.NoError(t, err)
+	require.Equal(t, "local_groq", out.APIKeys[domain.ProviderGroq])
+	require.Equal(t, "local_openai", out.APIKeys[domain.ProviderOpenAI])
+	require.Equal(t, "en", out.DefaultLanguage) // preserved from user config
 }
 
 // Local alias so the test file doesn't import the ports package — we just need

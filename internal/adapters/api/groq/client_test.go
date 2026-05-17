@@ -14,6 +14,37 @@ import (
 	"github.com/leotulipan/transcribe/internal/ports"
 )
 
+func TestClient_CheckKey(t *testing.T) {
+	t.Run("200 ok", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, "GET", r.Method)
+			require.Equal(t, "/openai/v1/models", r.URL.Path)
+			require.Equal(t, "Bearer test-key", r.Header.Get("Authorization"))
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"data":[]}`))
+		}))
+		defer srv.Close()
+
+		c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+		require.NoError(t, c.CheckKey(context.Background()))
+	})
+
+	t.Run("401 returns ErrProvider", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":"invalid api key"}`))
+		}))
+		defer srv.Close()
+
+		c := NewWithEndpoint("bad", srv.URL, http.DefaultClient)
+		err := c.CheckKey(context.Background())
+		require.Error(t, err)
+		var pe *domain.ErrProvider
+		require.ErrorAs(t, err, &pe)
+		require.Equal(t, 401, pe.StatusCode)
+	})
+}
+
 func TestClient_TranscribePostsAndParses(t *testing.T) {
 	fixture, err := os.ReadFile("../../../../testdata/groq_sample.json")
 	require.NoError(t, err)

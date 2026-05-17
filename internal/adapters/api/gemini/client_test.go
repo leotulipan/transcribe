@@ -15,6 +15,31 @@ import (
 	"github.com/leotulipan/transcribe/internal/ports"
 )
 
+func TestClient_CheckKey(t *testing.T) {
+	t.Run("200 ok", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, "GET", r.Method)
+			require.Equal(t, "/v1beta/models", r.URL.Path)
+			require.Equal(t, "test-key", r.Header.Get("x-goog-api-key"))
+			_, _ = w.Write([]byte(`{"models":[]}`))
+		}))
+		defer srv.Close()
+		c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+		require.NoError(t, c.CheckKey(context.Background()))
+	})
+	t.Run("403 returns ErrProvider", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusForbidden)
+		}))
+		defer srv.Close()
+		c := NewWithEndpoint("bad", srv.URL, http.DefaultClient)
+		err := c.CheckKey(context.Background())
+		var pe *domain.ErrProvider
+		require.ErrorAs(t, err, &pe)
+		require.Equal(t, 403, pe.StatusCode)
+	})
+}
+
 func TestClient_TranscribeTwoSteps(t *testing.T) {
 	fixture, err := os.ReadFile("../../../../testdata/gemini_sample.json")
 	require.NoError(t, err)

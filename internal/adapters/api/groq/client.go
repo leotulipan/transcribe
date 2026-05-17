@@ -3,6 +3,7 @@ package groq
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -19,7 +20,9 @@ const (
 	defaultEndpoint = "https://api.groq.com"
 	maxUploadBytes  = 25 * 1024 * 1024
 	transcribePath  = "/openai/v1/audio/transcriptions"
+	modelsPath      = "/openai/v1/models"
 	requestTimeout  = 5 * time.Minute
+	checkKeyTimeout = 10 * time.Second
 )
 
 // Client implements ports.Provider against Groq's OpenAI-compatible endpoint.
@@ -48,6 +51,32 @@ func (c *Client) Models() []string      { return Models() }
 func (c *Client) DefaultModel() string  { return DefaultModel() }
 func (c *Client) Capabilities(m string) ports.ModelCapabilities {
 	return Capabilities(m)
+}
+
+// CheckKey verifies the API key with a non-consuming GET /openai/v1/models.
+// Listing models is free and a 200 response confirms the key is accepted.
+func (c *Client) CheckKey(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, checkKeyTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", c.endpoint+modelsPath, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return &domain.ErrProvider{Provider: domain.ProviderGroq, Cause: err}
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return &domain.ErrProvider{
+			Provider:   domain.ProviderGroq,
+			StatusCode: resp.StatusCode,
+			Cause:      fmt.Errorf("%s", string(body)),
+		}
+	}
+	return nil
 }
 
 func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts ports.ProviderOpts) (*domain.Result, error) {
