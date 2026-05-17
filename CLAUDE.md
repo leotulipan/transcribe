@@ -194,7 +194,7 @@ ElevenLabs supports speaker diarization (--diarize flag). When enabled:
 
 ## Testing
 
-Uses **pytest** with Red/Green TDD workflow. Full guide: `docs/red_green_tdd.md`
+Uses **pytest** with Red/Green TDD workflow. Full guide: `python/docs/red_green_tdd.md`
 
 ```bash
 # Unit tests (fast, no API keys needed)
@@ -359,7 +359,7 @@ Managed via `pyproject.toml` with UV (never pip directly).
 5. Register in `get_api_instance()` factory function
 6. Update MODEL_REGISTRY with available models
 7. Update CLI help text and README
-8. Add unit tests in `tests/unit/test_parsers.py` and integration tests in `tests/integration/test_api_integration_newapi.py` (see `docs/red_green_tdd.md`)
+8. Add unit tests in `tests/unit/test_parsers.py` and integration tests in `tests/integration/test_api_integration_newapi.py` (see `python/docs/red_green_tdd.md`)
 
 ### Adding a New Output Format
 
