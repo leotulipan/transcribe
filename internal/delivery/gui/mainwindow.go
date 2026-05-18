@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -77,6 +78,8 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	if len(providerIDs) > 0 {
 		m.provider.SetSelected(providerIDs[0])
 	}
+	refreshModels := widget.NewButton("↻", m.onRefreshModels)
+	refreshModels.SetIcon(nil) // text-only; emoji renders consistently in Fyne
 
 	// Language + formats
 	m.language = widget.NewEntry()
@@ -108,7 +111,9 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 		container.NewBorder(nil, nil, nil, container.NewHBox(browseFile, browseDir), m.pathEntry),
 
 		widget.NewLabelWithStyle("Provider", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		container.NewGridWithColumns(2, m.provider, m.model),
+		container.NewBorder(nil, nil, nil, refreshModels,
+			container.NewGridWithColumns(2, m.provider, m.model),
+		),
 
 		widget.NewLabelWithStyle("Language", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		m.language,
@@ -346,6 +351,52 @@ func (m *mainWindow) onCancel() {
 	if m.currentJob != nil {
 		m.currentJob.Cancel()
 	}
+}
+
+// onRefreshModels calls the current provider's DiscoverModels endpoint,
+// persists the result via SaveConfig + Reload, and refreshes the dropdown.
+// Per-plan decision: per-provider button (no all-at-once action).
+func (m *mainWindow) onRefreshModels() {
+	if m.provider.Selected == "" {
+		dialog.ShowInformation("Pick a provider",
+			"Select a provider first.", m.Window)
+		return
+	}
+	pid := domain.ProviderID(m.provider.Selected)
+	go func() {
+		ctx, cancel := context.WithTimeout(m.ctx, 30*time.Second)
+		defer cancel()
+		svc := m.deps.Service()
+		models, err := svc.DiscoverModels(ctx, pid)
+		fyne.Do(func() {
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("discover %s: %w", pid, err), m.Window)
+				return
+			}
+			// Persist into config.
+			cfg := m.deps.Config()
+			if cfg.DiscoveredModels == nil {
+				cfg.DiscoveredModels = map[domain.ProviderID][]string{}
+			}
+			cfg.DiscoveredModels[pid] = models
+			if m.deps.SaveConfig != nil {
+				if saveErr := m.deps.SaveConfig(cfg); saveErr != nil {
+					dialog.ShowError(saveErr, m.Window)
+					return
+				}
+				if reloadErr := m.deps.Reload(); reloadErr != nil {
+					dialog.ShowError(reloadErr, m.Window)
+					return
+				}
+			}
+			m.model.Options = models
+			if len(models) > 0 {
+				m.model.SetSelected(models[0])
+			}
+			m.model.Refresh()
+			m.logf("refreshed %s: %d models", pid, len(models))
+		})
+	}()
 }
 
 func (m *mainWindow) onSettings() {

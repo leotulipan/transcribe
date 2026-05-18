@@ -20,6 +20,15 @@ func TestIntegration_Groq_CheckKey(t *testing.T) {
 	require.NoError(t, c.CheckKey(context.Background()))
 }
 
+func TestIntegration_Groq_DiscoverModels(t *testing.T) {
+	key := integration.Key(t, domain.ProviderGroq)
+	c := New(key, http.DefaultClient)
+	models, err := c.DiscoverModels(context.Background())
+	require.NoError(t, err)
+	require.NotEmpty(t, models)
+	t.Logf("groq discovered %d models: %v", len(models), models)
+}
+
 func TestIntegration_Groq_Transcribe(t *testing.T) {
 	key := integration.Key(t, domain.ProviderGroq)
 	c := New(key, http.DefaultClient)

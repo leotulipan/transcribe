@@ -21,6 +21,7 @@ const (
 	maxUploadBytes  = 1000 * 1024 * 1024 // 1 GB
 	transcribePath  = "/v1/speech-to-text"
 	userPath        = "/v1/user"
+	modelsPath      = "/v1/models"
 	requestTimeout  = 10 * time.Minute
 	checkKeyTimeout = 10 * time.Second
 )

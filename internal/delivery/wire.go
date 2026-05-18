@@ -40,10 +40,11 @@ func BuildService(cfg ports.Config, log ports.Logger) (ports.TranscribeService, 
 	}
 
 	return services.New(services.Deps{
-		Providers: providers,
-		Audio:     ffmpeg,
-		Cache:     cache.New(),
-		Writers:   writers,
-		Log:       log,
+		Providers:        providers,
+		Audio:            ffmpeg,
+		Cache:            cache.New(),
+		Writers:          writers,
+		Log:              log,
+		DiscoveredModels: cfg.DiscoveredModels,
 	}), nil
 }

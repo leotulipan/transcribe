@@ -25,5 +25,6 @@ func NewRoot(d Deps) *cobra.Command {
 	root.AddCommand(newProvidersCmd(d))
 	root.AddCommand(newSetupCmd(d))
 	root.AddCommand(newTestKeysCmd(d))
+	root.AddCommand(newDiscoverModelsCmd(d))
 	return root
 }

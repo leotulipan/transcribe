@@ -22,6 +22,10 @@ func (s *fakeSvc) ListModels(p domain.ProviderID) ([]string, error) {
 	return []string{"whisper-large-v3", "whisper-large-v3-turbo"}, nil
 }
 
+func (s *fakeSvc) DiscoverModels(_ context.Context, p domain.ProviderID) ([]string, error) {
+	return []string{"whisper-large-v3", "whisper-large-v3-turbo"}, nil
+}
+
 // fakeJob completes immediately with a synthetic result.
 type fakeJob struct {
 	done chan struct{}

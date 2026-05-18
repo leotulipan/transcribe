@@ -37,10 +37,11 @@ const LocalConfigName = ".transcribe.toml"
 
 // fileShape is the on-disk TOML schema.
 type fileShape struct {
-	DefaultProvider string            `toml:"default_provider"`
-	DefaultLanguage string            `toml:"default_language"`
-	FFmpegPath      string            `toml:"ffmpeg_path"`
-	APIKeys         map[string]string `toml:"api_keys"`
+	DefaultProvider  string              `toml:"default_provider"`
+	DefaultLanguage  string              `toml:"default_language"`
+	FFmpegPath       string              `toml:"ffmpeg_path"`
+	APIKeys          map[string]string   `toml:"api_keys"`
+	DiscoveredModels map[string][]string `toml:"discovered_models,omitempty"`
 }
 
 type Store struct {
@@ -129,6 +130,16 @@ func mergeFile(path string, cfg *ports.Config) error {
 			cfg.APIKeys[domain.ProviderID(k)] = v
 		}
 	}
+	if len(fs_.DiscoveredModels) > 0 {
+		if cfg.DiscoveredModels == nil {
+			cfg.DiscoveredModels = map[domain.ProviderID][]string{}
+		}
+		for k, list := range fs_.DiscoveredModels {
+			if len(list) > 0 {
+				cfg.DiscoveredModels[domain.ProviderID(k)] = list
+			}
+		}
+	}
 	return nil
 }
 
@@ -162,6 +173,14 @@ func (s *Store) Save(cfg ports.Config) error {
 	for k, v := range cfg.APIKeys {
 		fs_.APIKeys[string(k)] = v
 	}
+	if len(cfg.DiscoveredModels) > 0 {
+		fs_.DiscoveredModels = map[string][]string{}
+		for k, list := range cfg.DiscoveredModels {
+			if len(list) > 0 {
+				fs_.DiscoveredModels[string(k)] = list
+			}
+		}
+	}
 
 	data, err := toml.Marshal(fs_)
 	if err != nil {
@@ -170,5 +189,25 @@ func (s *Store) Save(cfg ports.Config) error {
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
 		return err
 	}
-	return os.WriteFile(s.path, data, 0o600)
+	// Atomic write: write to a temp file in the same dir, then rename.
+	// Both the GUI settings save and `transcribe discover-models` may write
+	// the same file; this avoids torn writes if they race.
+	tmp, err := os.CreateTemp(filepath.Dir(s.path), ".config.toml.tmp.*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName) // best-effort cleanup on error paths
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(0o600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, s.path)
 }

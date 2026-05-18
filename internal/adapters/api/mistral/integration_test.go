@@ -20,6 +20,15 @@ func TestIntegration_Mistral_CheckKey(t *testing.T) {
 	require.NoError(t, c.CheckKey(context.Background()))
 }
 
+func TestIntegration_Mistral_DiscoverModels(t *testing.T) {
+	key := integration.Key(t, domain.ProviderMistral)
+	c := New(key, http.DefaultClient)
+	models, err := c.DiscoverModels(context.Background())
+	require.NoError(t, err)
+	require.NotEmpty(t, models)
+	t.Logf("mistral discovered %d models: %v", len(models), models)
+}
+
 func TestIntegration_Mistral_Transcribe(t *testing.T) {
 	key := integration.Key(t, domain.ProviderMistral)
 	c := New(key, http.DefaultClient)

@@ -88,10 +88,11 @@ func TestStore_LocalConfigOverridesUserConfig(t *testing.T) {
 // Local alias so the test file doesn't import the ports package — we just need
 // the same struct shape for round-trip checks.
 type ports_Config = struct {
-	APIKeys         map[domain.ProviderID]string
-	DefaultProvider domain.ProviderID
-	DefaultLanguage string
-	FFmpegPath      string
+	APIKeys          map[domain.ProviderID]string
+	DefaultProvider  domain.ProviderID
+	DefaultLanguage  string
+	FFmpegPath       string
+	DiscoveredModels map[domain.ProviderID][]string
 }
 
 // Test the OS-specific default path returns something non-empty.

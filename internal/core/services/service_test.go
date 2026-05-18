@@ -57,3 +57,42 @@ func TestService_ListModels_UnknownProvider(t *testing.T) {
 	_, err := svc.ListModels(domain.ProviderGroq)
 	require.ErrorIs(t, err, domain.ErrProviderMissing)
 }
+
+func TestService_ListModels_PrefersDiscoveredOverHardcoded(t *testing.T) {
+	svc := New(Deps{
+		Providers: map[domain.ProviderID]ports.Provider{
+			domain.ProviderGroq: fakeProvider{id: domain.ProviderGroq, models: []string{"hardcoded-1"}},
+		},
+		DiscoveredModels: map[domain.ProviderID][]string{
+			domain.ProviderGroq: {"live-a", "live-b"},
+		},
+	})
+	got, err := svc.ListModels(domain.ProviderGroq)
+	require.NoError(t, err)
+	require.Equal(t, []string{"live-a", "live-b"}, got)
+}
+
+func TestService_ListModels_FallsBackToHardcodedWhenDiscoveredEmpty(t *testing.T) {
+	svc := New(Deps{
+		Providers: map[domain.ProviderID]ports.Provider{
+			domain.ProviderGroq: fakeProvider{id: domain.ProviderGroq, models: []string{"hardcoded-1"}},
+		},
+		DiscoveredModels: map[domain.ProviderID][]string{
+			domain.ProviderGroq: nil, // empty
+		},
+	})
+	got, err := svc.ListModels(domain.ProviderGroq)
+	require.NoError(t, err)
+	require.Equal(t, []string{"hardcoded-1"}, got)
+}
+
+func TestService_DiscoverModels_UnsupportedAdapter(t *testing.T) {
+	// fakeProvider doesn't implement ModelDiscoverer.
+	svc := New(Deps{
+		Providers: map[domain.ProviderID]ports.Provider{
+			domain.ProviderGroq: fakeProvider{id: domain.ProviderGroq},
+		},
+	})
+	_, err := svc.DiscoverModels(context.Background(), domain.ProviderGroq)
+	require.ErrorIs(t, err, ErrDiscoveryUnsupported)
+}

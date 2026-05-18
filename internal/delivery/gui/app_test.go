@@ -20,6 +20,9 @@ func (f *fakeService) ListProviders() []domain.ProviderID { return nil }
 func (f *fakeService) ListModels(domain.ProviderID) ([]string, error) {
 	return nil, nil
 }
+func (f *fakeService) DiscoverModels(context.Context, domain.ProviderID) ([]string, error) {
+	return nil, nil
+}
 func (f *fakeService) Submit(context.Context, domain.Request) (ports.Job, error) {
 	return nil, errors.New("not implemented")
 }
