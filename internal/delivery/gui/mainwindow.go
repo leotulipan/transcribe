@@ -16,7 +16,7 @@ import (
 
 type mainWindow struct {
 	fyne.Window
-	deps Deps
+	deps *Deps
 	ctx  context.Context
 
 	pathEntry  *widget.Entry
@@ -36,7 +36,7 @@ type mainWindow struct {
 	currentJob ports.Job
 }
 
-func newMainWindow(a fyne.App, ctx context.Context, d Deps) *mainWindow {
+func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	w := a.NewWindow(windowTitle)
 	w.Resize(preferredSize)
 
@@ -48,8 +48,9 @@ func newMainWindow(a fyne.App, ctx context.Context, d Deps) *mainWindow {
 	browse := widget.NewButton("Browse…", m.onBrowse)
 
 	// Provider + model row
+	svc := d.Service()
 	var providerIDs []string
-	for _, id := range d.Service.ListProviders() {
+	for _, id := range svc.ListProviders() {
 		providerIDs = append(providerIDs, string(id))
 	}
 	m.provider = widget.NewSelect(providerIDs, m.onProviderChanged)
@@ -61,7 +62,7 @@ func newMainWindow(a fyne.App, ctx context.Context, d Deps) *mainWindow {
 	// Language + formats
 	m.language = widget.NewEntry()
 	m.language.SetPlaceHolder("language (blank = auto)")
-	m.language.SetText(d.Config.DefaultLanguage)
+	m.language.SetText(d.Config().DefaultLanguage)
 	m.fmtText = widget.NewCheck("text", nil)
 	m.fmtText.SetChecked(true)
 	m.fmtSRT = widget.NewCheck("srt", nil)
@@ -128,7 +129,7 @@ func (m *mainWindow) onProviderChanged(id string) {
 		m.model.Refresh()
 		return
 	}
-	models, err := m.deps.Service.ListModels(domain.ProviderID(id))
+	models, err := m.deps.Service().ListModels(domain.ProviderID(id))
 	if err != nil {
 		m.logf("provider %s: %v", id, err)
 		return
@@ -173,7 +174,7 @@ func (m *mainWindow) onStart() {
 		req.DaVinciOpts = &domain.DaVinciOptions{}
 	}
 
-	job, err := runJob(m.ctx, m.deps.Service, req,
+	job, err := runJob(m.ctx, m.deps.Service(), req,
 		m.onProgress, m.onDone,
 	)
 	if err != nil {
@@ -231,7 +232,40 @@ func (m *mainWindow) onCancel() {
 }
 
 func (m *mainWindow) onSettings() {
-	newSettingsWindow(m.Window, m.deps).Show()
+	w := newSettingsWindow(m.Window, m.deps, m.refreshProviders)
+	w.Show()
+}
+
+// refreshProviders re-reads the provider list from the (possibly newly
+// reloaded) service and rebinds the dropdowns. Called after Settings saves.
+func (m *mainWindow) refreshProviders() {
+	svc := m.deps.Service()
+	var ids []string
+	for _, id := range svc.ListProviders() {
+		ids = append(ids, string(id))
+	}
+	m.provider.Options = ids
+	if len(ids) > 0 {
+		// Preserve current selection if still valid, else pick first.
+		current := m.provider.Selected
+		valid := false
+		for _, id := range ids {
+			if id == current {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			m.provider.SetSelected(ids[0])
+		} else {
+			m.onProviderChanged(current)
+		}
+	} else {
+		m.provider.ClearSelected()
+		m.model.Options = nil
+		m.model.Refresh()
+	}
+	m.provider.Refresh()
 }
 
 func (m *mainWindow) onWindowClose() {

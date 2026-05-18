@@ -91,9 +91,12 @@ func main() {
 	switch mode {
 	case modeGUI:
 		saveCfg := func(c ports.Config) error { return config.New().Save(c) }
-		err = gui.Run(ctx, gui.Deps{
-			Service: svc, Config: cfg, Logger: log, SaveConfig: saveCfg,
-		})
+		loadCfg := func() (ports.Config, error) { return config.New().Load() }
+		buildSvc := func(c ports.Config) (ports.TranscribeService, error) {
+			return delivery.BuildService(c, log)
+		}
+		deps := gui.NewDeps(svc, cfg, log, saveCfg, loadCfg, buildSvc)
+		err = gui.Run(ctx, deps)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(cli.ExitCodeFor(err))

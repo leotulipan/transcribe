@@ -7,30 +7,37 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/leotulipan/transcribe/internal/adapters/audio"
+	configadapter "github.com/leotulipan/transcribe/internal/adapters/config"
 	"github.com/leotulipan/transcribe/internal/core/domain"
 	"github.com/leotulipan/transcribe/internal/ports"
 )
 
 type settingsWindow struct{ fyne.Window }
 
-func newSettingsWindow(parent fyne.Window, d Deps) *settingsWindow {
+// newSettingsWindow opens the settings dialog. After a successful save,
+// onSaved (if non-nil) is called on the Fyne main thread so the main window
+// can refresh anything that depends on the new config (e.g. provider list).
+func newSettingsWindow(parent fyne.Window, d *Deps, onSaved func()) *settingsWindow {
 	a := fyne.CurrentApp()
 	w := a.NewWindow(windowTitle + " — Settings")
-	w.Resize(fyne.NewSize(520, 420))
+	w.Resize(fyne.NewSize(560, 460))
 
-	cfg := d.Config
+	// Always pre-populate from the latest in-memory config (which reflects
+	// the most recent save, since Reload swaps d.config). Falls back to the
+	// startup snapshot if nothing has been reloaded yet.
+	cfg := d.Config()
 
 	keyEntry := func(id domain.ProviderID) *widget.Entry {
 		e := widget.NewPasswordEntry()
 		e.SetText(cfg.APIKeys[id])
 		return e
 	}
-	groq     := keyEntry(domain.ProviderGroq)
-	openai   := keyEntry(domain.ProviderOpenAI)
+	groq := keyEntry(domain.ProviderGroq)
+	openai := keyEntry(domain.ProviderOpenAI)
 	assembly := keyEntry(domain.ProviderAssemblyAI)
-	eleven   := keyEntry(domain.ProviderElevenLabs)
-	gemini   := keyEntry(domain.ProviderGemini)
-	mistral  := keyEntry(domain.ProviderMistral)
+	eleven := keyEntry(domain.ProviderElevenLabs)
+	gemini := keyEntry(domain.ProviderGemini)
+	mistral := keyEntry(domain.ProviderMistral)
 
 	ffmpegEntry := widget.NewEntry()
 	ffmpegEntry.SetText(cfg.FFmpegPath)
@@ -39,6 +46,10 @@ func newSettingsWindow(parent fyne.Window, d Deps) *settingsWindow {
 	langEntry := widget.NewEntry()
 	langEntry.SetText(cfg.DefaultLanguage)
 	langEntry.SetPlaceHolder("en, de, fr, ...")
+
+	configPathLabel := widget.NewLabel("Config file: " + configadapter.New().Path())
+	configPathLabel.Wrapping = fyne.TextWrapBreak
+	configPathLabel.TextStyle = fyne.TextStyle{Italic: true}
 
 	save := widget.NewButton("Save", func() {
 		ffmpegResolved := ffmpegEntry.Text
@@ -49,7 +60,7 @@ func newSettingsWindow(parent fyne.Window, d Deps) *settingsWindow {
 				return
 			}
 			ffmpegResolved = r
-			ffmpegEntry.SetText(r) // show canonical path back to user
+			ffmpegEntry.SetText(r) // surface canonical path back to the user
 		}
 		next := ports.Config{
 			APIKeys: map[domain.ProviderID]string{
@@ -72,7 +83,15 @@ func newSettingsWindow(parent fyne.Window, d Deps) *settingsWindow {
 			dialog.ShowError(err, w)
 			return
 		}
-		dialog.ShowInformation("Saved", "Settings applied.", w)
+		// Hot-swap providers/service so the user doesn't have to restart.
+		if err := d.Reload(); err != nil {
+			dialog.ShowError(err, w)
+			return
+		}
+		if onSaved != nil {
+			onSaved()
+		}
+		dialog.ShowInformation("Saved", "Settings applied. No restart needed.", w)
 	})
 
 	cancel := widget.NewButton("Close", func() { w.Close() })
@@ -87,6 +106,12 @@ func newSettingsWindow(parent fyne.Window, d Deps) *settingsWindow {
 		widget.NewFormItem("FFmpeg path", ffmpegEntry),
 		widget.NewFormItem("Default language", langEntry),
 	)
-	w.SetContent(container.NewBorder(nil, container.NewHBox(save, cancel), nil, nil, form))
+	content := container.NewBorder(
+		configPathLabel,
+		container.NewHBox(save, cancel),
+		nil, nil,
+		form,
+	)
+	w.SetContent(content)
 	return &settingsWindow{Window: w}
 }

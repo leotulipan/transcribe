@@ -30,11 +30,16 @@ func main() {
 		os.Exit(3)
 	}
 	saveCfg := func(c ports.Config) error { return config.New().Save(c) }
+	loadCfg := func() (ports.Config, error) { return config.New().Load() }
+	buildSvc := func(c ports.Config) (ports.TranscribeService, error) {
+		return delivery.BuildService(c, log)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err = gui.Run(ctx, gui.Deps{Service: svc, Config: cfg, Logger: log, SaveConfig: saveCfg})
+	deps := gui.NewDeps(svc, cfg, log, saveCfg, loadCfg, buildSvc)
+	err = gui.Run(ctx, deps)
 	if err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(cli.ExitCodeFor(err))

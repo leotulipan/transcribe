@@ -37,6 +37,39 @@ go test -tags integration ./...
 #   go test -tags integration ./internal/adapters/api/groq/...
 ```
 
+## Configuration
+
+The Go binary reads configuration from three layers (later layers override earlier):
+
+1. **User config** — `%LOCALAPPDATA%\transcribe\config.toml` on Windows
+   (`~/.transcribe/config.toml` on Linux/macOS). Written by `transcribe setup`
+   and by the GUI's Settings dialog.
+2. **Repo-local override** — `.transcribe.toml` in the current working
+   directory or any ancestor. Gitignored. Convenient for per-checkout dev keys.
+3. **Environment variables** — `GROQ_API_KEY`, `OPENAI_API_KEY`,
+   `ASSEMBLYAI_API_KEY`, `ELEVENLABS_API_KEY`, `GEMINI_API_KEY`,
+   `MISTRAL_API_KEY`, `TRANSCRIBE_FFMPEG_PATH`. Win even over the repo-local
+   file.
+
+Note: this is **not** the same path the Python tool used
+(`%LOCALAPPDATA%\audio_transcribe\.env`). The Go port intentionally uses its
+own location.
+
+The TOML schema:
+
+```toml
+default_provider = "groq"
+default_language = "en"
+ffmpeg_path = "C:\\Users\\you\\AppData\\Local\\Microsoft\\WinGet\\Links\\ffmpeg.exe"
+
+[api_keys]
+groq = "gsk_..."
+openai = "sk-..."
+# etc.
+```
+
+The GUI displays the resolved config path in the Settings dialog header.
+
 ## Notes
 
 - v1 ships Windows-only. macOS/Linux are v2 and require additional toolchain
