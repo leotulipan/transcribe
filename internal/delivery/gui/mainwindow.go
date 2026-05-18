@@ -3,6 +3,7 @@ package gui
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -11,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
+	"github.com/leotulipan/transcribe/internal/core/services"
 	"github.com/leotulipan/transcribe/internal/ports"
 )
 
@@ -34,6 +36,13 @@ type mainWindow struct {
 	cancelBtn   *widget.Button
 
 	currentJob ports.Job
+
+	// Batch state. When the input path is a directory we enumerate it at
+	// Start time and process files sequentially. batchFiles is reset to
+	// nil between runs.
+	batchFiles  []string
+	batchIndex  int
+	batchCancel bool
 }
 
 func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
@@ -44,8 +53,18 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 
 	// File row
 	m.pathEntry = widget.NewEntry()
-	m.pathEntry.SetPlaceHolder("Pick an audio or video file")
-	browse := widget.NewButton("Browse…", m.onBrowse)
+	m.pathEntry.SetPlaceHolder("Pick a file or folder (or drop one here)")
+	browseFile := widget.NewButton("File…", m.onBrowseFile)
+	browseDir := widget.NewButton("Folder…", m.onBrowseFolder)
+
+	// Accept drag-and-drop of files / folders onto the window. Desktop-only;
+	// Fyne's SetOnDropped is a no-op on mobile, which is fine.
+	w.SetOnDropped(func(_ fyne.Position, uris []fyne.URI) {
+		if len(uris) == 0 {
+			return
+		}
+		m.pathEntry.SetText(uris[0].Path())
+	})
 
 	// Provider + model row
 	svc := d.Service()
@@ -85,8 +104,8 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	settingsBtn := widget.NewButton("Settings…", m.onSettings)
 
 	layout := container.NewVBox(
-		widget.NewLabelWithStyle("File", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		container.NewBorder(nil, nil, nil, browse, m.pathEntry),
+		widget.NewLabelWithStyle("File or folder", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		container.NewBorder(nil, nil, nil, container.NewHBox(browseFile, browseDir), m.pathEntry),
 
 		widget.NewLabelWithStyle("Provider", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		container.NewGridWithColumns(2, m.provider, m.model),
@@ -113,13 +132,25 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	return m
 }
 
-func (m *mainWindow) onBrowse() {
+func (m *mainWindow) onBrowseFile() {
 	dialog.ShowFileOpen(func(rc fyne.URIReadCloser, err error) {
 		if err != nil || rc == nil {
 			return
 		}
 		defer rc.Close()
 		m.pathEntry.SetText(rc.URI().Path())
+	}, m.Window)
+}
+
+// onBrowseFolder opens a folder picker. The chosen path is stored verbatim
+// in the entry; enumeration is deferred to Start so the user can still edit
+// the path or back out.
+func (m *mainWindow) onBrowseFolder() {
+	dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+		if err != nil || uri == nil {
+			return
+		}
+		m.pathEntry.SetText(uri.Path())
 	}, m.Window)
 }
 
@@ -148,22 +179,60 @@ func (m *mainWindow) onStart() {
 		return
 	}
 	if m.pathEntry.Text == "" {
-		dialog.ShowInformation("Pick a file", "Choose an audio or video file first.", m.Window)
+		dialog.ShowInformation("Pick a file", "Choose an audio file, video file, or folder first.", m.Window)
 		return
 	}
 	if m.provider.Selected == "" {
 		dialog.ShowInformation("Pick a provider", "Select a provider (run Settings if none are listed).", m.Window)
 		return
 	}
+
+	// Resolve the entry into a list of files. Single file → [file].
+	// Directory → walk + filter by AudioExtensions. Done at Start so the
+	// user can still edit the path after picking a folder.
+	files, err := services.EnumerateAudioFiles(m.pathEntry.Text)
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("read %s: %w", m.pathEntry.Text, err), m.Window)
+		return
+	}
+	if len(files) == 0 {
+		dialog.ShowInformation("No files",
+			"No audio or video files found in that folder.", m.Window)
+		return
+	}
+
 	m.lockUI(true)
+	m.logArea.SetText("")
+	m.batchFiles = files
+	m.batchIndex = 0
+	m.batchCancel = false
+
+	if len(files) > 1 {
+		m.logf("batch: %d files to process", len(files))
+	}
+	m.startNextJob(formats)
+}
+
+// startNextJob submits the file at m.batchIndex and arranges for the next
+// one to start when it finishes. Called serially; never concurrently.
+func (m *mainWindow) startNextJob(formats []domain.OutputFormat) {
+	if m.batchCancel || m.batchIndex >= len(m.batchFiles) {
+		m.finishBatch(nil)
+		return
+	}
+	file := m.batchFiles[m.batchIndex]
+
 	m.bar.Show()
 	m.bar.Start()
 	m.determinate.SetValue(0)
 	m.determinate.Hide()
-	m.logArea.SetText("")
+
+	if len(m.batchFiles) > 1 {
+		m.logf("[%d/%d] %s", m.batchIndex+1, len(m.batchFiles), filepathBase(file))
+	}
 
 	req := domain.Request{
-		InputPath: m.pathEntry.Text,
+		InputPath: file,
 		Provider:  domain.ProviderID(m.provider.Selected),
 		Model:     m.model.Selected,
 		Language:  strings.TrimSpace(m.language.Text),
@@ -175,15 +244,56 @@ func (m *mainWindow) onStart() {
 	}
 
 	job, err := runJob(m.ctx, m.deps.Service(), req,
-		m.onProgress, m.onDone,
+		m.onProgress,
+		func(res *domain.Result, err error) {
+			// On per-file error, abort the rest of the batch and surface
+			// the error. The user can fix and re-run.
+			if err != nil {
+				m.finishBatch(err)
+				return
+			}
+			m.batchIndex++
+			if m.batchIndex < len(m.batchFiles) && !m.batchCancel {
+				m.startNextJob(formats)
+				return
+			}
+			m.finishBatch(nil)
+		},
 	)
 	if err != nil {
-		m.lockUI(false)
-		m.bar.Hide()
-		dialog.ShowError(err, m.Window)
+		m.finishBatch(err)
 		return
 	}
 	m.currentJob = job
+}
+
+func (m *mainWindow) finishBatch(err error) {
+	m.lockUI(false)
+	m.bar.Hide()
+	m.determinate.Hide()
+	m.currentJob = nil
+	m.batchFiles = nil
+	m.batchIndex = 0
+	if err != nil {
+		dialog.ShowError(err, m.Window)
+		return
+	}
+	if m.batchCancel {
+		m.logf("batch cancelled")
+		return
+	}
+	dialog.ShowInformation("Done", "All files processed.", m.Window)
+}
+
+// filepathBase is a tiny helper to keep mainwindow.go from importing path/filepath
+// just for one call. Mirrors filepath.Base.
+func filepathBase(p string) string {
+	for i := len(p) - 1; i >= 0; i-- {
+		if p[i] == '/' || p[i] == os.PathSeparator {
+			return p[i+1:]
+		}
+	}
+	return p
 }
 
 func (m *mainWindow) selectedFormats() []domain.OutputFormat {
@@ -209,6 +319,9 @@ func (m *mainWindow) onProgress(ev domain.ProgressEvent) {
 	}
 }
 
+// onDone is retained for the single-file legacy path but the batch loop
+// now goes through startNextJob's inline callback. Kept to avoid breaking
+// anything in tests that might still reference it.
 func (m *mainWindow) onDone(res *domain.Result, err error) {
 	m.lockUI(false)
 	m.bar.Hide()
@@ -218,7 +331,10 @@ func (m *mainWindow) onDone(res *domain.Result, err error) {
 		dialog.ShowError(err, m.Window)
 		return
 	}
-	preview := res.Text
+	preview := ""
+	if res != nil {
+		preview = res.Text
+	}
 	if len(preview) > 300 {
 		preview = preview[:300] + "…"
 	}
@@ -226,6 +342,7 @@ func (m *mainWindow) onDone(res *domain.Result, err error) {
 }
 
 func (m *mainWindow) onCancel() {
+	m.batchCancel = true
 	if m.currentJob != nil {
 		m.currentJob.Cancel()
 	}

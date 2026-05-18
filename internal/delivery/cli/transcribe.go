@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
+	"github.com/leotulipan/transcribe/internal/core/services"
 )
 
 type transcribeFlags struct {
@@ -75,8 +76,19 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 			}
 		}
 	}
+	// Expand any directory arguments into their constituent audio/video files.
+	// Files are passed through unchanged. This lets users do
+	//     transcribe path/to/folder file.mp3 anotherFolder/
+	expanded, err := expandPaths(files)
+	if err != nil {
+		return err
+	}
+	if len(expanded) == 0 {
+		return fmt.Errorf("no audio/video files found in: %s", strings.Join(files, ", "))
+	}
+
 	provider := domain.ProviderID(f.api)
-	for _, file := range files {
+	for _, file := range expanded {
 		req := domain.Request{
 			InputPath: file,
 			Provider:  provider,
@@ -166,6 +178,20 @@ type EscalateToTUI struct {
 }
 
 func (e *EscalateToTUI) Error() string { return "escalating to TUI for missing inputs" }
+
+// expandPaths walks each input. Files pass through; directories are
+// expanded via EnumerateAudioFiles. Order matches the input.
+func expandPaths(paths []string) ([]string, error) {
+	var out []string
+	for _, p := range paths {
+		more, err := services.EnumerateAudioFiles(p)
+		if err != nil {
+			return nil, fmt.Errorf("enumerate %s: %w", p, err)
+		}
+		out = append(out, more...)
+	}
+	return out, nil
+}
 
 func firstOr(s []string, def string) string {
 	if len(s) > 0 {
