@@ -1,13 +1,12 @@
 package gui
 
 import (
-	"fmt"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 
+	"github.com/leotulipan/transcribe/internal/adapters/audio"
 	"github.com/leotulipan/transcribe/internal/core/domain"
 	"github.com/leotulipan/transcribe/internal/ports"
 )
@@ -42,6 +41,16 @@ func newSettingsWindow(parent fyne.Window, d Deps) *settingsWindow {
 	langEntry.SetPlaceHolder("en, de, fr, ...")
 
 	save := widget.NewButton("Save", func() {
+		ffmpegResolved := ffmpegEntry.Text
+		if ffmpegResolved != "" {
+			r, err := audio.ResolveBinary(ffmpegResolved, "ffmpeg")
+			if err != nil {
+				dialog.ShowError(err, w)
+				return
+			}
+			ffmpegResolved = r
+			ffmpegEntry.SetText(r) // show canonical path back to user
+		}
 		next := ports.Config{
 			APIKeys: map[domain.ProviderID]string{
 				domain.ProviderGroq:       groq.Text,
@@ -53,7 +62,7 @@ func newSettingsWindow(parent fyne.Window, d Deps) *settingsWindow {
 			},
 			DefaultProvider: cfg.DefaultProvider,
 			DefaultLanguage: langEntry.Text,
-			FFmpegPath:      ffmpegEntry.Text,
+			FFmpegPath:      ffmpegResolved,
 		}
 		if d.SaveConfig == nil {
 			dialog.ShowInformation("Save", "(no SaveConfig wired)", w)
@@ -63,8 +72,7 @@ func newSettingsWindow(parent fyne.Window, d Deps) *settingsWindow {
 			dialog.ShowError(err, w)
 			return
 		}
-		dialog.ShowInformation("Saved",
-			fmt.Sprintf("Config written. Restart transcribe to pick up new keys."), w)
+		dialog.ShowInformation("Saved", "Settings applied.", w)
 	})
 
 	cancel := widget.NewButton("Close", func() { w.Close() })

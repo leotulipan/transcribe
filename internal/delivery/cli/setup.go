@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/leotulipan/transcribe/internal/adapters/audio"
 	"github.com/leotulipan/transcribe/internal/adapters/config"
 	"github.com/leotulipan/transcribe/internal/core/domain"
 	"github.com/leotulipan/transcribe/internal/ports"
@@ -41,7 +42,14 @@ func newSetupCmd(d Deps) *cobra.Command {
 				cfg.DefaultLanguage = defaultLang
 			}
 			if ffmpegPath != "" {
-				cfg.FFmpegPath = ffmpegPath
+				resolved, err := audio.ResolveBinary(ffmpegPath, "ffmpeg")
+				if err != nil {
+					return fmt.Errorf("--ffmpeg-path: %w", err)
+				}
+				cfg.FFmpegPath = resolved
+				if resolved != ffmpegPath {
+					fmt.Println("ffmpeg resolved to", resolved)
+				}
 			}
 			store := config.New()
 			if err := store.Save(cfg); err != nil {

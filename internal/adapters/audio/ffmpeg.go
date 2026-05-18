@@ -1,7 +1,7 @@
 package audio
 
 import (
-	"os/exec"
+	"errors"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
 	"github.com/leotulipan/transcribe/internal/ports"
@@ -14,22 +14,47 @@ type FFmpeg struct {
 	log     ports.Logger
 }
 
+// New resolves ffmpeg and ffprobe via ResolveBinary, falling back to PATH
+// discovery if the user-supplied paths are empty or invalid. Returns
+// domain.ErrFFmpegMissing wrapping the resolution failure when either binary
+// cannot be located.
 func New(ffmpegPath, ffprobePath string, log ports.Logger) (*FFmpeg, error) {
-	if ffmpegPath == "" {
-		p, err := exec.LookPath("ffmpeg")
-		if err != nil {
-			return nil, domain.ErrFFmpegMissing
+	resolvedFFmpeg, err := ResolveBinary(ffmpegPath, "ffmpeg")
+	if err != nil {
+		// If a user-supplied path was invalid, retry with auto-discover so the
+		// app still works when ffmpeg is on PATH. Warn so the bad value gets
+		// surfaced. Without a logger, just swallow it.
+		if ffmpegPath != "" {
+			if log != nil {
+				log.Warn("configured ffmpeg path invalid; falling back to PATH",
+					"path", ffmpegPath, "err", err.Error())
+			}
+			if p2, err2 := ResolveBinary("", "ffmpeg"); err2 == nil {
+				resolvedFFmpeg = p2
+			} else {
+				return nil, errors.Join(domain.ErrFFmpegMissing, err2)
+			}
+		} else {
+			return nil, errors.Join(domain.ErrFFmpegMissing, err)
 		}
-		ffmpegPath = p
 	}
-	if ffprobePath == "" {
-		p, err := exec.LookPath("ffprobe")
-		if err != nil {
-			return nil, domain.ErrFFmpegMissing
+	resolvedFFprobe, err := ResolveBinary(ffprobePath, "ffprobe")
+	if err != nil {
+		if ffprobePath != "" {
+			if log != nil {
+				log.Warn("configured ffprobe path invalid; falling back to PATH",
+					"path", ffprobePath, "err", err.Error())
+			}
+			if p2, err2 := ResolveBinary("", "ffprobe"); err2 == nil {
+				resolvedFFprobe = p2
+			} else {
+				return nil, errors.Join(domain.ErrFFmpegMissing, err2)
+			}
+		} else {
+			return nil, errors.Join(domain.ErrFFmpegMissing, err)
 		}
-		ffprobePath = p
 	}
-	return &FFmpeg{ffmpeg: ffmpegPath, ffprobe: ffprobePath, log: log}, nil
+	return &FFmpeg{ffmpeg: resolvedFFmpeg, ffprobe: resolvedFFprobe, log: log}, nil
 }
 
 // compile-time check
