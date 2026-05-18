@@ -1,0 +1,50 @@
+package elevenlabs
+
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/leotulipan/transcribe/internal/core/domain"
+)
+
+// response mirrors ElevenLabs speech-to-text response.
+// language_code is ISO-639-3 (e.g. "eng"); passed through verbatim.
+// Words include both "word" and "spacing" types; spacing entries are filtered.
+type response struct {
+	LanguageCode        string  `json:"language_code"`
+	LanguageProbability float64 `json:"language_probability"`
+	Text                string  `json:"text"`
+	Words               []word  `json:"words"`
+}
+
+type word struct {
+	Text  string  `json:"text"`
+	Start float64 `json:"start"`
+	End   float64 `json:"end"`
+	Type  string  `json:"type"` // "word" or "spacing"
+}
+
+func parse(data []byte, model string) (*domain.Result, error) {
+	var resp response
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, err
+	}
+	res := &domain.Result{
+		Provider: domain.ProviderElevenLabs,
+		Model:    model,
+		Language: resp.LanguageCode,
+		Text:     resp.Text,
+		RawJSON:  data,
+	}
+	for _, w := range resp.Words {
+		if w.Type != "word" {
+			continue // skip spacing entries
+		}
+		res.Words = append(res.Words, domain.Word{
+			Text:  w.Text,
+			Start: time.Duration(w.Start * float64(time.Second)),
+			End:   time.Duration(w.End * float64(time.Second)),
+		})
+	}
+	return res, nil
+}

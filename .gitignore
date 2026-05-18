@@ -1,5 +1,8 @@
 # custom files with personal information that shouldn't be on github
 
+# Local API keys for runtime + integration tests (TOML form of .env)
+.transcribe.toml
+
 desktop.ini
 *.csv
 invoice*.pdf
@@ -198,3 +201,20 @@ parser_log.txt
 /tests/fixtures/audio_files/empty.*
 /tests/fixtures/audio_files/invalid.*
 /tests/fixtures/audio_files/.*temp*
+
+# Go build artifacts
+/dist/
+/bin/
+/transcribe
+/transcribe.exe
+/transcribe-gui
+/transcribe-gui.exe
+
+# Go test artifacts
+*.test
+*.out
+coverage.out
+
+# Go runtime
+*.transcribe.*.json
+.transcribe-tmp/

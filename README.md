@@ -318,7 +318,7 @@ The executable will be in the `dist/` directory.
   - `transcribe_helpers/` - Transcription helpers
   - `tui/` - Interactive setup wizard
 - `batch_templates/` - Ready-to-use batch files
-- `feature-sprints/` - Planning and documentation files
+- `python/plans/sprints/` - Planning and documentation files
 
 ### Running Tests
 

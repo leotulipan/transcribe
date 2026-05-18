@@ -1,0 +1,17 @@
+{
+  "text": "Goodbye cruel world this is OpenAI.",
+  "language": "en",
+  "duration": 4.0,
+  "segments": [
+    {"id": 0, "start": 0.0, "end": 2.0, "text": "Goodbye cruel world", "avg_logprob": -0.15},
+    {"id": 1, "start": 2.1, "end": 4.0, "text": "this is OpenAI.", "avg_logprob": -0.18}
+  ],
+  "words": [
+    {"word": "Goodbye", "start": 0.0,  "end": 0.6},
+    {"word": "cruel",   "start": 0.7,  "end": 1.1},
+    {"word": "world",   "start": 1.2,  "end": 1.8},
+    {"word": "this",    "start": 2.1,  "end": 2.4},
+    {"word": "is",      "start": 2.5,  "end": 2.7},
+    {"word": "OpenAI.", "start": 2.8,  "end": 4.0}
+  ]
+}
