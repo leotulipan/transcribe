@@ -9,11 +9,11 @@ import (
 )
 
 func TestDefaultModel(t *testing.T) {
-	require.Equal(t, "scribe_v1", DefaultModel())
+	require.Equal(t, "scribe_v2", DefaultModel())
 }
 
 func TestCapabilities_DefaultModelHasWordTimestamps(t *testing.T) {
-	c := Capabilities("scribe_v1")
+	c := Capabilities("scribe_v2")
 	require.True(t, c.WordTimestamps)
 	require.False(t, c.SegmentTimestamps)
 	require.True(t, c.LanguageHint)
