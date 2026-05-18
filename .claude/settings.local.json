@@ -19,7 +19,15 @@
       "Bash(uv tool:*)",
       "Skill(update-config)",
       "Bash(git check-ignore *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(uvx showboat --help:*)",
+      "Bash(uvx showboat init:*)",
+      "Bash(uvx showboat exec:*)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:using-git-worktrees)",
+      "Bash(load-env.ps1*)",
+      "Bash(load-env.sh*)"
     ]
   }
 }
