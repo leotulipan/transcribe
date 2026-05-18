@@ -9,7 +9,7 @@ import (
 )
 
 func TestDefaultModel(t *testing.T) {
-	require.Equal(t, "gemini-2.0-flash", DefaultModel())
+	require.Equal(t, "gemini-2.5-flash", DefaultModel())
 }
 
 func TestCapabilities_DefaultModelIsTextOnly(t *testing.T) {
