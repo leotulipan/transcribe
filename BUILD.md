@@ -84,6 +84,38 @@ The GUI displays the resolved config path in the Settings dialog header.
 
 `./bin/transcribe.exe --version` will report the embedded version.
 
+## Release
+
+Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html):
+`MAJOR.MINOR.PATCH`. Pre-1.0 (`0.x.y`) is fair game for incompatible changes
+on each MINOR bump. Tags use a lowercase `v` prefix (`v0.9.0`, `v0.9.1`, ...).
+
+To cut a release:
+
+```powershell
+# 1. Bump CHANGELOG.md: add a new [X.Y.Z] heading above [0.9.0], summarize
+#    the changes, update the link lines at the bottom.
+# 2. Commit the changelog bump.
+# 3. Tag the commit:
+git tag -a vX.Y.Z -m "Release X.Y.Z"
+# 4. Build with the embedded version:
+./scripts/build.ps1
+# 5. Verify:
+./bin/transcribe.exe --version   # expect: transcribe version vX.Y.Z
+# 6. Push the tag (the workflow at .github/workflows/release.yml does the rest):
+git push origin vX.Y.Z
+```
+
+`scripts/build.ps1` accepts `-Version` to override; when omitted it calls
+`git describe --tags --always`, which yields the current tag on a tagged
+commit and `vX.Y.Z-N-gSHA` on commits past the tag. Non-semver strings
+(`dev`, `dev-mybranch`, etc.) are accepted with a warning so ad-hoc smoke
+builds still work.
+
+The Python tool's version (in `pyproject.toml`) is independent — it ships
+its own release line. The Go binary version is authoritative for everything
+under `cmd/` and `internal/`.
+
 ## GUI flavor
 
 `scripts/build.ps1` produces two executables:
