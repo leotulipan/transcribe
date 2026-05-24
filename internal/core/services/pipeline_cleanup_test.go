@@ -56,6 +56,20 @@ func TestCleanupEmptyWorkDir_ToleratesMissingDir(t *testing.T) {
 	cleanupEmptyWorkDir(jobDir) // no assertion needed; must not panic
 }
 
+func TestCleanupEmptyWorkDir_LeavesNonTranscribeParent(t *testing.T) {
+	// Parent is NOT named ".transcribe-tmp" (e.g. fallback path under os.TempDir()).
+	// The job dir should be removed, but the parent must not be touched.
+	root := t.TempDir()
+	parent := filepath.Join(root, "transcribe-talk") // fallback layout, no .transcribe-tmp
+	jobDir := filepath.Join(parent, "work")
+	require.NoError(t, os.MkdirAll(jobDir, 0o755))
+
+	cleanupEmptyWorkDir(jobDir)
+
+	require.NoDirExists(t, jobDir, "empty job dir should still be removed")
+	require.DirExists(t, parent, "non-.transcribe-tmp parent must not be removed")
+}
+
 func TestResolveWorkDir_CreatesAndCleanupRemoves(t *testing.T) {
 	root := t.TempDir()
 	inputPath := filepath.Join(root, "talk.mp3")

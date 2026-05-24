@@ -261,8 +261,9 @@ func resolveWorkDir(inputPath string) (string, bool) {
 }
 
 // cleanupEmptyWorkDir removes workDir if it is empty, then removes its parent
-// (.transcribe-tmp) if that also becomes empty. Tolerates missing directories
-// and "not empty" failures silently; only real I/O errors reach the log.
+// if the parent is named ".transcribe-tmp" and also becomes empty. Tolerates
+// "not exist" and "not empty" silently. Other errors are also swallowed —
+// callers do not need to act on cleanup failures.
 func cleanupEmptyWorkDir(workDir string) {
 	if workDir == "" {
 		return
@@ -271,8 +272,11 @@ func cleanupEmptyWorkDir(workDir string) {
 		// ErrNotExist and "directory not empty" are both expected — ignore.
 		return
 	}
-	// Job dir was removed; try the parent too.
+	// Job dir was removed; try the parent only when it is our own staging dir.
 	parent := filepath.Dir(workDir)
+	if filepath.Base(parent) != ".transcribe-tmp" {
+		return
+	}
 	_ = os.Remove(parent) // silently ignore: non-empty parent is normal
 }
 
