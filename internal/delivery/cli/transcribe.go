@@ -29,6 +29,7 @@ type transcribeFlags struct {
 	fillerWords    []string
 	removeFillers  bool
 	fillerLines    bool
+	charsPerLine   int
 }
 
 func newTranscribeCmd(d Deps) *cobra.Command {
@@ -67,6 +68,7 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().StringSliceVar(&f.fillerWords, "filler-words", nil, "comma-separated filler words (default: um,uh,ähm,äh,hm,hmm)")
 	cmd.Flags().BoolVar(&f.removeFillers, "remove-fillers", false, "drop filler words from output entirely")
 	cmd.Flags().BoolVar(&f.fillerLines, "filler-lines", true, "uppercase fillers so DaVinci renders them on their own line")
+	cmd.Flags().IntVar(&f.charsPerLine, "chars-per-line", 0, "max chars per rendered subtitle line (0 = no wrapping)")
 	return cmd
 }
 
@@ -100,13 +102,14 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 	provider := domain.ProviderID(f.api)
 	for _, file := range expanded {
 		req := domain.Request{
-			InputPath: file,
-			Provider:  provider,
-			Model:     f.model,
-			Language:  f.language,
-			Formats:   formats,
-			OutputDir: f.outDir,
-			UseCache:  f.cache,
+			InputPath:       file,
+			Provider:        provider,
+			Model:           f.model,
+			Language:        f.language,
+			Formats:         formats,
+			OutputDir:       f.outDir,
+			UseCache:        f.cache,
+			MaxCharsPerLine: f.charsPerLine,
 		}
 		if hasFormat(formats, domain.FormatDavinciSRT) {
 			opts := &domain.DaVinciOptions{

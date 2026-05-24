@@ -25,7 +25,7 @@ func TestDaVinci_Write_Golden(t *testing.T) {
 	}
 	dir := t.TempDir()
 	dst := filepath.Join(dir, "out.davinci.srt")
-	require.NoError(t, NewDaVinci().Write(res, dst))
+	require.NoError(t, NewDaVinci().Write(res, dst, domain.WriteOpts{}))
 
 	got, err := os.ReadFile(dst)
 	require.NoError(t, err)

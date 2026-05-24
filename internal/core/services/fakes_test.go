@@ -158,7 +158,7 @@ type recordingWriter struct {
 }
 
 func (w *recordingWriter) Format() domain.OutputFormat { return w.format }
-func (w *recordingWriter) Write(_ *domain.Result, dst string) error {
+func (w *recordingWriter) Write(_ *domain.Result, dst string, _ domain.WriteOpts) error {
 	w.paths = append(w.paths, dst)
 	return nil
 }

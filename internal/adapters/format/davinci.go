@@ -20,7 +20,7 @@ func NewDaVinci() *DaVinci { return &DaVinci{} }
 
 func (DaVinci) Format() domain.OutputFormat { return domain.FormatDavinciSRT }
 
-func (DaVinci) Write(r *domain.Result, dst string) error {
+func (DaVinci) Write(r *domain.Result, dst string, opts domain.WriteOpts) error {
 	var b strings.Builder
 	index := 1
 
@@ -31,7 +31,7 @@ func (DaVinci) Write(r *domain.Result, dst string) error {
 		if len(bucket) == 0 {
 			return
 		}
-		writeBlock(&b, index, bucket)
+		writeBlock(&b, index, bucket, opts.MaxCharsPerLine)
 		index++
 		bucket = nil
 	}
@@ -39,11 +39,11 @@ func (DaVinci) Write(r *domain.Result, dst string) error {
 		switch {
 		case w.Text == "(...)":
 			flush()
-			writeBlock(&b, index, []domain.Word{w})
+			writeBlock(&b, index, []domain.Word{w}, opts.MaxCharsPerLine)
 			index++
 		case isAllUpper(w.Text):
 			flush()
-			writeBlock(&b, index, []domain.Word{w})
+			writeBlock(&b, index, []domain.Word{w}, opts.MaxCharsPerLine)
 			index++
 		default:
 			// gap-induced break
@@ -61,7 +61,7 @@ func (DaVinci) Write(r *domain.Result, dst string) error {
 	return os.WriteFile(dst, []byte(b.String()), 0o644)
 }
 
-func writeBlock(b *strings.Builder, idx int, words []domain.Word) {
+func writeBlock(b *strings.Builder, idx int, words []domain.Word, maxCharsPerLine int) {
 	if len(words) == 0 {
 		return
 	}
@@ -73,11 +73,17 @@ func writeBlock(b *strings.Builder, idx int, words []domain.Word) {
 	b.WriteString(" --> ")
 	b.WriteString(formatTimecode(end))
 	b.WriteByte('\n')
-	for i, w := range words {
-		if i > 0 {
-			b.WriteByte(' ')
+	lines := wrapByChars(words, maxCharsPerLine)
+	for li, line := range lines {
+		if li > 0 {
+			b.WriteByte('\n')
 		}
-		b.WriteString(w.Text)
+		for i, w := range line {
+			if i > 0 {
+				b.WriteByte(' ')
+			}
+			b.WriteString(w.Text)
+		}
 	}
 	b.WriteString("\n\n")
 }

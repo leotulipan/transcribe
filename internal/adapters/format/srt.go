@@ -19,7 +19,7 @@ func NewSRT() *SRT { return &SRT{} }
 
 func (SRT) Format() domain.OutputFormat { return domain.FormatSRT }
 
-func (SRT) Write(r *domain.Result, dst string) error {
+func (SRT) Write(r *domain.Result, dst string, opts domain.WriteOpts) error {
 	blocks := groupWords(r.Words, srtMaxWordsPerBlock, srtMaxGap)
 	var b strings.Builder
 	for i, blk := range blocks {
@@ -29,11 +29,17 @@ func (SRT) Write(r *domain.Result, dst string) error {
 		b.WriteString(" --> ")
 		b.WriteString(formatTimecode(blk.End))
 		b.WriteByte('\n')
-		for j, w := range blk.Words {
-			if j > 0 {
-				b.WriteByte(' ')
+		lines := wrapByChars(blk.Words, opts.MaxCharsPerLine)
+		for li, line := range lines {
+			if li > 0 {
+				b.WriteByte('\n')
 			}
-			b.WriteString(w.Text)
+			for j, w := range line {
+				if j > 0 {
+					b.WriteByte(' ')
+				}
+				b.WriteString(w.Text)
+			}
 		}
 		b.WriteString("\n\n")
 	}

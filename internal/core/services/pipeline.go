@@ -187,6 +187,7 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 
 	// Stage 9 — write outputs
 	emit(domain.ProgressEvent{Stage: domain.StageWriting})
+	writeOpts := domain.WriteOpts{MaxCharsPerLine: req.MaxCharsPerLine}
 	for i, f := range req.Formats {
 		w, ok := deps.Writers[f]
 		if !ok {
@@ -194,7 +195,7 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 			return nil, err
 		}
 		dst := outputPath(req, f)
-		if werr := w.Write(result, dst); werr != nil {
+		if werr := w.Write(result, dst, writeOpts); werr != nil {
 			err = werr
 			return nil, werr
 		}

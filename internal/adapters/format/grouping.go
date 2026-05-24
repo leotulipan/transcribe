@@ -43,6 +43,40 @@ func groupWords(words []domain.Word, maxWords int, maxGap time.Duration) []block
 	return out
 }
 
+// wrapByChars splits a slice of words into lines so no rendered line (words
+// joined by single spaces) exceeds maxChars. A single word longer than
+// maxChars stays whole on its own line. maxChars <= 0 returns the words as a
+// single line so callers can iterate the result unconditionally.
+func wrapByChars(words []domain.Word, maxChars int) [][]domain.Word {
+	if maxChars <= 0 || len(words) == 0 {
+		return [][]domain.Word{words}
+	}
+	var lines [][]domain.Word
+	var cur []domain.Word
+	curLen := 0
+	for _, w := range words {
+		if len(cur) == 0 {
+			// First word on a new line — always add it even if it exceeds maxChars.
+			cur = []domain.Word{w}
+			curLen = len(w.Text)
+			continue
+		}
+		// Adding w would cost 1 (space) + len(w.Text) extra chars.
+		if curLen+1+len(w.Text) > maxChars {
+			lines = append(lines, cur)
+			cur = []domain.Word{w}
+			curLen = len(w.Text)
+		} else {
+			cur = append(cur, w)
+			curLen += 1 + len(w.Text)
+		}
+	}
+	if len(cur) > 0 {
+		lines = append(lines, cur)
+	}
+	return lines
+}
+
 // formatTimecode renders an SRT-style timecode "HH:MM:SS,mmm".
 func formatTimecode(d time.Duration) string {
 	if d < 0 {

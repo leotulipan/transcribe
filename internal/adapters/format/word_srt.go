@@ -13,7 +13,7 @@ func NewWordSRT() *WordSRT { return &WordSRT{} }
 
 func (WordSRT) Format() domain.OutputFormat { return domain.FormatWordSRT }
 
-func (WordSRT) Write(r *domain.Result, dst string) error {
+func (WordSRT) Write(r *domain.Result, dst string, _ domain.WriteOpts) error {
 	var b strings.Builder
 	for i, w := range r.Words {
 		b.WriteString(itoa(i + 1))

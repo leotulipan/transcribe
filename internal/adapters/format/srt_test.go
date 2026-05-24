@@ -27,7 +27,7 @@ func TestSRT_Write_Golden(t *testing.T) {
 	}
 	dir := t.TempDir()
 	dst := filepath.Join(dir, "out.srt")
-	require.NoError(t, NewSRT().Write(res, dst))
+	require.NoError(t, NewSRT().Write(res, dst, domain.WriteOpts{}))
 
 	got, err := os.ReadFile(dst)
 	require.NoError(t, err)
