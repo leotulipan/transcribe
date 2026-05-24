@@ -49,6 +49,8 @@ type DaVinciOptions struct {
 	SilentPortionThreshold time.Duration
 	PaddingStart           time.Duration
 	FillerWords            []string
+	RemoveFillers          bool
+	NoFillerLines          bool
 }
 
 // DefaultFillerWords is what DaVinciOptions.FillerWords defaults to when empty.

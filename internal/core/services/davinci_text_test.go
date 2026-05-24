@@ -126,3 +126,86 @@ func TestDavinciApply_CleanTextEmitsUnchanged(t *testing.T) {
 	})
 	require.Equal(t, original, res.Words, "no fillers and no pauses → no mutation")
 }
+
+func TestDavinciApply_RemoveFillersDropsMatches(t *testing.T) {
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "So", Start: 0, End: 100 * time.Millisecond},
+			{Text: "um", Start: 150 * time.Millisecond, End: 250 * time.Millisecond},
+			{Text: "yeah", Start: 300 * time.Millisecond, End: 400 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 5 * time.Second,
+		RemoveFillers:          true,
+	})
+	require.Len(t, res.Words, 2, "filler word must be dropped entirely")
+	require.Equal(t, "So", res.Words[0].Text)
+	require.Equal(t, "yeah", res.Words[1].Text)
+}
+
+func TestDavinciApply_RemoveFillersDropsAllDefaults(t *testing.T) {
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "um", Start: 0, End: 100 * time.Millisecond},
+			{Text: "hello", Start: 150 * time.Millisecond, End: 250 * time.Millisecond},
+			{Text: "uh", Start: 300 * time.Millisecond, End: 400 * time.Millisecond},
+			{Text: "there", Start: 450 * time.Millisecond, End: 550 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 5 * time.Second,
+		RemoveFillers:          true,
+	})
+	require.Len(t, res.Words, 2)
+	require.Equal(t, "hello", res.Words[0].Text)
+	require.Equal(t, "there", res.Words[1].Text)
+}
+
+func TestDavinciApply_FillerLinesFalsePreservesCase(t *testing.T) {
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "um", Start: 0, End: 100 * time.Millisecond},
+			{Text: "uh", Start: 150 * time.Millisecond, End: 250 * time.Millisecond},
+			{Text: "hello", Start: 300 * time.Millisecond, End: 400 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 5 * time.Second,
+		NoFillerLines:          true,
+	})
+	require.Equal(t, "um", res.Words[0].Text, "NoFillerLines=true must leave filler in original case")
+	require.Equal(t, "uh", res.Words[1].Text, "NoFillerLines=true must leave filler in original case")
+	require.Equal(t, "hello", res.Words[2].Text)
+}
+
+func TestDavinciApply_FillerLinesTrueUppercases(t *testing.T) {
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "um", Start: 0, End: 100 * time.Millisecond},
+			{Text: "hello", Start: 150 * time.Millisecond, End: 250 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 5 * time.Second,
+		NoFillerLines:          false,
+	})
+	require.Equal(t, "UM", res.Words[0].Text, "NoFillerLines=false (default) must uppercase the filler")
+	require.Equal(t, "hello", res.Words[1].Text)
+}
+
+func TestDavinciApply_RemoveFillersTakesPrecedenceOverFillerLines(t *testing.T) {
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "um", Start: 0, End: 100 * time.Millisecond},
+			{Text: "hello", Start: 150 * time.Millisecond, End: 250 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 5 * time.Second,
+		RemoveFillers:          true,
+		NoFillerLines:          false,
+	})
+	require.Len(t, res.Words, 1, "RemoveFillers must drop the word even when NoFillerLines=false")
+	require.Equal(t, "hello", res.Words[0].Text)
+}

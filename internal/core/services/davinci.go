@@ -43,7 +43,13 @@ func applyDavinci(r *domain.Result, opts *domain.DaVinciOptions) {
 		}
 		text := w.Text
 		if _, ok := fillerSet[strings.ToLower(strings.TrimFunc(text, isPunct))]; ok {
-			text = strings.ToUpper(text)
+			if opts.RemoveFillers {
+				prevEnd = w.End
+				continue
+			}
+			if !opts.NoFillerLines {
+				text = strings.ToUpper(text)
+			}
 		}
 		out = append(out, domain.Word{
 			Text:       text,
