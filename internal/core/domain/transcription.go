@@ -50,7 +50,7 @@ type DaVinciOptions struct {
 	PaddingStart           time.Duration
 	FillerWords            []string
 	RemoveFillers          bool
-	NoFillerLines          bool
+	SuppressFillerLines    bool
 }
 
 // DefaultFillerWords is what DaVinciOptions.FillerWords defaults to when empty.

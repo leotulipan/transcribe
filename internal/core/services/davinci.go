@@ -47,7 +47,7 @@ func applyDavinci(r *domain.Result, opts *domain.DaVinciOptions) {
 				prevEnd = w.End
 				continue
 			}
-			if !opts.NoFillerLines {
+			if !opts.SuppressFillerLines {
 				text = strings.ToUpper(text)
 			}
 		}

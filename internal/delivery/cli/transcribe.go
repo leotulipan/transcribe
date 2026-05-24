@@ -108,7 +108,7 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 			opts := &domain.DaVinciOptions{
 				SilentPortionThreshold: parseSilentMs(f.silentMs),
 				RemoveFillers:          f.removeFillers,
-				NoFillerLines:          !f.fillerLines,
+				SuppressFillerLines:    !f.fillerLines,
 			}
 			if len(f.fillerWords) > 0 {
 				opts.FillerWords = f.fillerWords
