@@ -67,5 +67,8 @@
       "Bash(unset GROQ_API_KEY OPENAI_API_KEY ASSEMBLYAI_API_KEY ELEVENLABS_API_KEY GEMINI_API_KEY MISTRAL_API_KEY)",
       "Bash(unset GROQ_API_KEY OPENAI_API_KEY ASSEMBLYAI_API_KEY ELEVENLABS_API_KEY)"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "mentortools"
+  ]
 }

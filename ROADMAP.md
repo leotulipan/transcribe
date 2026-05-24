@@ -137,3 +137,68 @@ When the last skip flips, the Python feature gap is closed.
 - `go test ./...` runs zero skips for the feature-parity test set.
 - Golden fixtures in `internal/adapters/format/testdata/` regenerated and reviewed.
 - Manual smoke: ElevenLabs run with `--diarize --davinci --padding-start 80 --chars-per-line 55 --filler-lines` produces a Resolve-ready .srt with speaker prefixes, intelligent padding, char-wrapped lines, and UPPERCASE filler lines.
+
+---
+
+## Phase 5 — Remaining Python CLI surface (added 2026-05-24)
+
+Surfaced after sweeping the Python `cli.py` (preserved at `G:\Meine Ablage\_2_Areas\Scripts\Transcribe\build\lib\audio_transcribe\cli.py`) against the current Go flag set in `internal/delivery/cli/transcribe.go`. These were not in Phases 1–4. Group by area; each bullet is the Python flag, default, and where it must land in Go.
+
+### 5a. Subtitle grouping / timing
+- `--words-per-subtitle / -w` (int, default 0=off). Mutually exclusive with `--chars-per-line`. Pair with `groupWords` in `internal/adapters/format/grouping.go`.
+- `--silent-portions / -p` (int ms, default per provider). Pause threshold; today hardcoded as `--silent-portion-ms 1500`. Rename or alias.
+- `--padding-end` (int ms). Mirror of `--padding-start`; subtract from `Word.End` symmetrically in `applyDavinci`.
+- `--show-pauses` (bool). Emit `(...)` text for pauses ≥ silent-portions. Already partially in `applyDavinci`; expose flag.
+- `--start-hour` (int). Hour offset added to all SRT timestamps. Apply in `srt.go` / `davinci.go` write path.
+
+### 5b. Frame-based editing (DaVinci)
+- `--fps` (float), `--fps-offset-start` (int, default -1), `--fps-offset-end` (int, default 0). Snap word boundaries to frame grid before SRT emit. New helper next to `applyDavinci`.
+
+### 5c. Provider tuning
+- `--num-speakers` (1..32). AssemblyAI + ElevenLabs `speakers_expected` payload field. Gate on `--diarize`.
+- `--keyterms-prompt` (string, AssemblyAI). Comma list. Pass through to AssemblyAI request.
+- `--speech-models` (string, AssemblyAI). Fallback model list, e.g. `universal-3-pro,universal-2`. Pass through.
+
+### 5d. Audio pipeline
+- `--size-threshold` (float MB, default 100). Files under threshold skip conversion if format compatible. Wire in `internal/core/services/audio.go` (or equivalent).
+- `--chunk-length` (int s, default 600), `--overlap` (int s, default 10). Chunking knobs already implied by the chunker; expose.
+- `--use-input` (bool). Bypass conversion entirely, send original.
+- `--use-pcm` (bool). Convert to PCM WAV instead of FLAC.
+- `--keep-flac` (bool), `--keep` (bool). Retain intermediates instead of deleting.
+
+### 5e. I/O & workflow
+- `--force / -r` (bool). Re-transcribe even when sidecar transcript exists. Today `--use-cache=false` does this; add `-r` alias / rename.
+- `--save-cleaned-json / -J` (bool). Persist the normalized pre-format JSON next to outputs.
+- `--use-json-input / -j` (bool). Accept a previously-saved JSON as input and skip the API call.
+- `--extensions / -e` (string). Filter file extensions when input is a directory.
+- `--start-hour` — see 5a.
+
+### 5f. Logging & discovery
+- `--debug / -d`, `--verbose / -v`. Log level / console verbosity. Wire to the logger port.
+- `--list` (bool). List APIs + their models and exit. Use the existing discovery interfaces.
+- `--api-key` (string, with `--setup`). Non-interactive key setter for a single provider.
+
+### 5g. Short-flag aliases for parity
+The Python CLI exposes single-letter aliases (`-a --api`, `-l --language`, `-o --output`, `-c --chars-per-line`, `-C --word-srt`, `-D --davinci-srt`, `-m --model`, `-p --silent-portions`, `-w --words-per-subtitle`, `-d --debug`, `-v --verbose`, `-e --extensions`, `-r --force`, `-j --use-json-input`, `-J --save-cleaned-json`). Add via Cobra `Flags().StringVarP` etc. so muscle memory carries over.
+
+### Verification (Phase 5)
+- `go run ./cmd/transcribe --help` lists every Phase 5 flag.
+- Run with `--use-json-input old.json --output srt` skips API entirely and re-emits formats from a cached JSON.
+- Regression test: `--chunk-length 300 --overlap 5` produces multi-chunk output without word loss across boundaries.
+
+---
+
+## Phase 6 — Bug: stale `.transcribe_temp_*` directories (added 2026-05-24)
+
+### Symptom
+Empty `.transcribe_temp_<basename>` folders accumulate next to processed audio files and **nest recursively** on retries — observed under `tests/fixtures/audio_files/`, e.g. `.transcribe_temp_sample_video/.transcribe_temp_sample_video_intermediate_extracted/.transcribe_temp_sample_video_intermediate_extracted_intermediate_extracted/`. The cleanup pass that removed Python-era temp dirs (see Python `intermediate_files.py` cleanup) was not ported.
+
+### Fix
+- In whatever Go service creates the per-input temp dir (search `transcribe_temp` or `.transcribe_temp_`), wrap creation in a `defer` that removes the directory if empty after processing.
+- On chunked / intermediate-extract retries, reuse the existing temp dir; do not derive a new name by appending `_intermediate_extracted` again. Idempotent naming = `<basename>` only, not whatever the prior dir name was.
+- Add a startup sweep (gated behind `--clean` or run unconditionally if cheap) that removes empty `.transcribe_temp_*` dirs under the working directory.
+
+### Verification
+- `go test ./...` followed by `find tests/fixtures -type d -name '.transcribe_temp_*'` returns nothing.
+- Manual: run twice in a row on the same input; only one `.transcribe_temp_<name>` exists during run, none after.
+

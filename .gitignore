@@ -1,5 +1,15 @@
 # custom files with personal information that shouldn't be on github
 
+# Cowork workspace working memory — keep out of the public repo
+MEMORY.md
+
+# Local agent/workspace tooling state — not for the public repo
+.claire/
+.claude/worktrees/
+
+# Showboat demo artifacts (regenerated locally)
+demo.md
+
 # Local API keys for runtime + integration tests (TOML form of .env)
 .transcribe.toml
 
