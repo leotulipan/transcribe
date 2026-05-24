@@ -36,6 +36,7 @@ func BuildService(cfg ports.Config, log ports.Logger) (ports.TranscribeService, 
 	writers := map[domain.OutputFormat]ports.FormatWriter{
 		domain.FormatText:       format.NewText(),
 		domain.FormatSRT:        format.NewSRT(),
+		domain.FormatWordSRT:    format.NewWordSRT(),
 		domain.FormatDavinciSRT: format.NewDaVinci(),
 	}
 

@@ -1,36 +1,61 @@
 package format
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
 
-// Word-level SRT output (one subtitle per word, useful for tight caption sync)
-// is not yet implemented in Go. domain.FormatWordSRT does not exist yet.
-// See docs/plans/2-feature-parity-completion.md Phase 2a.
-//
+	"github.com/stretchr/testify/require"
+
+	"github.com/leotulipan/transcribe/internal/core/domain"
+)
+
+// Word-level SRT output (one subtitle per word, useful for tight caption sync).
 // Python source: audio_transcribe/utils/formatters.py — create_srt(format_type="word")
-// Python tests:  tests/unit/test_formatters.py — word-SRT cases
 
 func TestWordSRT_OneSubtitlePerWord(t *testing.T) {
-	t.Skip("pending: FormatWordSRT not yet defined — see Phase 2a")
-	// expected behavior:
-	//   given Words [{"Hello", 1.0–1.5s}, {"world", 1.6–2.1s}],
-	//   output is:
-	//     1
-	//     00:00:01,000 --> 00:00:01,500
-	//     Hello
-	//
-	//     2
-	//     00:00:01,600 --> 00:00:02,100
-	//     world
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "Hello", Start: 1000 * time.Millisecond, End: 1500 * time.Millisecond},
+			{Text: "world", Start: 1600 * time.Millisecond, End: 2100 * time.Millisecond},
+		},
+	}
+	dir := t.TempDir()
+	dst := filepath.Join(dir, "out.srt")
+	require.NoError(t, NewWordSRT().Write(res, dst))
+
+	got, err := os.ReadFile(dst)
+	require.NoError(t, err)
+
+	want := "1\n00:00:01,000 --> 00:00:01,500\nHello\n\n2\n00:00:01,600 --> 00:00:02,100\nworld\n\n"
+	require.Equal(t, want, string(got))
 }
 
 func TestWordSRT_EmptyResultProducesEmptyFile(t *testing.T) {
-	t.Skip("pending: FormatWordSRT not yet defined — see Phase 2a")
-	// expected behavior:
-	//   Result with no Words → output file is empty (no header, no error).
+	res := &domain.Result{}
+	dir := t.TempDir()
+	dst := filepath.Join(dir, "out.srt")
+	require.NoError(t, NewWordSRT().Write(res, dst))
+
+	got, err := os.ReadFile(dst)
+	require.NoError(t, err)
+	require.Empty(t, got)
 }
 
 func TestWordSRT_PreservesPunctuationOnWord(t *testing.T) {
-	t.Skip("pending: FormatWordSRT not yet defined — see Phase 2a")
-	// expected behavior:
-	//   Word.Text "Hello," renders as "Hello," (comma not stripped).
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "Hello,", Start: 1000 * time.Millisecond, End: 1500 * time.Millisecond},
+		},
+	}
+	dir := t.TempDir()
+	dst := filepath.Join(dir, "out.srt")
+	require.NoError(t, NewWordSRT().Write(res, dst))
+
+	got, err := os.ReadFile(dst)
+	require.NoError(t, err)
+
+	want := "1\n00:00:01,000 --> 00:00:01,500\nHello,\n\n"
+	require.Equal(t, want, string(got))
 }

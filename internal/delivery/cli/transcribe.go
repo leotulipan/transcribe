@@ -21,6 +21,7 @@ type transcribeFlags struct {
 	outDir         string
 	cache          bool
 	davinci        bool
+	wordSRT        bool
 	silentMs       int
 	paddingStartMs int
 	jsonMode       bool
@@ -54,10 +55,11 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().StringVar(&f.api, "api", string(d.Config.DefaultProvider), "transcription API id")
 	cmd.Flags().StringVar(&f.model, "model", "", "model name (provider default if empty)")
 	cmd.Flags().StringVar(&f.language, "language", d.Config.DefaultLanguage, "ISO-639-1 language hint")
-	cmd.Flags().StringSliceVar(&f.outputs, "output", []string{"text"}, "output formats: text,srt,davinci_srt")
+	cmd.Flags().StringSliceVar(&f.outputs, "output", []string{"text"}, "output formats: text,srt,word_srt,davinci_srt")
 	cmd.Flags().StringVar(&f.outDir, "output-dir", "", "output directory (default: next to input)")
 	cmd.Flags().BoolVar(&f.cache, "use-cache", true, "reuse sidecar transcripts when present")
 	cmd.Flags().BoolVar(&f.davinci, "davinci", false, "convenience flag: enable davinci_srt output")
+	cmd.Flags().BoolVar(&f.wordSRT, "word-srt", false, "convenience flag: enable word_srt output")
 	cmd.Flags().IntVar(&f.silentMs, "silent-portion-ms", 1500, "pause threshold for davinci mode")
 	cmd.Flags().IntVar(&f.paddingStartMs, "padding-start", 0, "shift subtitle starts earlier by up to this many ms (davinci mode)")
 	cmd.Flags().BoolVar(&f.jsonMode, "json", false, "agent-callable JSON output, no TUI escalation")
@@ -69,7 +71,7 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 }
 
 func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []string) error {
-	formats, err := parseFormats(f.outputs, f.davinci)
+	formats, err := parseFormats(f.outputs, f.davinci, f.wordSRT)
 	if err != nil {
 		return err
 	}
@@ -125,14 +127,14 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 	return nil
 }
 
-func parseFormats(outs []string, davinciFlag bool) ([]domain.OutputFormat, error) {
+func parseFormats(outs []string, davinciFlag bool, wordSRTFlag bool) ([]domain.OutputFormat, error) {
 	seen := map[domain.OutputFormat]bool{}
 	var out []domain.OutputFormat
 	for _, name := range outs {
 		for _, raw := range strings.Split(name, ",") {
 			f := domain.OutputFormat(strings.TrimSpace(strings.ToLower(raw)))
 			switch f {
-			case domain.FormatText, domain.FormatSRT, domain.FormatDavinciSRT:
+			case domain.FormatText, domain.FormatSRT, domain.FormatWordSRT, domain.FormatDavinciSRT:
 			default:
 				return nil, fmt.Errorf("unknown output format %q", raw)
 			}
@@ -144,6 +146,9 @@ func parseFormats(outs []string, davinciFlag bool) ([]domain.OutputFormat, error
 	}
 	if davinciFlag && !seen[domain.FormatDavinciSRT] {
 		out = append(out, domain.FormatDavinciSRT)
+	}
+	if wordSRTFlag && !seen[domain.FormatWordSRT] {
+		out = append(out, domain.FormatWordSRT)
 	}
 	return out, nil
 }
@@ -217,6 +222,6 @@ func firstOr(s []string, def string) string {
 
 // mustFormats parses formats from flags, returning an empty slice on error.
 func mustFormats(f *transcribeFlags) []domain.OutputFormat {
-	out, _ := parseFormats(f.outputs, f.davinci)
+	out, _ := parseFormats(f.outputs, f.davinci, f.wordSRT)
 	return out
 }
