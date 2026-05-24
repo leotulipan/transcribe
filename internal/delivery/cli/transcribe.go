@@ -22,6 +22,7 @@ type transcribeFlags struct {
 	cache         bool
 	davinci       bool
 	silentMs      int
+	paddingStartMs int
 	jsonMode      bool
 	progress      bool
 	fillerWords   []string
@@ -58,6 +59,7 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().BoolVar(&f.cache, "use-cache", true, "reuse sidecar transcripts when present")
 	cmd.Flags().BoolVar(&f.davinci, "davinci", false, "convenience flag: enable davinci_srt output")
 	cmd.Flags().IntVar(&f.silentMs, "silent-portion-ms", 1500, "pause threshold for davinci mode")
+	cmd.Flags().IntVar(&f.paddingStartMs, "padding-start", 0, "shift subtitle starts earlier by up to this many ms (davinci mode, default 0)")
 	cmd.Flags().BoolVar(&f.jsonMode, "json", false, "agent-callable JSON output, no TUI escalation")
 	cmd.Flags().BoolVar(&f.progress, "progress", false, "with --json, emit JSONL progress events")
 	cmd.Flags().StringSliceVar(&f.fillerWords, "filler-words", nil, "comma-separated filler words (default: um,uh,ähm,äh,hm,hmm)")
@@ -107,6 +109,7 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 		if hasFormat(formats, domain.FormatDavinciSRT) {
 			opts := &domain.DaVinciOptions{
 				SilentPortionThreshold: parseSilentMs(f.silentMs),
+				PaddingStart:           parseSilentMs(f.paddingStartMs),
 				RemoveFillers:          f.removeFillers,
 				SuppressFillerLines:    !f.fillerLines,
 			}

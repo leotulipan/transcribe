@@ -60,6 +60,26 @@ func applyDavinci(r *domain.Result, opts *domain.DaVinciOptions) {
 		prevEnd = w.End
 	}
 	r.Words = out
+
+	if opts.PaddingStart > 0 {
+		var prevWordEnd time.Duration = -1
+		for i := range r.Words {
+			w := &r.Words[i]
+			shift := opts.PaddingStart
+			if prevWordEnd >= 0 {
+				gap := w.Start - prevWordEnd
+				halfGap := gap / 2
+				if halfGap < shift {
+					shift = halfGap
+				}
+			}
+			w.Start -= shift
+			if w.Start < 0 {
+				w.Start = 0
+			}
+			prevWordEnd = r.Words[i].End
+		}
+	}
 }
 
 func isPunct(r rune) bool {
