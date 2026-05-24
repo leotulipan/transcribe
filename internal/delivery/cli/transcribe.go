@@ -14,20 +14,20 @@ import (
 )
 
 type transcribeFlags struct {
-	api           string
-	model         string
-	language      string
-	outputs       []string
-	outDir        string
-	cache         bool
-	davinci       bool
-	silentMs      int
+	api            string
+	model          string
+	language       string
+	outputs        []string
+	outDir         string
+	cache          bool
+	davinci        bool
+	silentMs       int
 	paddingStartMs int
-	jsonMode      bool
-	progress      bool
-	fillerWords   []string
-	removeFillers bool
-	fillerLines   bool
+	jsonMode       bool
+	progress       bool
+	fillerWords    []string
+	removeFillers  bool
+	fillerLines    bool
 }
 
 func newTranscribeCmd(d Deps) *cobra.Command {
@@ -59,7 +59,7 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().BoolVar(&f.cache, "use-cache", true, "reuse sidecar transcripts when present")
 	cmd.Flags().BoolVar(&f.davinci, "davinci", false, "convenience flag: enable davinci_srt output")
 	cmd.Flags().IntVar(&f.silentMs, "silent-portion-ms", 1500, "pause threshold for davinci mode")
-	cmd.Flags().IntVar(&f.paddingStartMs, "padding-start", 0, "shift subtitle starts earlier by up to this many ms (davinci mode, default 0)")
+	cmd.Flags().IntVar(&f.paddingStartMs, "padding-start", 0, "shift subtitle starts earlier by up to this many ms (davinci mode)")
 	cmd.Flags().BoolVar(&f.jsonMode, "json", false, "agent-callable JSON output, no TUI escalation")
 	cmd.Flags().BoolVar(&f.progress, "progress", false, "with --json, emit JSONL progress events")
 	cmd.Flags().StringSliceVar(&f.fillerWords, "filler-words", nil, "comma-separated filler words (default: um,uh,ähm,äh,hm,hmm)")

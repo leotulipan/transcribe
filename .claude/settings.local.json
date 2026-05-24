@@ -65,7 +65,13 @@
       "Bash(git -C C:/local/cc/programming/python/transcribe commit -m ' *)",
       "Bash(go run *)",
       "Bash(unset GROQ_API_KEY OPENAI_API_KEY ASSEMBLYAI_API_KEY ELEVENLABS_API_KEY GEMINI_API_KEY MISTRAL_API_KEY)",
-      "Bash(unset GROQ_API_KEY OPENAI_API_KEY ASSEMBLYAI_API_KEY ELEVENLABS_API_KEY)"
+      "Bash(unset GROQ_API_KEY OPENAI_API_KEY ASSEMBLYAI_API_KEY ELEVENLABS_API_KEY)",
+      "Bash(Select-String \"filler\")",
+      "Bash(Select-String \"padding-start\")",
+      "PowerShell(go run *)",
+      "PowerShell(go build *)",
+      "Bash(Select-String -Pattern \"padding|silent|davinci\" -Context 1)",
+      "Bash(gofmt *)"
     ]
   },
   "disabledMcpjsonServers": [

@@ -11,9 +11,6 @@ import (
 
 // --padding-start subtracts a small amount from each word's start time so the
 // DaVinci-imported subtitle leads its audio (compensates editor preview lag).
-// The DaVinciOptions.PaddingStart field exists at internal/core/domain/transcription.go,
-// but applyDavinci does not consume it yet.
-// See docs/plans/2-feature-parity-completion.md Phase 1b.
 //
 // Python source: audio_transcribe/transcribe_helpers/output_formatters.py — apply_intelligent_padding
 // Python tests:  tests/unit/test_text_processing.py — padding cases

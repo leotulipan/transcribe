@@ -64,6 +64,8 @@ func applyDavinci(r *domain.Result, opts *domain.DaVinciOptions) {
 	if opts.PaddingStart > 0 {
 		var prevWordEnd time.Duration = -1
 		for i := range r.Words {
+			// Pause markers (text "(...)") sit in r.Words with gap == 0 to the preceding word,
+			// so the cap rule means adjacent words receive zero shift — intentional, matches Python.
 			w := &r.Words[i]
 			shift := opts.PaddingStart
 			if prevWordEnd >= 0 {
