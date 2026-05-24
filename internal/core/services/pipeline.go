@@ -53,9 +53,11 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 	}
 
 	var tempFiles []domain.AudioFile
+	var workDir string
 
 	// Deferred cleanup with policy from spec §6.3.1
 	defer func() {
+		keepFiles := false
 		for _, tf := range tempFiles {
 			if !tf.IsTemp {
 				continue
@@ -66,16 +68,20 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 			case err == nil:
 				_ = deps.Audio.Cleanup(tf)
 			case transient(err):
-				// keep for future retry
+				keepFiles = true // keep for future retry
 			default:
-				// keep (permanent error — don't delete intermediates)
+				keepFiles = true // keep (permanent error — don't delete intermediates)
 			}
+		}
+		// Remove empty temp directories unless we kept files for retry.
+		if !keepFiles && workDir != "" {
+			cleanupEmptyWorkDir(workDir)
 		}
 	}()
 
 	if cached == nil {
 		// Stage 3 — working dir
-		workDir, _ := resolveWorkDir(req.InputPath)
+		workDir, _ = resolveWorkDir(req.InputPath)
 
 		// Stage 4 — intermediate cache
 		var prepared domain.AudioFile
@@ -252,6 +258,22 @@ func resolveWorkDir(inputPath string) (string, bool) {
 	fallback := filepath.Join(os.TempDir(), "transcribe-"+base)
 	_ = os.MkdirAll(fallback, 0o755)
 	return fallback, false
+}
+
+// cleanupEmptyWorkDir removes workDir if it is empty, then removes its parent
+// (.transcribe-tmp) if that also becomes empty. Tolerates missing directories
+// and "not empty" failures silently; only real I/O errors reach the log.
+func cleanupEmptyWorkDir(workDir string) {
+	if workDir == "" {
+		return
+	}
+	if err := os.Remove(workDir); err != nil {
+		// ErrNotExist and "directory not empty" are both expected — ignore.
+		return
+	}
+	// Job dir was removed; try the parent too.
+	parent := filepath.Dir(workDir)
+	_ = os.Remove(parent) // silently ignore: non-empty parent is normal
 }
 
 // outputPath returns the path for an output file. If req.OutputDir is set the
