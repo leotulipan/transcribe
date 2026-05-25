@@ -110,3 +110,17 @@ func TestRoot_NoArgsShowsHelp(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, buf.String(), "Transcribe audio and video files via multiple AI providers")
 }
+
+func TestRoot_SetupFlagIsRegistered(t *testing.T) {
+	root := NewRoot(Deps{})
+	require.NotNil(t, root.PersistentFlags().Lookup("setup"), "--setup must be a persistent flag")
+}
+
+func TestRoot_HelpMentionsSetupFlag(t *testing.T) {
+	var buf bytes.Buffer
+	root := NewRoot(Deps{Version: "1.0.0", LevelVar: new(slog.LevelVar)})
+	root.SetOut(&buf)
+	root.SetArgs([]string{"--help"})
+	_ = root.Execute()
+	require.Contains(t, buf.String(), "--setup")
+}

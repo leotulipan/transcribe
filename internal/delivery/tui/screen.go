@@ -9,6 +9,7 @@ const (
 	screenFilePicker screenID = iota
 	screenOptions
 	screenProgress
+	screenWizard
 )
 
 // screen is the contract every sub-model fulfills.
