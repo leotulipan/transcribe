@@ -107,6 +107,152 @@ func TestPipeline_RejectsIncompatibleFormat(t *testing.T) {
 	require.Equal(t, domain.FormatSRT, ei.Format)
 }
 
+func TestPipeline_UsePCMOverridesPreferredCodec(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "talk.mp3")
+	require.NoError(t, os.WriteFile(inputPath, []byte("\xff\xfb"), 0o644))
+
+	var capturedTarget ports.TargetFormat
+	audio := &fakeAudio{
+		probeOut: domain.AudioFile{Path: inputPath, Codec: "mp3", Container: "mp3", SizeBytes: 100, Duration: time.Second},
+	}
+	// Override Transcode to capture the target format used.
+	audio.transcOut = domain.AudioFile{Path: filepath.Join(dir, "out.wav"), Codec: "pcm_s16le", Container: "wav", IsTemp: true, Complete: true, SizeBytes: 50}
+
+	prov := &fakeProviderFull{
+		id:        domain.ProviderGroq,
+		models:    []string{"whisper-large-v3"},
+		maxUpload: 50, // force transcode: src SizeBytes 100 > 50 maxUpload
+		caps: map[string]ports.ModelCapabilities{
+			"whisper-large-v3": {
+				WordTimestamps: false,
+				AcceptedInputs: []domain.AudioFormat{{Codec: "mp3"}},
+			},
+		},
+		result: &domain.Result{Text: "hello"},
+	}
+
+	// Capture the target by wrapping the Transcode call.
+	transcribeFn := prov.transcribeFn
+	_ = transcribeFn
+
+	// Build a custom fakeAudio that records the target codec.
+	recordingAudio := &recordingTranscodeAudio{
+		fakeAudio: &fakeAudio{
+			probeOut: domain.AudioFile{Path: inputPath, Codec: "mp3", Container: "mp3", SizeBytes: 100, Duration: time.Second},
+			transcOut: domain.AudioFile{Path: filepath.Join(dir, "out.wav"), Codec: "pcm_s16le", Container: "wav", IsTemp: true, Complete: true, SizeBytes: 50},
+		},
+		capturedTarget: &capturedTarget,
+	}
+
+	textWriter := &recordingWriter{format: domain.FormatText}
+	svc := New(Deps{
+		Providers: map[domain.ProviderID]ports.Provider{domain.ProviderGroq: prov},
+		Audio:     recordingAudio,
+		Cache:     newFakeCache(),
+		Writers:   map[domain.OutputFormat]ports.FormatWriter{domain.FormatText: textWriter},
+	})
+
+	job, err := svc.Submit(context.Background(), domain.Request{
+		InputPath: inputPath,
+		Provider:  domain.ProviderGroq,
+		Model:     "whisper-large-v3",
+		Formats:   []domain.OutputFormat{domain.FormatText},
+		UsePCM:    true,
+	})
+	require.NoError(t, err)
+	_, err = job.Wait()
+	require.NoError(t, err)
+	require.Equal(t, "pcm_s16le", capturedTarget.Codec, "UsePCM should override transcode target to pcm_s16le")
+}
+
+func TestPipeline_KeepIntermediatesPreventsCleanup(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "talk.mp3")
+	require.NoError(t, os.WriteFile(inputPath, []byte("\xff\xfb"), 0o644))
+
+	// Transcode produces a temp file; it should NOT be cleaned up.
+	transcoded := filepath.Join(dir, "out.mp3")
+	require.NoError(t, os.WriteFile(transcoded, []byte("x"), 0o644))
+
+	audio := &fakeAudio{
+		probeOut:  domain.AudioFile{Path: inputPath, Codec: "pcm_s16le", Container: "wav", SizeBytes: 100, Duration: time.Second},
+		transcOut: domain.AudioFile{Path: transcoded, Codec: "mp3", Container: "mp3", IsTemp: true, Complete: true, SizeBytes: 50},
+	}
+	prov := &fakeProviderFull{
+		id:        domain.ProviderGroq,
+		models:    []string{"whisper-large-v3"},
+		maxUpload: 200,
+		caps: map[string]ports.ModelCapabilities{
+			"whisper-large-v3": {WordTimestamps: false, AcceptedInputs: []domain.AudioFormat{{Codec: "mp3"}}},
+		},
+		result: &domain.Result{Text: "hello"},
+	}
+	textWriter := &recordingWriter{format: domain.FormatText}
+	svc := New(Deps{
+		Providers: map[domain.ProviderID]ports.Provider{domain.ProviderGroq: prov},
+		Audio:     audio,
+		Cache:     newFakeCache(),
+		Writers:   map[domain.OutputFormat]ports.FormatWriter{domain.FormatText: textWriter},
+	})
+
+	job, err := svc.Submit(context.Background(), domain.Request{
+		InputPath:         inputPath,
+		Provider:          domain.ProviderGroq,
+		Model:             "whisper-large-v3",
+		Formats:           []domain.OutputFormat{domain.FormatText},
+		KeepIntermediates: true,
+	})
+	require.NoError(t, err)
+	_, err = job.Wait()
+	require.NoError(t, err)
+	// KeepIntermediates means Cleanup should never have been called.
+	require.Equal(t, 0, audio.cleanupCalls, "KeepIntermediates should prevent any cleanup calls")
+}
+
+func TestPipeline_KeepFLACOnlyPreservesFlacFiles(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "talk.mp3")
+	require.NoError(t, os.WriteFile(inputPath, []byte("\xff\xfb"), 0o644))
+
+	transcoded := filepath.Join(dir, "out.flac")
+	require.NoError(t, os.WriteFile(transcoded, []byte("x"), 0o644))
+
+	// Prepared file is FLAC — should be kept when KeepFLACIntermediates=true.
+	audio := &fakeAudio{
+		probeOut:  domain.AudioFile{Path: inputPath, Codec: "pcm_s16le", Container: "wav", SizeBytes: 100, Duration: time.Second},
+		transcOut: domain.AudioFile{Path: transcoded, Codec: "flac", Container: "flac", IsTemp: true, Complete: true, SizeBytes: 50},
+	}
+	prov := &fakeProviderFull{
+		id:        domain.ProviderGroq,
+		models:    []string{"whisper-large-v3"},
+		maxUpload: 200,
+		caps: map[string]ports.ModelCapabilities{
+			"whisper-large-v3": {WordTimestamps: false, AcceptedInputs: []domain.AudioFormat{{Codec: "flac"}}},
+		},
+		result: &domain.Result{Text: "hello"},
+	}
+	textWriter := &recordingWriter{format: domain.FormatText}
+	svc := New(Deps{
+		Providers: map[domain.ProviderID]ports.Provider{domain.ProviderGroq: prov},
+		Audio:     audio,
+		Cache:     newFakeCache(),
+		Writers:   map[domain.OutputFormat]ports.FormatWriter{domain.FormatText: textWriter},
+	})
+
+	job, err := svc.Submit(context.Background(), domain.Request{
+		InputPath:             inputPath,
+		Provider:              domain.ProviderGroq,
+		Model:                 "whisper-large-v3",
+		Formats:               []domain.OutputFormat{domain.FormatText},
+		KeepFLACIntermediates: true,
+	})
+	require.NoError(t, err)
+	_, err = job.Wait()
+	require.NoError(t, err)
+	require.Equal(t, 0, audio.cleanupCalls, "KeepFLACIntermediates=true with flac output should prevent cleanup")
+}
+
 func TestPipeline_ResultCacheHit_SkipsAudioAndProvider(t *testing.T) {
 	dir := t.TempDir()
 	inputPath := filepath.Join(dir, "talk.mp3")

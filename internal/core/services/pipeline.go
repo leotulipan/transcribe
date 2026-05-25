@@ -65,6 +65,12 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 			switch {
 			case !tf.Complete:
 				_ = deps.Audio.Cleanup(tf)
+			case req.KeepIntermediates:
+				// User asked to retain all intermediates — skip cleanup.
+				keepFiles = true
+			case req.KeepFLACIntermediates && (tf.Codec == "flac" || tf.Container == "flac"):
+				// User asked to retain FLAC intermediates specifically.
+				keepFiles = true
 			case err == nil:
 				_ = deps.Audio.Cleanup(tf)
 			case transient(err):
@@ -90,12 +96,20 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 			srcMTime = info.ModTime().Unix()
 		}
 		targetCodec := preferredCodecFor(req.Provider, caps)
+		if req.UsePCM {
+			targetCodec = "pcm_s16le"
+		}
+		prepOpts := ports.PrepareOpts{
+			UseInput:           req.UseInput,
+			UsePCM:             req.UsePCM,
+			SizeThresholdBytes: req.SizeThresholdBytes,
+		}
 		if hit := lookupIntermediate(workDir, src, srcMTime, req.Provider, model, prov.MaxUploadBytes(), targetCodec); hit != nil {
 			prepared = *hit
 		} else {
 			// Stage 5 — prepare
 			emit(domain.ProgressEvent{Stage: domain.StageCompressing})
-			p, perr := prepare(ctx, deps.Audio, src, caps, prov.MaxUploadBytes(), workDir, ports.TargetFormat{Codec: targetCodec})
+			p, perr := prepare(ctx, deps.Audio, src, caps, prov.MaxUploadBytes(), workDir, ports.TargetFormat{Codec: targetCodec}, prepOpts)
 			if perr != nil {
 				err = perr
 				return nil, fmt.Errorf("prepare: %w", err)
@@ -122,7 +136,11 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 
 		// Stage 6 — chunk (single-chunk path is common)
 		emit(domain.ProgressEvent{Stage: domain.StageChunking})
-		chunks, cerr := deps.Audio.Chunk(ctx, prepared, prov.MaxUploadBytes(), workDir)
+		chunkOpts := ports.ChunkOpts{
+			ChunkLengthSec: req.ChunkLengthSec,
+			OverlapSec:     req.OverlapSec,
+		}
+		chunks, cerr := deps.Audio.Chunk(ctx, prepared, prov.MaxUploadBytes(), workDir, chunkOpts)
 		if cerr != nil {
 			err = cerr
 			return nil, fmt.Errorf("chunk: %w", err)

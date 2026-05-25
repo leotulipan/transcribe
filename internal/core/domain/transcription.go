@@ -19,6 +19,15 @@ type Request struct {
 	NumSpeakers      int            // 0 = unset; 1..32 valid; only meaningful when SpeakerLabels=true
 	KeyTerms         []string       // comma-parsed keyterms; empty = unset
 	SpeechModels     []string       // fallback speech model list; empty = unset
+
+	// Audio pipeline knobs (Phase 5d).
+	SizeThresholdBytes    int64 // 0 = use provider maxBytes only; >0 widens the as-is path past provider max
+	ChunkLengthSec        int   // 0 = derive from byte budget; >0 overrides chunk duration
+	OverlapSec            int   // 0 = no overlap; >0 = each chunk starts this many seconds before the nominal boundary
+	UseInput              bool  // bypass conversion entirely — send source file as-is
+	UsePCM                bool  // transcode to PCM WAV (pcm_s16le) instead of the preferred codec
+	KeepIntermediates     bool  // retain all temp files even on success
+	KeepFLACIntermediates bool  // retain temp files whose codec/container is flac
 }
 
 // WriteOpts carries per-write rendering knobs that are derived from Request

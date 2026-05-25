@@ -100,3 +100,59 @@ func TestTranscribeCmd_ParseCommaSeparatedSkipsEmpties(t *testing.T) {
 func TestTranscribeCmd_ParseCommaSeparatedEmptyString(t *testing.T) {
 	require.Nil(t, parseCommaSeparated(""))
 }
+
+func TestTranscribeCmd_HasPhase5dFlags(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	flags := []struct {
+		name     string
+		defValue string
+	}{
+		{"size-threshold", "100"},
+		{"chunk-length", "0"},
+		{"overlap", "0"},
+		{"use-input", "false"},
+		{"use-pcm", "false"},
+		{"keep", "false"},
+		{"keep-flac", "false"},
+	}
+	for _, tc := range flags {
+		t.Run(tc.name, func(t *testing.T) {
+			f := cmd.Flags().Lookup(tc.name)
+			require.NotNil(t, f, "--%s flag must be registered", tc.name)
+			require.Equal(t, tc.defValue, f.DefValue, "--%s default mismatch", tc.name)
+		})
+	}
+}
+
+func TestTranscribeCmd_UseInputAndUsePCMMutex(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("use-input", "true"))
+	require.NoError(t, cmd.Flags().Set("use-pcm", "true"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "mutually exclusive")
+}
+
+func TestTranscribeCmd_RejectsNegativeChunkLength(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("chunk-length", "-1"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "chunk-length")
+}
+
+func TestTranscribeCmd_RejectsNegativeOverlap(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("overlap", "-1"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "overlap")
+}
+
+func TestTranscribeCmd_RejectsNegativeSizeThreshold(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("size-threshold", "-1"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "size-threshold")
+}

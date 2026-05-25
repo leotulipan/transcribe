@@ -43,6 +43,15 @@ type transcribeFlags struct {
 	numSpeakers      int
 	keyTermsPrompt   string
 	speechModels     string
+
+	// Audio pipeline knobs (Phase 5d).
+	sizeThresholdMB float64 // stored as MB; converted to bytes when building Request
+	chunkLengthSec  int
+	overlapSec      int
+	useInput        bool
+	usePCM          bool
+	keep            bool
+	keepFLAC        bool
 }
 
 func newTranscribeCmd(d Deps) *cobra.Command {
@@ -68,6 +77,19 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 			// surfaces unconditionally (even when no input files are provided).
 			if f.numSpeakers < 0 || f.numSpeakers > 32 {
 				return fmt.Errorf("--num-speakers must be between 0 and 32 (got %d)", f.numSpeakers)
+			}
+			// Mutex: --use-input and --use-pcm are contradictory.
+			if f.useInput && f.usePCM {
+				return fmt.Errorf("--use-input and --use-pcm are mutually exclusive")
+			}
+			if f.chunkLengthSec < 0 {
+				return fmt.Errorf("--chunk-length must be 0 (unset) or positive (got %d)", f.chunkLengthSec)
+			}
+			if f.overlapSec < 0 {
+				return fmt.Errorf("--overlap must be 0 (no overlap) or positive (got %d)", f.overlapSec)
+			}
+			if f.sizeThresholdMB < 0 {
+				return fmt.Errorf("--size-threshold must be 0 (unset) or positive (got %g)", f.sizeThresholdMB)
 			}
 			if len(args) == 0 && f.jsonMode {
 				return fmt.Errorf("at least one input file is required in --json mode")
@@ -112,6 +134,14 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().IntVar(&f.numSpeakers, "num-speakers", 0, "expected number of speakers 1..32 (assemblyai+elevenlabs; requires --diarize; 0 = unset)")
 	cmd.Flags().StringVar(&f.keyTermsPrompt, "keyterms-prompt", "", "comma-separated key terms to boost recognition (assemblyai)")
 	cmd.Flags().StringVar(&f.speechModels, "speech-models", "", "comma-separated fallback speech models (assemblyai)")
+	// Audio pipeline flags (Phase 5d).
+	cmd.Flags().Float64Var(&f.sizeThresholdMB, "size-threshold", 100, "files (MB) under this size skip conversion if format is compatible (0 = provider limit only)")
+	cmd.Flags().IntVar(&f.chunkLengthSec, "chunk-length", 0, "chunk duration in seconds (0 = derive from byte budget)")
+	cmd.Flags().IntVar(&f.overlapSec, "overlap", 0, "overlap in seconds between consecutive chunks (0 = no overlap)")
+	cmd.Flags().BoolVar(&f.useInput, "use-input", false, "bypass conversion — send original file as-is")
+	cmd.Flags().BoolVar(&f.usePCM, "use-pcm", false, "convert to PCM WAV instead of the preferred codec")
+	cmd.Flags().BoolVar(&f.keep, "keep", false, "retain all intermediate files instead of deleting them")
+	cmd.Flags().BoolVar(&f.keepFLAC, "keep-flac", false, "retain FLAC intermediate files instead of deleting them")
 	return cmd
 }
 
@@ -161,6 +191,14 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 			NumSpeakers:      f.numSpeakers,
 			KeyTerms:         keyTerms,
 			SpeechModels:     speechModels,
+			// Audio pipeline (Phase 5d).
+			SizeThresholdBytes:    int64(f.sizeThresholdMB * 1024 * 1024),
+			ChunkLengthSec:        f.chunkLengthSec,
+			OverlapSec:            f.overlapSec,
+			UseInput:              f.useInput,
+			UsePCM:                f.usePCM,
+			KeepIntermediates:     f.keep,
+			KeepFLACIntermediates: f.keepFLAC,
 		}
 		if hasFormat(formats, domain.FormatDavinciSRT) {
 			opts := &domain.DaVinciOptions{

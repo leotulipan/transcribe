@@ -64,7 +64,7 @@ func (f *fakeAudio) Transcode(_ context.Context, in domain.AudioFile, _ ports.Ta
 	}
 	return out, nil
 }
-func (f *fakeAudio) Chunk(_ context.Context, in domain.AudioFile, _ int64, _ string) ([]domain.Chunk, error) {
+func (f *fakeAudio) Chunk(_ context.Context, in domain.AudioFile, _ int64, _ string, _ ports.ChunkOpts) ([]domain.Chunk, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.chunkCalls++
@@ -81,6 +81,22 @@ func (f *fakeAudio) Cleanup(domain.AudioFile) error {
 }
 
 var _ ports.AudioProcessor = (*fakeAudio)(nil)
+
+// recordingTranscodeAudio wraps fakeAudio and captures the TargetFormat passed
+// to Transcode so tests can assert which codec the pipeline selected.
+type recordingTranscodeAudio struct {
+	*fakeAudio
+	capturedTarget *ports.TargetFormat
+}
+
+func (r *recordingTranscodeAudio) Transcode(ctx context.Context, in domain.AudioFile, target ports.TargetFormat, workDir string) (domain.AudioFile, error) {
+	if r.capturedTarget != nil {
+		*r.capturedTarget = target
+	}
+	return r.fakeAudio.Transcode(ctx, in, target, workDir)
+}
+
+var _ ports.AudioProcessor = (*recordingTranscodeAudio)(nil)
 
 // fakeProviderFull is a complete Provider implementation for K6 tests.
 type fakeProviderFull struct {
