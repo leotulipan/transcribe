@@ -17,6 +17,49 @@ import (
 // pipelineRun executes the full transcription pipeline. Returns the final
 // Result + error; emits progress events to `emit` as it walks the stages.
 func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(domain.ProgressEvent)) (result *domain.Result, err error) {
+	// UseJSONInput short-circuit: load the pre-saved sidecar and skip all audio
+	// and provider stages (probe, cache lookup, prepare, chunk, transcribe).
+	// Execution resumes at Stage 8 (optional cache write) and Stage 9 (write outputs).
+	if req.UseJSONInput {
+		if deps.Cache == nil {
+			return nil, fmt.Errorf("--use-json-input requires a cache adapter")
+		}
+		loaded, loadErr := deps.Cache.LoadFromFile(req.InputPath)
+		if loadErr != nil {
+			return nil, fmt.Errorf("load json input: %w", loadErr)
+		}
+		result = loaded
+		// DaVinci post-processing still applies when the format is requested.
+		if hasFormat(req.Formats, domain.FormatDavinciSRT) {
+			applyDavinci(result, req.DaVinciOpts)
+		}
+		if req.SaveCleanedJSON && deps.Cache != nil {
+			if werr := deps.Cache.Save(req.InputPath, result); werr != nil && deps.Log != nil {
+				deps.Log.Warn("cache save failed", "err", werr)
+			}
+		}
+		emit(domain.ProgressEvent{Stage: domain.StageWriting})
+		writeOpts := domain.WriteOpts{
+			MaxCharsPerLine:  req.MaxCharsPerLine,
+			SpeakerLabels:    req.SpeakerLabels,
+			WordsPerSubtitle: req.WordsPerSubtitle,
+			StartHour:        req.StartHour,
+		}
+		for i, f := range req.Formats {
+			w, ok := deps.Writers[f]
+			if !ok {
+				return nil, fmt.Errorf("no writer registered for format %q", f)
+			}
+			dst := outputPath(req, f)
+			if werr := w.Write(result, dst, writeOpts); werr != nil {
+				return nil, werr
+			}
+			emit(domain.ProgressEvent{Stage: domain.StageWriting, Percent: float64(i+1) / float64(len(req.Formats))})
+		}
+		emit(domain.ProgressEvent{Stage: domain.StageDone})
+		return result, nil
+	}
+
 	prov, err := providerFor(deps, req.Provider)
 	if err != nil {
 		return nil, err
@@ -202,8 +245,10 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 		applyDavinci(result, req.DaVinciOpts)
 	}
 
-	// Stage 8 — cache write (only when we actually transcribed)
-	if cached == nil && deps.Cache != nil {
+	// Stage 8 — cache write. Triggers on a fresh transcription (cached==nil) when
+	// UseCache is on, OR unconditionally when SaveCleanedJSON is set. The guard on
+	// (UseCache || SaveCleanedJSON) ensures we never write when both are false.
+	if cached == nil && deps.Cache != nil && (req.UseCache || req.SaveCleanedJSON) {
 		if werr := deps.Cache.Save(req.InputPath, result); werr != nil && deps.Log != nil {
 			deps.Log.Warn("cache save failed", "err", werr)
 		}

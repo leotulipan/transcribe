@@ -52,6 +52,12 @@ type transcribeFlags struct {
 	usePCM          bool
 	keep            bool
 	keepFLAC        bool
+
+	// I/O & workflow flags (Phase 5e).
+	force           bool   // force re-transcription even when a sidecar exists (sets UseCache=false)
+	saveCleanedJSON bool   // persist normalized JSON even when UseCache=false
+	useJSONInput    bool   // treat input path as a pre-saved sidecar JSON; skip API call
+	extensions      string // comma-separated extension filter for directory enumeration
 }
 
 func newTranscribeCmd(d Deps) *cobra.Command {
@@ -142,6 +148,11 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().BoolVar(&f.usePCM, "use-pcm", false, "convert to PCM WAV instead of the preferred codec")
 	cmd.Flags().BoolVar(&f.keep, "keep", false, "retain all intermediate files instead of deleting them")
 	cmd.Flags().BoolVar(&f.keepFLAC, "keep-flac", false, "retain FLAC intermediate files instead of deleting them")
+	// I/O & workflow flags (Phase 5e).
+	cmd.Flags().BoolVar(&f.force, "force", false, "re-transcribe even when a sidecar transcript exists (overrides --use-cache)")
+	cmd.Flags().BoolVar(&f.saveCleanedJSON, "save-cleaned-json", false, "persist the normalized pre-format JSON next to outputs even when --use-cache=false")
+	cmd.Flags().BoolVar(&f.useJSONInput, "use-json-input", false, "accept a previously-saved sidecar JSON as input and skip the API call")
+	cmd.Flags().StringVar(&f.extensions, "extensions", "", "comma-separated file extensions to filter directory enumeration (e.g. mp3,m4a)")
 	return cmd
 }
 
@@ -152,6 +163,21 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 	}
 	keyTerms := parseCommaSeparated(f.keyTermsPrompt)
 	speechModels := parseCommaSeparated(f.speechModels)
+
+	// --use-json-input + --force is contradictory: there is no cache lookup to bypass.
+	if f.useJSONInput && f.force {
+		return fmt.Errorf("--use-json-input and --force are mutually exclusive: no API call is made with --use-json-input")
+	}
+
+	// Validate: --use-json-input paths must end in .json.
+	if f.useJSONInput {
+		for _, p := range files {
+			if !strings.HasSuffix(strings.ToLower(p), ".json") {
+				return fmt.Errorf("--use-json-input: path must be a .json sidecar file, got: %s", p)
+			}
+		}
+	}
+
 	if !f.jsonMode {
 		// Escalation rule: if no provider is configured at all, escalate to TUI.
 		if f.api == "" && d.Config.DefaultProvider == "" {
@@ -163,15 +189,28 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 			}
 		}
 	}
-	// Expand any directory arguments into their constituent audio/video files.
-	// Files are passed through unchanged. This lets users do
-	//     transcribe path/to/folder file.mp3 anotherFolder/
-	expanded, err := expandPaths(files)
-	if err != nil {
-		return err
+
+	var expanded []string
+	if f.useJSONInput {
+		// JSON-input paths are passed verbatim — no audio enumeration needed.
+		expanded = files
+	} else {
+		// Expand any directory arguments into their constituent audio/video files.
+		// Files are passed through unchanged. This lets users do
+		//     transcribe path/to/folder file.mp3 anotherFolder/
+		exts := parseExtensions(f.extensions)
+		expanded, err = expandPathsWith(files, exts)
+		if err != nil {
+			return err
+		}
+		if len(expanded) == 0 {
+			return fmt.Errorf("no audio/video files found in: %s", strings.Join(files, ", "))
+		}
 	}
-	if len(expanded) == 0 {
-		return fmt.Errorf("no audio/video files found in: %s", strings.Join(files, ", "))
+
+	useCache := f.cache
+	if f.force {
+		useCache = false
 	}
 
 	provider := domain.ProviderID(f.api)
@@ -183,7 +222,7 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 			Language:         f.language,
 			Formats:          formats,
 			OutputDir:        f.outDir,
-			UseCache:         f.cache,
+			UseCache:         useCache,
 			MaxCharsPerLine:  f.charsPerLine,
 			WordsPerSubtitle: f.wordsPerSubtitle,
 			StartHour:        f.startHour,
@@ -199,6 +238,9 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 			UsePCM:                f.usePCM,
 			KeepIntermediates:     f.keep,
 			KeepFLACIntermediates: f.keepFLAC,
+			// I/O & workflow (Phase 5e).
+			UseJSONInput:    f.useJSONInput,
+			SaveCleanedJSON: f.saveCleanedJSON,
 		}
 		if hasFormat(formats, domain.FormatDavinciSRT) {
 			opts := &domain.DaVinciOptions{
@@ -296,18 +338,43 @@ type EscalateToTUI struct {
 
 func (e *EscalateToTUI) Error() string { return "escalating to TUI for missing inputs" }
 
-// expandPaths walks each input. Files pass through; directories are
-// expanded via EnumerateAudioFiles. Order matches the input.
-func expandPaths(paths []string) ([]string, error) {
+// expandPathsWith walks each input using the provided extension filter.
+// Files pass through; directories are expanded via EnumerateAudioFilesWith.
+// Pass nil extensions to use the default AudioExtensions list.
+func expandPathsWith(paths []string, extensions []string) ([]string, error) {
 	var out []string
 	for _, p := range paths {
-		more, err := services.EnumerateAudioFiles(p)
+		more, err := services.EnumerateAudioFilesWith(p, extensions)
 		if err != nil {
 			return nil, fmt.Errorf("enumerate %s: %w", p, err)
 		}
 		out = append(out, more...)
 	}
 	return out, nil
+}
+
+// parseExtensions splits a comma-separated extension string into a normalised
+// slice (lower-cased, leading dot optional). Returns nil when s is empty.
+func parseExtensions(s string) []string {
+	if s == "" {
+		return nil
+	}
+	raw := strings.Split(s, ",")
+	out := make([]string, 0, len(raw))
+	for _, e := range raw {
+		e = strings.TrimSpace(strings.ToLower(e))
+		if e == "" {
+			continue
+		}
+		if !strings.HasPrefix(e, ".") {
+			e = "." + e
+		}
+		out = append(out, e)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func firstOr(s []string, def string) string {

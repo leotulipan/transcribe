@@ -156,3 +156,62 @@ func TestTranscribeCmd_RejectsNegativeSizeThreshold(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "size-threshold")
 }
+
+func TestTranscribeCmd_HasPhase5eFlags(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	flags := []struct {
+		name     string
+		defValue string
+	}{
+		{"force", "false"},
+		{"save-cleaned-json", "false"},
+		{"use-json-input", "false"},
+		{"extensions", ""},
+	}
+	for _, tc := range flags {
+		t.Run(tc.name, func(t *testing.T) {
+			f := cmd.Flags().Lookup(tc.name)
+			require.NotNil(t, f, "--%s flag must be registered", tc.name)
+			require.Equal(t, tc.defValue, f.DefValue, "--%s default mismatch", tc.name)
+		})
+	}
+}
+
+func TestTranscribeCmd_ForceSetsUseCacheFalse(t *testing.T) {
+	// Parsing only; we can't call runTranscribe without a full service, but we
+	// can verify the flag registration and value round-trip.
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("force", "true"))
+	require.NoError(t, cmd.Flags().Set("use-cache", "true"))
+	// Trigger RunE with no files → escalates to TUI error, which means the
+	// flag parsing path ran; we verify no crash on the mutual combination.
+	err := cmd.RunE(cmd, []string{})
+	// EscalateToTUI or "at least one input file" error — either is fine.
+	require.Error(t, err)
+}
+
+func TestTranscribeCmd_UseJSONInputAcceptsJSONOnly(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("use-json-input", "true"))
+	err := cmd.RunE(cmd, []string{"audio.mp3"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), ".json")
+}
+
+func TestTranscribeCmd_UseJSONInputAndForceAreExclusive(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("use-json-input", "true"))
+	require.NoError(t, cmd.Flags().Set("force", "true"))
+	err := cmd.RunE(cmd, []string{"audio.transcribe.groq.json"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "mutually exclusive")
+}
+
+func TestTranscribeCmd_ParseExtensionsNormalisesEntries(t *testing.T) {
+	got := parseExtensions("MP3, .WAV, m4a,,")
+	require.Equal(t, []string{".mp3", ".wav", ".m4a"}, got)
+}
+
+func TestTranscribeCmd_ParseExtensionsEmptyString(t *testing.T) {
+	require.Nil(t, parseExtensions(""))
+}

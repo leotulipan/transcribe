@@ -90,3 +90,42 @@ func TestEnumerateAudioFiles_MissingPath(t *testing.T) {
 	_, err := EnumerateAudioFiles(filepath.Join(t.TempDir(), "does-not-exist"))
 	require.Error(t, err)
 }
+
+func TestEnumerateAudioFilesWith_ExtensionsOverridesDefault(t *testing.T) {
+	dir := t.TempDir()
+	touch(t, filepath.Join(dir, "a.mp3"))
+	touch(t, filepath.Join(dir, "b.wav"))
+	touch(t, filepath.Join(dir, "c.m4a"))
+
+	// Only mp3 and m4a — wav must be excluded.
+	got, err := EnumerateAudioFilesWith(dir, []string{"mp3", "m4a"})
+	require.NoError(t, err)
+
+	want := []string{
+		filepath.Join(dir, "a.mp3"),
+		filepath.Join(dir, "c.m4a"),
+	}
+	sort.Strings(want)
+	require.Equal(t, want, got)
+}
+
+func TestEnumerateAudioFilesWith_DotPrefixAccepted(t *testing.T) {
+	dir := t.TempDir()
+	touch(t, filepath.Join(dir, "a.mp3"))
+	touch(t, filepath.Join(dir, "b.wav"))
+
+	// ".mp3" with leading dot must also work.
+	got, err := EnumerateAudioFilesWith(dir, []string{".mp3"})
+	require.NoError(t, err)
+	require.Equal(t, []string{filepath.Join(dir, "a.mp3")}, got)
+}
+
+func TestEnumerateAudioFilesWith_NoExtensionsUsesDefault(t *testing.T) {
+	dir := t.TempDir()
+	touch(t, filepath.Join(dir, "a.mp3"))
+	touch(t, filepath.Join(dir, "ignore.txt"))
+
+	got, err := EnumerateAudioFilesWith(dir, nil)
+	require.NoError(t, err)
+	require.Equal(t, []string{filepath.Join(dir, "a.mp3")}, got)
+}

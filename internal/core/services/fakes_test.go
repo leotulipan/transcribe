@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
@@ -142,13 +143,17 @@ var _ ports.Provider = (*fakeProviderFull)(nil)
 
 // fakeCache is a map-backed ResultCache.
 type fakeCache struct {
-	mu    sync.Mutex
-	store map[string]*domain.Result
-	saves int
+	mu        sync.Mutex
+	store     map[string]*domain.Result
+	fileStore map[string]*domain.Result // keyed by absolute JSON path for LoadFromFile
+	saves     int
 }
 
 func newFakeCache() *fakeCache {
-	return &fakeCache{store: map[string]*domain.Result{}}
+	return &fakeCache{
+		store:     map[string]*domain.Result{},
+		fileStore: map[string]*domain.Result{},
+	}
 }
 
 func (c *fakeCache) Lookup(path string, _ domain.ProviderID) (*domain.Result, bool, error) {
@@ -163,6 +168,21 @@ func (c *fakeCache) Save(path string, r *domain.Result) error {
 	c.store[path] = r
 	c.saves++
 	return nil
+}
+func (c *fakeCache) LoadFromFile(jsonPath string) (*domain.Result, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if r, ok := c.fileStore[jsonPath]; ok {
+		return r, nil
+	}
+	return nil, fmt.Errorf("fakeCache: no result for %s", jsonPath)
+}
+
+// storeFile registers a result to be returned by LoadFromFile for jsonPath.
+func (c *fakeCache) storeFile(jsonPath string, r *domain.Result) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.fileStore[jsonPath] = r
 }
 
 var _ ports.ResultCache = (*fakeCache)(nil)

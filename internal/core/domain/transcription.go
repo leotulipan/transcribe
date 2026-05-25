@@ -28,6 +28,10 @@ type Request struct {
 	UsePCM                bool  // transcode to PCM WAV (pcm_s16le) instead of the preferred codec
 	KeepIntermediates     bool  // retain all temp files even on success
 	KeepFLACIntermediates bool  // retain temp files whose codec/container is flac
+
+	// I/O & workflow knobs (Phase 5e).
+	UseJSONInput    bool // treat InputPath as a pre-saved sidecar JSON; skip API call entirely
+	SaveCleanedJSON bool // persist the normalized domain.Result JSON even when UseCache=false
 }
 
 // WriteOpts carries per-write rendering knobs that are derived from Request

@@ -58,6 +58,7 @@ func TestPipeline_HappyPath_TextOnly(t *testing.T) {
 		Provider:  domain.ProviderGroq,
 		Model:     "whisper-large-v3",
 		Formats:   []domain.OutputFormat{domain.FormatText},
+		UseCache:  true,
 	})
 	require.NoError(t, err)
 
@@ -292,4 +293,130 @@ func TestPipeline_ResultCacheHit_SkipsAudioAndProvider(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "cached text", res.Text)
 	require.Len(t, textWriter.paths, 1)
+}
+
+func TestPipelineRun_UseJSONInputSkipsProvider(t *testing.T) {
+	dir := t.TempDir()
+	jsonPath := filepath.Join(dir, "talk.transcribe.groq.json")
+
+	loaded := &domain.Result{Text: "from json", Provider: domain.ProviderGroq}
+	cache := newFakeCache()
+	cache.storeFile(jsonPath, loaded)
+
+	textWriter := &recordingWriter{format: domain.FormatText}
+	prov := &fakeProviderFull{
+		id:        domain.ProviderGroq,
+		models:    []string{"whisper-large-v3"},
+		maxUpload: 1024,
+		caps: map[string]ports.ModelCapabilities{
+			"whisper-large-v3": {WordTimestamps: false, AcceptedInputs: []domain.AudioFormat{{Codec: "mp3"}}},
+		},
+		transcribeFn: func(context.Context, domain.AudioFile, ports.ProviderOpts) (*domain.Result, error) {
+			t.Fatal("provider must not be called when UseJSONInput=true")
+			return nil, nil
+		},
+	}
+
+	svc := New(Deps{
+		Providers: map[domain.ProviderID]ports.Provider{domain.ProviderGroq: prov},
+		Audio:     &fakeAudio{},
+		Cache:     cache,
+		Writers:   map[domain.OutputFormat]ports.FormatWriter{domain.FormatText: textWriter},
+	})
+
+	job, err := svc.Submit(context.Background(), domain.Request{
+		InputPath:    jsonPath,
+		Provider:     domain.ProviderGroq,
+		Formats:      []domain.OutputFormat{domain.FormatText},
+		UseJSONInput: true,
+	})
+	require.NoError(t, err)
+	res, err := job.Wait()
+	require.NoError(t, err)
+	require.Equal(t, "from json", res.Text)
+	require.Len(t, textWriter.paths, 1)
+	// No save because UseCache=false (default) and SaveCleanedJSON=false (default).
+	require.Equal(t, 0, cache.saves)
+}
+
+func TestPipelineRun_SaveCleanedJSONWritesEvenWhenCacheDisabled(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "talk.mp3")
+	require.NoError(t, os.WriteFile(inputPath, []byte("\xff\xfb"), 0o644))
+
+	audio := &fakeAudio{
+		probeOut: domain.AudioFile{Path: inputPath, Codec: "mp3", Container: "mp3", SizeBytes: 100, Duration: time.Second},
+	}
+	prov := &fakeProviderFull{
+		id:        domain.ProviderGroq,
+		models:    []string{"whisper-large-v3"},
+		maxUpload: 1024,
+		caps: map[string]ports.ModelCapabilities{
+			"whisper-large-v3": {WordTimestamps: false, AcceptedInputs: []domain.AudioFormat{{Codec: "mp3"}}},
+		},
+		result: &domain.Result{Text: "saved"},
+	}
+	cache := newFakeCache()
+	textWriter := &recordingWriter{format: domain.FormatText}
+
+	svc := New(Deps{
+		Providers: map[domain.ProviderID]ports.Provider{domain.ProviderGroq: prov},
+		Audio:     audio,
+		Cache:     cache,
+		Writers:   map[domain.OutputFormat]ports.FormatWriter{domain.FormatText: textWriter},
+	})
+
+	job, err := svc.Submit(context.Background(), domain.Request{
+		InputPath:       inputPath,
+		Provider:        domain.ProviderGroq,
+		Model:           "whisper-large-v3",
+		Formats:         []domain.OutputFormat{domain.FormatText},
+		UseCache:        false,
+		SaveCleanedJSON: true,
+	})
+	require.NoError(t, err)
+	_, err = job.Wait()
+	require.NoError(t, err)
+	require.Equal(t, 1, cache.saves, "SaveCleanedJSON=true must write JSON even when UseCache=false")
+}
+
+func TestPipelineRun_NoSaveWhenBothFalse(t *testing.T) {
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "talk.mp3")
+	require.NoError(t, os.WriteFile(inputPath, []byte("\xff\xfb"), 0o644))
+
+	audio := &fakeAudio{
+		probeOut: domain.AudioFile{Path: inputPath, Codec: "mp3", Container: "mp3", SizeBytes: 100, Duration: time.Second},
+	}
+	prov := &fakeProviderFull{
+		id:        domain.ProviderGroq,
+		models:    []string{"whisper-large-v3"},
+		maxUpload: 1024,
+		caps: map[string]ports.ModelCapabilities{
+			"whisper-large-v3": {WordTimestamps: false, AcceptedInputs: []domain.AudioFormat{{Codec: "mp3"}}},
+		},
+		result: &domain.Result{Text: "no save"},
+	}
+	cache := newFakeCache()
+	textWriter := &recordingWriter{format: domain.FormatText}
+
+	svc := New(Deps{
+		Providers: map[domain.ProviderID]ports.Provider{domain.ProviderGroq: prov},
+		Audio:     audio,
+		Cache:     cache,
+		Writers:   map[domain.OutputFormat]ports.FormatWriter{domain.FormatText: textWriter},
+	})
+
+	job, err := svc.Submit(context.Background(), domain.Request{
+		InputPath:       inputPath,
+		Provider:        domain.ProviderGroq,
+		Model:           "whisper-large-v3",
+		Formats:         []domain.OutputFormat{domain.FormatText},
+		UseCache:        false,
+		SaveCleanedJSON: false,
+	})
+	require.NoError(t, err)
+	_, err = job.Wait()
+	require.NoError(t, err)
+	require.Equal(t, 0, cache.saves, "UseCache=false + SaveCleanedJSON=false must not write JSON")
 }

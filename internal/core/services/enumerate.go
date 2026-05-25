@@ -16,11 +16,21 @@ var AudioExtensions = []string{
 	".mp4", ".mkv", ".mov", ".avi", ".webm",
 }
 
-// EnumerateAudioFiles returns the audio/video files at root. If root is a
+// EnumerateAudioFiles returns the audio/video files at root using the default
+// AudioExtensions list. See EnumerateAudioFilesWith for the full contract.
+func EnumerateAudioFiles(root string) ([]string, error) {
+	return EnumerateAudioFilesWith(root, nil)
+}
+
+// EnumerateAudioFilesWith returns the audio/video files at root. If root is a
 // regular file it returns [root] (no extension filtering — the user picked it
 // explicitly). If root is a directory it walks recursively, skips hidden
-// files (leading "."), filters by AudioExtensions, and returns a sorted slice.
-func EnumerateAudioFiles(root string) ([]string, error) {
+// files (leading "."), and filters by the provided extensions list.
+//
+// extensions may be nil or empty, in which case AudioExtensions is used. Each
+// entry is normalised: a leading dot is added when absent and the value is
+// lowercased. Both "mp3" and ".mp3" are accepted.
+func EnumerateAudioFilesWith(root string, extensions []string) ([]string, error) {
 	info, err := os.Stat(root)
 	if err != nil {
 		return nil, err
@@ -29,8 +39,16 @@ func EnumerateAudioFiles(root string) ([]string, error) {
 		return []string{root}, nil
 	}
 
-	exts := make(map[string]struct{}, len(AudioExtensions))
-	for _, e := range AudioExtensions {
+	list := AudioExtensions
+	if len(extensions) > 0 {
+		list = extensions
+	}
+	exts := make(map[string]struct{}, len(list))
+	for _, e := range list {
+		e = strings.ToLower(e)
+		if !strings.HasPrefix(e, ".") {
+			e = "." + e
+		}
 		exts[e] = struct{}{}
 	}
 
