@@ -37,6 +37,9 @@ type transcribeFlags struct {
 	startHour        int
 	diarize          bool
 	speakerLabels    bool
+	fps              float64
+	fpsOffsetStart   int
+	fpsOffsetEnd     int
 }
 
 func newTranscribeCmd(d Deps) *cobra.Command {
@@ -95,6 +98,9 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().IntVar(&f.charsPerLine, "chars-per-line", 0, "max chars per rendered subtitle line (0 = no wrapping)")
 	cmd.Flags().BoolVar(&f.diarize, "diarize", false, "request speaker diarization from the provider (assemblyai, elevenlabs)")
 	cmd.Flags().BoolVar(&f.speakerLabels, "speaker-labels", false, "prefix subtitle blocks with [Speaker X]: (default: mirrors --diarize)")
+	cmd.Flags().Float64Var(&f.fps, "fps", 0, "video frame rate for snapping subtitle boundaries to frame grid (0 = no snapping)")
+	cmd.Flags().IntVar(&f.fpsOffsetStart, "fps-offset-start", -1, "frame offset added to snapped Start times (-1 = appear 1 frame earlier)")
+	cmd.Flags().IntVar(&f.fpsOffsetEnd, "fps-offset-end", 0, "frame offset added to snapped End times")
 	return cmd
 }
 
@@ -148,6 +154,9 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 				RemoveFillers:          f.removeFillers,
 				SuppressFillerLines:    !f.fillerLines,
 				SuppressPauses:         !f.showPauses,
+				FPS:                    f.fps,
+				FPSOffsetStart:         f.fpsOffsetStart,
+				FPSOffsetEnd:           f.fpsOffsetEnd,
 			}
 			if len(f.fillerWords) > 0 {
 				opts.FillerWords = f.fillerWords

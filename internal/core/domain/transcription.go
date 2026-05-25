@@ -68,6 +68,9 @@ type DaVinciOptions struct {
 	RemoveFillers          bool
 	SuppressFillerLines    bool
 	SuppressPauses         bool // when true, no (...) markers are inserted even on long gaps
+	FPS                    float64
+	FPSOffsetStart         int // frames added to snapped Start; CLI default is -1 (appear one frame early)
+	FPSOffsetEnd           int // frames added to snapped End; CLI default is 0
 }
 
 // DefaultFillerWords is what DaVinciOptions.FillerWords defaults to when empty.

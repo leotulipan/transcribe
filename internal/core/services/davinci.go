@@ -7,6 +7,37 @@ import (
 	"github.com/leotulipan/transcribe/internal/core/domain"
 )
 
+// snapToFrames snaps every word's Start and End to the nearest frame boundary
+// at the given fps, then applies the per-boundary frame offsets. Results are
+// clamped so Start >= 0 and End >= Start.
+func snapToFrames(words []domain.Word, fps float64, offsetStart, offsetEnd int) {
+	if fps <= 0 || len(words) == 0 {
+		return
+	}
+	fn := time.Duration(float64(time.Second) / fps)
+	if fn <= 0 {
+		return
+	}
+	for i := range words {
+		w := &words[i]
+
+		frameStart := int64((float64(w.Start) / float64(fn)) + 0.5)
+		frameEnd := int64((float64(w.End) / float64(fn)) + 0.5)
+
+		newStart := time.Duration(frameStart+int64(offsetStart)) * fn
+		newEnd := time.Duration(frameEnd+int64(offsetEnd)) * fn
+
+		if newStart < 0 {
+			newStart = 0
+		}
+		if newEnd < newStart {
+			newEnd = newStart
+		}
+		w.Start = newStart
+		w.End = newEnd
+	}
+}
+
 // applyDavinci mutates result.Words in place: pause markers get inserted as
 // synthetic words with text "(...)", and filler-word matches get uppercased
 // so the DaVinci format writer renders them on their own line.
@@ -14,7 +45,8 @@ import (
 // Processing order:
 //  1. PaddingStart — shift real-word Start times earlier (based on real-word gaps).
 //  2. PaddingEnd   — shrink real-word End times (based on real-word gaps).
-//  3. Filler + pause-marker pass — insert synthetic "(...)" words and uppercase
+//  3. Frame-snap   — when FPS > 0, quantize Start/End to the frame grid and apply offsets.
+//  4. Filler + pause-marker pass — insert synthetic "(...)" words and uppercase
 //     fillers. Pause markers are based on the padding-adjusted gaps, which is
 //     architecturally correct: the silence between words is measured after any
 //     timestamp adjustments have been applied.
@@ -76,9 +108,11 @@ func applyDavinci(r *domain.Result, opts *domain.DaVinciOptions) {
 		}
 	}
 
-	// Pass 3: Filler handling + pause-marker insertion.
-	// Gaps are measured on the padding-adjusted timestamps, so pause markers
-	// reflect the actual post-padding silence.
+	// Pass 3: Frame-snap — quantize to the frame grid after padding, before pause markers.
+	snapToFrames(r.Words, opts.FPS, opts.FPSOffsetStart, opts.FPSOffsetEnd)
+
+	// Pass 4: Filler handling + pause-marker insertion.
+	// Gaps are measured on the padding- and frame-snap-adjusted timestamps.
 	var out []domain.Word
 	prevEnd := time.Duration(-1)
 	for i, w := range r.Words {
