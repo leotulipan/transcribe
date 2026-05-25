@@ -19,21 +19,36 @@ func NewSRT() *SRT { return &SRT{} }
 
 func (SRT) Format() domain.OutputFormat { return domain.FormatSRT }
 
-func (SRT) Write(r *domain.Result, dst string) error {
-	blocks := groupWords(r.Words, srtMaxWordsPerBlock, srtMaxGap)
+func (SRT) Write(r *domain.Result, dst string, opts domain.WriteOpts) error {
+	maxWords := srtMaxWordsPerBlock
+	if opts.WordsPerSubtitle > 0 {
+		maxWords = opts.WordsPerSubtitle
+	}
+	blocks := groupWords(r.Words, maxWords, srtMaxGap)
 	var b strings.Builder
 	for i, blk := range blocks {
 		b.WriteString(itoa(i + 1))
 		b.WriteByte('\n')
-		b.WriteString(formatTimecode(blk.Start))
+		b.WriteString(formatTimecodeOffset(blk.Start, opts.StartHour))
 		b.WriteString(" --> ")
-		b.WriteString(formatTimecode(blk.End))
+		b.WriteString(formatTimecodeOffset(blk.End, opts.StartHour))
 		b.WriteByte('\n')
-		for j, w := range blk.Words {
-			if j > 0 {
-				b.WriteByte(' ')
+		if opts.SpeakerLabels && len(blk.Words) > 0 && blk.Words[0].Speaker != "" {
+			b.WriteString("[Speaker ")
+			b.WriteString(blk.Words[0].Speaker)
+			b.WriteString("]: ")
+		}
+		lines := wrapByChars(blk.Words, opts.MaxCharsPerLine)
+		for li, line := range lines {
+			if li > 0 {
+				b.WriteByte('\n')
 			}
-			b.WriteString(w.Text)
+			for j, w := range line {
+				if j > 0 {
+					b.WriteByte(' ')
+				}
+				b.WriteString(w.Text)
+			}
 		}
 		b.WriteString("\n\n")
 	}

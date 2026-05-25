@@ -76,7 +76,11 @@ func main() {
 		fmt.Fprintln(os.Stderr, "config:", err)
 		os.Exit(3)
 	}
-	log := logging.NewText(os.Stderr, slog.LevelInfo)
+	// Start at Warn; cobra PersistentPreRunE promotes to Info or Debug when
+	// --verbose or --debug is passed, using slog.LevelVar for zero-rebuild mutation.
+	logLevel := &slog.LevelVar{}
+	logLevel.Set(slog.LevelWarn)
+	log := logging.NewLevelled(os.Stderr, logLevel)
 
 	svc, err := delivery.BuildService(cfg, log)
 	if err != nil {
@@ -108,17 +112,22 @@ func main() {
 			os.Exit(cli.ExitCodeFor(err))
 		}
 	default:
-		root := cli.NewRoot(cli.Deps{Service: svc, Config: cfg, Logger: log, Version: version})
+		root := cli.NewRoot(cli.Deps{Service: svc, Config: cfg, Logger: log, Version: version, LevelVar: logLevel})
 		if err := root.ExecuteContext(ctx); err != nil {
 			// CLI may signal escalation via a typed error
 			var esc *cli.EscalateToTUI
 			if errors.As(err, &esc) {
 				_, e := tui.Run(ctx, tui.Deps{Service: svc, Config: cfg, Logger: log}, tui.Prefill{
-					InputPath: esc.InputPath,
-					Provider:  domain.ProviderID(esc.Provider),
-					Model:     esc.Model,
-					Language:  esc.Language,
-					Formats:   esc.Formats,
+					InputPath:      esc.InputPath,
+					Provider:       domain.ProviderID(esc.Provider),
+					Model:          esc.Model,
+					Language:       esc.Language,
+					Formats:        esc.Formats,
+					Diarize:        esc.Diarize,
+					RemoveFillers:  esc.RemoveFillers,
+					FillerLines:    esc.FillerLines,
+					PaddingStartMs: esc.PaddingStartMs,
+					PaddingEndMs:   esc.PaddingEndMs,
 				})
 				if e != nil && !errors.Is(e, context.Canceled) {
 					fmt.Fprintln(os.Stderr, e)

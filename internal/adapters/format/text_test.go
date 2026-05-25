@@ -15,7 +15,7 @@ func TestText_Write(t *testing.T) {
 	dst := filepath.Join(dir, "out.txt")
 	w := NewText()
 	require.Equal(t, domain.FormatText, w.Format())
-	require.NoError(t, w.Write(&domain.Result{Text: "hello world\n"}, dst))
+	require.NoError(t, w.Write(&domain.Result{Text: "hello world\n"}, dst, domain.WriteOpts{}))
 	got, err := os.ReadFile(dst)
 	require.NoError(t, err)
 	require.Equal(t, "hello world\n", string(got))

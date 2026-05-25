@@ -18,3 +18,11 @@ type Config struct {
     // or the GUI refresh action. Empty = use the adapter's hardcoded fallback.
     DiscoveredModels map[domain.ProviderID][]string
 }
+
+// SetAPIKey stores or replaces the API key for the given provider.
+func (c *Config) SetAPIKey(p domain.ProviderID, key string) {
+    if c.APIKeys == nil {
+        c.APIKeys = map[domain.ProviderID]string{}
+    }
+    c.APIKeys[p] = key
+}

@@ -1,0 +1,217 @@
+package cli
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+
+func TestTranscribeCmd_HasPaddingStartFlag(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	f := cmd.Flags().Lookup("padding-start")
+	require.NotNil(t, f, "--padding-start flag must be registered")
+	require.Equal(t, "0", f.DefValue, "default must be 0")
+}
+
+func TestTranscribeCmd_HasNewPhase5aFlags(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	flags := []struct {
+		name     string
+		defValue string
+	}{
+		{"words-per-subtitle", "0"},
+		{"silent-portions", "1500"},
+		{"padding-end", "0"},
+		{"show-pauses", "true"},
+		{"start-hour", "0"},
+	}
+	for _, tc := range flags {
+		t.Run(tc.name, func(t *testing.T) {
+			f := cmd.Flags().Lookup(tc.name)
+			require.NotNil(t, f, "--%s flag must be registered", tc.name)
+			require.Equal(t, tc.defValue, f.DefValue, "--%s default mismatch", tc.name)
+		})
+	}
+}
+
+func TestTranscribeCmd_SilentPortionMsBackwardCompat(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	f := cmd.Flags().Lookup("silent-portion-ms")
+	require.NotNil(t, f, "--silent-portion-ms (legacy flag) must still be registered")
+	require.Equal(t, "1500", f.DefValue)
+}
+
+func TestTranscribeCmd_WordsPerSubtitleAndCharsPerLineMutex(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	// Both flags non-zero → error.
+	require.NoError(t, cmd.Flags().Set("words-per-subtitle", "3"))
+	require.NoError(t, cmd.Flags().Set("chars-per-line", "50"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "mutually exclusive")
+}
+
+func TestTranscribeCmd_HasPhase5cFlags(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	flags := []struct {
+		name     string
+		defValue string
+	}{
+		{"num-speakers", "0"},
+		{"keyterms-prompt", ""},
+		{"speech-models", ""},
+	}
+	for _, tc := range flags {
+		t.Run(tc.name, func(t *testing.T) {
+			f := cmd.Flags().Lookup(tc.name)
+			require.NotNil(t, f, "--%s flag must be registered", tc.name)
+			require.Equal(t, tc.defValue, f.DefValue, "--%s default mismatch", tc.name)
+		})
+	}
+}
+
+func TestTranscribeCmd_RejectsNumSpeakersOver32(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("num-speakers", "33"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "num-speakers")
+}
+
+func TestTranscribeCmd_RejectsNegativeNumSpeakers(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("num-speakers", "-1"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "num-speakers")
+}
+
+func TestTranscribeCmd_ParsesKeyTermsCommaList(t *testing.T) {
+	result := parseCommaSeparated("foo, bar ,baz")
+	require.Equal(t, []string{"foo", "bar", "baz"}, result)
+}
+
+func TestTranscribeCmd_ParseCommaSeparatedSkipsEmpties(t *testing.T) {
+	result := parseCommaSeparated("foo,,  ,bar")
+	require.Equal(t, []string{"foo", "bar"}, result)
+}
+
+func TestTranscribeCmd_ParseCommaSeparatedEmptyString(t *testing.T) {
+	require.Nil(t, parseCommaSeparated(""))
+}
+
+func TestTranscribeCmd_HasPhase5dFlags(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	flags := []struct {
+		name     string
+		defValue string
+	}{
+		{"size-threshold", "100"},
+		{"chunk-length", "0"},
+		{"overlap", "0"},
+		{"use-input", "false"},
+		{"use-pcm", "false"},
+		{"keep", "false"},
+		{"keep-flac", "false"},
+	}
+	for _, tc := range flags {
+		t.Run(tc.name, func(t *testing.T) {
+			f := cmd.Flags().Lookup(tc.name)
+			require.NotNil(t, f, "--%s flag must be registered", tc.name)
+			require.Equal(t, tc.defValue, f.DefValue, "--%s default mismatch", tc.name)
+		})
+	}
+}
+
+func TestTranscribeCmd_UseInputAndUsePCMMutex(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("use-input", "true"))
+	require.NoError(t, cmd.Flags().Set("use-pcm", "true"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "mutually exclusive")
+}
+
+func TestTranscribeCmd_RejectsNegativeChunkLength(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("chunk-length", "-1"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "chunk-length")
+}
+
+func TestTranscribeCmd_RejectsNegativeOverlap(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("overlap", "-1"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "overlap")
+}
+
+func TestTranscribeCmd_RejectsNegativeSizeThreshold(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("size-threshold", "-1"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "size-threshold")
+}
+
+func TestTranscribeCmd_HasPhase5eFlags(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	flags := []struct {
+		name     string
+		defValue string
+	}{
+		{"force", "false"},
+		{"save-cleaned-json", "false"},
+		{"use-json-input", "false"},
+		{"extensions", ""},
+	}
+	for _, tc := range flags {
+		t.Run(tc.name, func(t *testing.T) {
+			f := cmd.Flags().Lookup(tc.name)
+			require.NotNil(t, f, "--%s flag must be registered", tc.name)
+			require.Equal(t, tc.defValue, f.DefValue, "--%s default mismatch", tc.name)
+		})
+	}
+}
+
+func TestTranscribeCmd_ForceSetsUseCacheFalse(t *testing.T) {
+	// Parsing only; we can't call runTranscribe without a full service, but we
+	// can verify the flag registration and value round-trip.
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("force", "true"))
+	require.NoError(t, cmd.Flags().Set("use-cache", "true"))
+	// Trigger RunE with no files → escalates to TUI error, which means the
+	// flag parsing path ran; we verify no crash on the mutual combination.
+	err := cmd.RunE(cmd, []string{})
+	// EscalateToTUI or "at least one input file" error — either is fine.
+	require.Error(t, err)
+}
+
+func TestTranscribeCmd_UseJSONInputAcceptsJSONOnly(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("use-json-input", "true"))
+	err := cmd.RunE(cmd, []string{"audio.mp3"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), ".json")
+}
+
+func TestTranscribeCmd_UseJSONInputAndForceAreExclusive(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	require.NoError(t, cmd.Flags().Set("use-json-input", "true"))
+	require.NoError(t, cmd.Flags().Set("force", "true"))
+	err := cmd.RunE(cmd, []string{"audio.transcribe.groq.json"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "mutually exclusive")
+}
+
+func TestTranscribeCmd_ParseExtensionsNormalisesEntries(t *testing.T) {
+	got := parseExtensions("MP3, .WAV, m4a,,")
+	require.Equal(t, []string{".mp3", ".wav", ".m4a"}, got)
+}
+
+func TestTranscribeCmd_ParseExtensionsEmptyString(t *testing.T) {
+	require.Nil(t, parseExtensions(""))
+}

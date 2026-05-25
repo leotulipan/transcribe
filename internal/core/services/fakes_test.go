@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
@@ -64,7 +65,7 @@ func (f *fakeAudio) Transcode(_ context.Context, in domain.AudioFile, _ ports.Ta
 	}
 	return out, nil
 }
-func (f *fakeAudio) Chunk(_ context.Context, in domain.AudioFile, _ int64, _ string) ([]domain.Chunk, error) {
+func (f *fakeAudio) Chunk(_ context.Context, in domain.AudioFile, _ int64, _ string, _ ports.ChunkOpts) ([]domain.Chunk, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.chunkCalls++
@@ -81,6 +82,22 @@ func (f *fakeAudio) Cleanup(domain.AudioFile) error {
 }
 
 var _ ports.AudioProcessor = (*fakeAudio)(nil)
+
+// recordingTranscodeAudio wraps fakeAudio and captures the TargetFormat passed
+// to Transcode so tests can assert which codec the pipeline selected.
+type recordingTranscodeAudio struct {
+	*fakeAudio
+	capturedTarget *ports.TargetFormat
+}
+
+func (r *recordingTranscodeAudio) Transcode(ctx context.Context, in domain.AudioFile, target ports.TargetFormat, workDir string) (domain.AudioFile, error) {
+	if r.capturedTarget != nil {
+		*r.capturedTarget = target
+	}
+	return r.fakeAudio.Transcode(ctx, in, target, workDir)
+}
+
+var _ ports.AudioProcessor = (*recordingTranscodeAudio)(nil)
 
 // fakeProviderFull is a complete Provider implementation for K6 tests.
 type fakeProviderFull struct {
@@ -126,13 +143,17 @@ var _ ports.Provider = (*fakeProviderFull)(nil)
 
 // fakeCache is a map-backed ResultCache.
 type fakeCache struct {
-	mu    sync.Mutex
-	store map[string]*domain.Result
-	saves int
+	mu        sync.Mutex
+	store     map[string]*domain.Result
+	fileStore map[string]*domain.Result // keyed by absolute JSON path for LoadFromFile
+	saves     int
 }
 
 func newFakeCache() *fakeCache {
-	return &fakeCache{store: map[string]*domain.Result{}}
+	return &fakeCache{
+		store:     map[string]*domain.Result{},
+		fileStore: map[string]*domain.Result{},
+	}
 }
 
 func (c *fakeCache) Lookup(path string, _ domain.ProviderID) (*domain.Result, bool, error) {
@@ -148,6 +169,21 @@ func (c *fakeCache) Save(path string, r *domain.Result) error {
 	c.saves++
 	return nil
 }
+func (c *fakeCache) LoadFromFile(jsonPath string) (*domain.Result, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if r, ok := c.fileStore[jsonPath]; ok {
+		return r, nil
+	}
+	return nil, fmt.Errorf("fakeCache: no result for %s", jsonPath)
+}
+
+// storeFile registers a result to be returned by LoadFromFile for jsonPath.
+func (c *fakeCache) storeFile(jsonPath string, r *domain.Result) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.fileStore[jsonPath] = r
+}
 
 var _ ports.ResultCache = (*fakeCache)(nil)
 
@@ -158,7 +194,7 @@ type recordingWriter struct {
 }
 
 func (w *recordingWriter) Format() domain.OutputFormat { return w.format }
-func (w *recordingWriter) Write(_ *domain.Result, dst string) error {
+func (w *recordingWriter) Write(_ *domain.Result, dst string, _ domain.WriteOpts) error {
 	w.paths = append(w.paths, dst)
 	return nil
 }

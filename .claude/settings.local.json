@@ -65,7 +65,18 @@
       "Bash(git -C C:/local/cc/programming/python/transcribe commit -m ' *)",
       "Bash(go run *)",
       "Bash(unset GROQ_API_KEY OPENAI_API_KEY ASSEMBLYAI_API_KEY ELEVENLABS_API_KEY GEMINI_API_KEY MISTRAL_API_KEY)",
-      "Bash(unset GROQ_API_KEY OPENAI_API_KEY ASSEMBLYAI_API_KEY ELEVENLABS_API_KEY)"
+      "Bash(unset GROQ_API_KEY OPENAI_API_KEY ASSEMBLYAI_API_KEY ELEVENLABS_API_KEY)",
+      "Bash(Select-String \"filler\")",
+      "Bash(Select-String \"padding-start\")",
+      "PowerShell(go run *)",
+      "PowerShell(go build *)",
+      "Bash(Select-String -Pattern \"padding|silent|davinci\" -Context 1)",
+      "Bash(gofmt *)",
+      "PowerShell(Set-Location \"C:\\\\local\\\\cc\\\\dev\\\\transcribe\"; $help = go run ./cmd/transcribe transcribe --help 2>&1; $help | Where-Object { $_ -match \"chars\" })",
+      "Bash(Select-String -Pattern \"diarize|speaker\")",
+      "Bash(Select-String \"num-speakers|keyterms-prompt|speech-models\")",
+      "PowerShell(if \\($LASTEXITCODE -ne 0\\) { \"BUILD FAILED\" } else { \"OK\" })",
+      "Bash(Select-String \"setup\")"
     ]
   },
   "disabledMcpjsonServers": [

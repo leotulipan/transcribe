@@ -16,10 +16,11 @@ type OutputFormat string
 const (
 	FormatText       OutputFormat = "text"
 	FormatSRT        OutputFormat = "srt"
+	FormatWordSRT    OutputFormat = "word_srt"
 	FormatDavinciSRT OutputFormat = "davinci_srt"
 )
 
 // NeedsTimestamps reports whether this output format requires word-level timing.
 func (f OutputFormat) NeedsTimestamps() bool {
-	return f == FormatSRT || f == FormatDavinciSRT
+	return f == FormatSRT || f == FormatWordSRT || f == FormatDavinciSRT
 }

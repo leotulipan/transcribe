@@ -3,6 +3,7 @@ package cache
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -102,6 +103,50 @@ func (s *Sidecar) Lookup(inputPath string, p domain.ProviderID) (*domain.Result,
 		})
 	}
 	return res, true, nil
+}
+
+// LoadFromFile reads the sidecar JSON at exactly jsonPath (no path construction)
+// and returns the parsed Result. Returns an error if the file is missing, unreadable,
+// or has an unrecognised schema version.
+func (s *Sidecar) LoadFromFile(jsonPath string) (*domain.Result, error) {
+	data, err := os.ReadFile(jsonPath)
+	if err != nil {
+		return nil, err
+	}
+	var env envelope
+	if err := json.Unmarshal(data, &env); err != nil {
+		return nil, err
+	}
+	if env.SchemaVersion != schemaVersion {
+		return nil, fmt.Errorf("unsupported sidecar schema version %d (expected %d)", env.SchemaVersion, schemaVersion)
+	}
+	res := &domain.Result{
+		Provider:   env.Provider,
+		Model:      env.Model,
+		Language:   env.Language,
+		Text:       env.Text,
+		Confidence: env.Confidence,
+		Duration:   time.Duration(env.DurationMs) * time.Millisecond,
+		SourcePath: env.SourcePath,
+		RawJSON:    []byte(env.Raw),
+	}
+	for _, w := range env.Words {
+		res.Words = append(res.Words, domain.Word{
+			Text:       w.Text,
+			Start:      time.Duration(w.StartMs) * time.Millisecond,
+			End:        time.Duration(w.EndMs) * time.Millisecond,
+			Confidence: w.Confidence,
+		})
+	}
+	for _, sg := range env.Segments {
+		res.Segments = append(res.Segments, domain.Segment{
+			Text:      sg.Text,
+			Start:     time.Duration(sg.StartMs) * time.Millisecond,
+			End:       time.Duration(sg.EndMs) * time.Millisecond,
+			SpeakerID: sg.SpeakerID,
+		})
+	}
+	return res, nil
 }
 
 func (s *Sidecar) Save(inputPath string, r *domain.Result) error {

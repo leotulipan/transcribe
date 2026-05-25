@@ -17,6 +17,49 @@ import (
 // pipelineRun executes the full transcription pipeline. Returns the final
 // Result + error; emits progress events to `emit` as it walks the stages.
 func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(domain.ProgressEvent)) (result *domain.Result, err error) {
+	// UseJSONInput short-circuit: load the pre-saved sidecar and skip all audio
+	// and provider stages (probe, cache lookup, prepare, chunk, transcribe).
+	// Execution resumes at Stage 8 (optional cache write) and Stage 9 (write outputs).
+	if req.UseJSONInput {
+		if deps.Cache == nil {
+			return nil, fmt.Errorf("--use-json-input requires a cache adapter")
+		}
+		loaded, loadErr := deps.Cache.LoadFromFile(req.InputPath)
+		if loadErr != nil {
+			return nil, fmt.Errorf("load json input: %w", loadErr)
+		}
+		result = loaded
+		// DaVinci post-processing still applies when the format is requested.
+		if hasFormat(req.Formats, domain.FormatDavinciSRT) {
+			applyDavinci(result, req.DaVinciOpts)
+		}
+		if req.SaveCleanedJSON && deps.Cache != nil {
+			if werr := deps.Cache.Save(req.InputPath, result); werr != nil && deps.Log != nil {
+				deps.Log.Warn("cache save failed", "err", werr)
+			}
+		}
+		emit(domain.ProgressEvent{Stage: domain.StageWriting})
+		writeOpts := domain.WriteOpts{
+			MaxCharsPerLine:  req.MaxCharsPerLine,
+			SpeakerLabels:    req.SpeakerLabels,
+			WordsPerSubtitle: req.WordsPerSubtitle,
+			StartHour:        req.StartHour,
+		}
+		for i, f := range req.Formats {
+			w, ok := deps.Writers[f]
+			if !ok {
+				return nil, fmt.Errorf("no writer registered for format %q", f)
+			}
+			dst := outputPath(req, f)
+			if werr := w.Write(result, dst, writeOpts); werr != nil {
+				return nil, werr
+			}
+			emit(domain.ProgressEvent{Stage: domain.StageWriting, Percent: float64(i+1) / float64(len(req.Formats))})
+		}
+		emit(domain.ProgressEvent{Stage: domain.StageDone})
+		return result, nil
+	}
+
 	prov, err := providerFor(deps, req.Provider)
 	if err != nil {
 		return nil, err
@@ -53,9 +96,11 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 	}
 
 	var tempFiles []domain.AudioFile
+	var workDir string
 
 	// Deferred cleanup with policy from spec §6.3.1
 	defer func() {
+		keepFiles := false
 		for _, tf := range tempFiles {
 			if !tf.IsTemp {
 				continue
@@ -63,19 +108,29 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 			switch {
 			case !tf.Complete:
 				_ = deps.Audio.Cleanup(tf)
+			case req.KeepIntermediates:
+				// User asked to retain all intermediates — skip cleanup.
+				keepFiles = true
+			case req.KeepFLACIntermediates && (tf.Codec == "flac" || tf.Container == "flac"):
+				// User asked to retain FLAC intermediates specifically.
+				keepFiles = true
 			case err == nil:
 				_ = deps.Audio.Cleanup(tf)
 			case transient(err):
-				// keep for future retry
+				keepFiles = true // keep for future retry
 			default:
-				// keep (permanent error — don't delete intermediates)
+				keepFiles = true // keep (permanent error — don't delete intermediates)
 			}
+		}
+		// Remove empty temp directories unless we kept files for retry.
+		if !keepFiles && workDir != "" {
+			cleanupEmptyWorkDir(workDir)
 		}
 	}()
 
 	if cached == nil {
 		// Stage 3 — working dir
-		workDir, _ := resolveWorkDir(req.InputPath)
+		workDir, _ = resolveWorkDir(req.InputPath)
 
 		// Stage 4 — intermediate cache
 		var prepared domain.AudioFile
@@ -84,12 +139,19 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 			srcMTime = info.ModTime().Unix()
 		}
 		targetCodec := preferredCodecFor(req.Provider, caps)
+		if req.UsePCM {
+			targetCodec = "pcm_s16le"
+		}
+		prepOpts := ports.PrepareOpts{
+			UseInput:           req.UseInput,
+			SizeThresholdBytes: req.SizeThresholdBytes,
+		}
 		if hit := lookupIntermediate(workDir, src, srcMTime, req.Provider, model, prov.MaxUploadBytes(), targetCodec); hit != nil {
 			prepared = *hit
 		} else {
 			// Stage 5 — prepare
 			emit(domain.ProgressEvent{Stage: domain.StageCompressing})
-			p, perr := prepare(ctx, deps.Audio, src, caps, prov.MaxUploadBytes(), workDir, ports.TargetFormat{Codec: targetCodec})
+			p, perr := prepare(ctx, deps.Audio, src, caps, prov.MaxUploadBytes(), workDir, ports.TargetFormat{Codec: targetCodec}, prepOpts)
 			if perr != nil {
 				err = perr
 				return nil, fmt.Errorf("prepare: %w", err)
@@ -116,7 +178,11 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 
 		// Stage 6 — chunk (single-chunk path is common)
 		emit(domain.ProgressEvent{Stage: domain.StageChunking})
-		chunks, cerr := deps.Audio.Chunk(ctx, prepared, prov.MaxUploadBytes(), workDir)
+		chunkOpts := ports.ChunkOpts{
+			ChunkLengthSec: req.ChunkLengthSec,
+			OverlapSec:     req.OverlapSec,
+		}
+		chunks, cerr := deps.Audio.Chunk(ctx, prepared, prov.MaxUploadBytes(), workDir, chunkOpts)
 		if cerr != nil {
 			err = cerr
 			return nil, fmt.Errorf("chunk: %w", err)
@@ -147,7 +213,14 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 				Path: c.Path, SizeBytes: c.SizeBytes, Codec: prepared.Codec, Container: prepared.Container,
 				IsTemp: prepared.IsTemp, Complete: c.Complete,
 			}
-			r, terr := prov.Transcribe(ctx, chunkAudio, ports.ProviderOpts{Model: model, Language: req.Language})
+			r, terr := prov.Transcribe(ctx, chunkAudio, ports.ProviderOpts{
+					Model:         model,
+					Language:      req.Language,
+					SpeakerLabels: req.SpeakerLabels,
+					NumSpeakers:   req.NumSpeakers,
+					KeyTerms:      req.KeyTerms,
+					SpeechModels:  req.SpeechModels,
+				})
 			if terr != nil {
 				err = terr
 				return nil, terr
@@ -172,8 +245,10 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 		applyDavinci(result, req.DaVinciOpts)
 	}
 
-	// Stage 8 — cache write (only when we actually transcribed)
-	if cached == nil && deps.Cache != nil {
+	// Stage 8 — cache write. Triggers on a fresh transcription (cached==nil) when
+	// UseCache is on, OR unconditionally when SaveCleanedJSON is set. The guard on
+	// (UseCache || SaveCleanedJSON) ensures we never write when both are false.
+	if cached == nil && deps.Cache != nil && (req.UseCache || req.SaveCleanedJSON) {
 		if werr := deps.Cache.Save(req.InputPath, result); werr != nil && deps.Log != nil {
 			deps.Log.Warn("cache save failed", "err", werr)
 		}
@@ -181,6 +256,12 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 
 	// Stage 9 — write outputs
 	emit(domain.ProgressEvent{Stage: domain.StageWriting})
+	writeOpts := domain.WriteOpts{
+		MaxCharsPerLine:  req.MaxCharsPerLine,
+		SpeakerLabels:    req.SpeakerLabels,
+		WordsPerSubtitle: req.WordsPerSubtitle,
+		StartHour:        req.StartHour,
+	}
 	for i, f := range req.Formats {
 		w, ok := deps.Writers[f]
 		if !ok {
@@ -188,7 +269,7 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 			return nil, err
 		}
 		dst := outputPath(req, f)
-		if werr := w.Write(result, dst); werr != nil {
+		if werr := w.Write(result, dst, writeOpts); werr != nil {
 			err = werr
 			return nil, werr
 		}
@@ -254,11 +335,34 @@ func resolveWorkDir(inputPath string) (string, bool) {
 	return fallback, false
 }
 
+// cleanupEmptyWorkDir removes workDir if it is empty, then removes its parent
+// if the parent is named ".transcribe-tmp" and also becomes empty. Tolerates
+// "not exist" and "not empty" silently. Other errors are also swallowed —
+// callers do not need to act on cleanup failures.
+func cleanupEmptyWorkDir(workDir string) {
+	if workDir == "" {
+		return
+	}
+	if err := os.Remove(workDir); err != nil {
+		// ErrNotExist and "directory not empty" are both expected — ignore.
+		return
+	}
+	// Job dir was removed; try the parent only when it is our own staging dir.
+	parent := filepath.Dir(workDir)
+	if filepath.Base(parent) != ".transcribe-tmp" {
+		return
+	}
+	_ = os.Remove(parent) // silently ignore: non-empty parent is normal
+}
+
 // outputPath returns the path for an output file. If req.OutputDir is set the
 // output lands there with the source basename; otherwise it lands next to the
 // source.
 func outputPath(req domain.Request, f domain.OutputFormat) string {
 	base := strings.TrimSuffix(filepath.Base(req.InputPath), filepath.Ext(req.InputPath))
+	if req.UseJSONInput {
+		base = stripTranscribeSuffix(base)
+	}
 	dir := req.OutputDir
 	if dir == "" {
 		dir = filepath.Dir(req.InputPath)
@@ -275,4 +379,23 @@ func outputPath(req domain.Request, f domain.OutputFormat) string {
 		ext = "." + string(f)
 	}
 	return filepath.Join(dir, base+ext)
+}
+
+// stripTranscribeSuffix removes a trailing ".transcribe.<something>" pair from
+// the filename base (the part after the last path separator, with the final
+// extension already stripped). For example:
+//
+//	"myfile.transcribe.groq"   → "myfile"
+//	"myfile.transcribe.openai" → "myfile"
+//	"weird"                    → "weird"   (no match — returned unchanged)
+//
+// The check is purely filename-driven so it works even when the provider in
+// req.Provider differs from the one baked into the sidecar filename.
+func stripTranscribeSuffix(base string) string {
+	parts := strings.Split(base, ".")
+	// Need at least 3 segments: <name> . transcribe . <provider>
+	if len(parts) >= 3 && parts[len(parts)-2] == "transcribe" {
+		return strings.Join(parts[:len(parts)-2], ".")
+	}
+	return base
 }

@@ -20,7 +20,12 @@ func NewDaVinci() *DaVinci { return &DaVinci{} }
 
 func (DaVinci) Format() domain.OutputFormat { return domain.FormatDavinciSRT }
 
-func (DaVinci) Write(r *domain.Result, dst string) error {
+func (DaVinci) Write(r *domain.Result, dst string, opts domain.WriteOpts) error {
+	maxWords := davinciMaxWordsPerBlock
+	if opts.WordsPerSubtitle > 0 {
+		maxWords = opts.WordsPerSubtitle
+	}
+
 	var b strings.Builder
 	index := 1
 
@@ -31,7 +36,7 @@ func (DaVinci) Write(r *domain.Result, dst string) error {
 		if len(bucket) == 0 {
 			return
 		}
-		writeBlock(&b, index, bucket)
+		writeBlock(&b, index, bucket, opts)
 		index++
 		bucket = nil
 	}
@@ -39,17 +44,17 @@ func (DaVinci) Write(r *domain.Result, dst string) error {
 		switch {
 		case w.Text == "(...)":
 			flush()
-			writeBlock(&b, index, []domain.Word{w})
+			writeBlock(&b, index, []domain.Word{w}, opts)
 			index++
 		case isAllUpper(w.Text):
 			flush()
-			writeBlock(&b, index, []domain.Word{w})
+			writeBlock(&b, index, []domain.Word{w}, opts)
 			index++
 		default:
 			// gap-induced break
 			if len(bucket) > 0 {
 				last := bucket[len(bucket)-1]
-				if w.Start-last.End > davinciMaxGap || len(bucket) >= davinciMaxWordsPerBlock {
+				if w.Start-last.End > davinciMaxGap || len(bucket) >= maxWords {
 					flush()
 				}
 			}
@@ -61,7 +66,7 @@ func (DaVinci) Write(r *domain.Result, dst string) error {
 	return os.WriteFile(dst, []byte(b.String()), 0o644)
 }
 
-func writeBlock(b *strings.Builder, idx int, words []domain.Word) {
+func writeBlock(b *strings.Builder, idx int, words []domain.Word, opts domain.WriteOpts) {
 	if len(words) == 0 {
 		return
 	}
@@ -69,15 +74,26 @@ func writeBlock(b *strings.Builder, idx int, words []domain.Word) {
 	end := words[len(words)-1].End
 	b.WriteString(itoa(idx))
 	b.WriteByte('\n')
-	b.WriteString(formatTimecode(start))
+	b.WriteString(formatTimecodeOffset(start, opts.StartHour))
 	b.WriteString(" --> ")
-	b.WriteString(formatTimecode(end))
+	b.WriteString(formatTimecodeOffset(end, opts.StartHour))
 	b.WriteByte('\n')
-	for i, w := range words {
-		if i > 0 {
-			b.WriteByte(' ')
+	if opts.SpeakerLabels && words[0].Speaker != "" {
+		b.WriteString("[Speaker ")
+		b.WriteString(words[0].Speaker)
+		b.WriteString("]: ")
+	}
+	lines := wrapByChars(words, opts.MaxCharsPerLine)
+	for li, line := range lines {
+		if li > 0 {
+			b.WriteByte('\n')
 		}
-		b.WriteString(w.Text)
+		for i, w := range line {
+			if i > 0 {
+				b.WriteByte(' ')
+			}
+			b.WriteString(w.Text)
+		}
 	}
 	b.WriteString("\n\n")
 }

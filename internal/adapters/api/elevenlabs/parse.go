@@ -18,10 +18,11 @@ type response struct {
 }
 
 type word struct {
-	Text  string  `json:"text"`
-	Start float64 `json:"start"`
-	End   float64 `json:"end"`
-	Type  string  `json:"type"` // "word" or "spacing"
+	Text      string  `json:"text"`
+	Start     float64 `json:"start"`
+	End       float64 `json:"end"`
+	Type      string  `json:"type"`       // "word" or "spacing"
+	SpeakerID string  `json:"speaker_id"` // populated when diarize=true
 }
 
 func parse(data []byte, model string) (*domain.Result, error) {
@@ -36,15 +37,21 @@ func parse(data []byte, model string) (*domain.Result, error) {
 		Text:     resp.Text,
 		RawJSON:  data,
 	}
+	seen := map[string]bool{}
 	for _, w := range resp.Words {
 		if w.Type != "word" {
 			continue // skip spacing entries
 		}
 		res.Words = append(res.Words, domain.Word{
-			Text:  w.Text,
-			Start: time.Duration(w.Start * float64(time.Second)),
-			End:   time.Duration(w.End * float64(time.Second)),
+			Text:    w.Text,
+			Start:   time.Duration(w.Start * float64(time.Second)),
+			End:     time.Duration(w.End * float64(time.Second)),
+			Speaker: w.SpeakerID,
 		})
+		if w.SpeakerID != "" && !seen[w.SpeakerID] {
+			seen[w.SpeakerID] = true
+			res.Speakers = append(res.Speakers, domain.Speaker{ID: w.SpeakerID})
+		}
 	}
 	return res, nil
 }

@@ -49,9 +49,24 @@ func prepare(
 	maxBytes int64,
 	workDir string,
 	transcodeTarget ports.TargetFormat,
+	opts ports.PrepareOpts,
 ) (domain.AudioFile, error) {
+	// UseInput: power-user bypass — send source as-is no matter what.
+	if opts.UseInput {
+		return src, nil
+	}
+
+	// Compute the effective size ceiling for the as-is path. When the user has
+	// set a size threshold (> 0), that value widens the path: files up to the
+	// threshold are sent as-is even if they exceed the provider's own maxBytes.
+	// The provider may reject the upload; that is the user's stated preference.
+	effectiveMax := maxBytes
+	if opts.SizeThresholdBytes > effectiveMax {
+		effectiveMax = opts.SizeThresholdBytes
+	}
+
 	// 5a: as-is
-	if codecAccepted(caps, src) && src.SizeBytes <= maxBytes {
+	if codecAccepted(caps, src) && src.SizeBytes <= effectiveMax {
 		return src, nil
 	}
 	// 5b: stream copy when the codec is accepted but container isn't (or video wrapper)

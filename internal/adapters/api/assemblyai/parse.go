@@ -21,9 +21,10 @@ type transcriptResponse struct {
 }
 
 type aWord struct {
-	Text  string `json:"text"`
-	Start int64  `json:"start"` // milliseconds
-	End   int64  `json:"end"`   // milliseconds
+	Text    string `json:"text"`
+	Start   int64  `json:"start"`   // milliseconds
+	End     int64  `json:"end"`     // milliseconds
+	Speaker string `json:"speaker"` // populated when speaker_labels=true
 }
 
 func parse(data []byte, model string) (*domain.Result, error) {
@@ -42,12 +43,18 @@ func parse(data []byte, model string) (*domain.Result, error) {
 		Duration: time.Duration(resp.AudioDuration * float64(time.Second)),
 		RawJSON:  data,
 	}
+	seen := map[string]bool{}
 	for _, w := range resp.Words {
 		res.Words = append(res.Words, domain.Word{
-			Text:  w.Text,
-			Start: time.Duration(w.Start) * time.Millisecond,
-			End:   time.Duration(w.End) * time.Millisecond,
+			Text:    w.Text,
+			Start:   time.Duration(w.Start) * time.Millisecond,
+			End:     time.Duration(w.End) * time.Millisecond,
+			Speaker: w.Speaker,
 		})
+		if w.Speaker != "" && !seen[w.Speaker] {
+			seen[w.Speaker] = true
+			res.Speakers = append(res.Speakers, domain.Speaker{ID: w.Speaker})
+		}
 	}
 	return res, nil
 }
