@@ -59,3 +59,16 @@ func TestWordSRT_PreservesPunctuationOnWord(t *testing.T) {
 	want := "1\n00:00:01,000 --> 00:00:01,500\nHello,\n\n"
 	require.Equal(t, want, string(got))
 }
+
+func TestWordSRT_StartHourShiftsTimecodes(t *testing.T) {
+	res := &domain.Result{Words: []domain.Word{
+		{Text: "Hello", Start: 1 * time.Second, End: 2 * time.Second},
+	}}
+	dir := t.TempDir()
+	dst := filepath.Join(dir, "out.srt")
+	require.NoError(t, NewWordSRT().Write(res, dst, domain.WriteOpts{StartHour: 1}))
+	body, err := os.ReadFile(dst)
+	require.NoError(t, err)
+	s := string(body)
+	require.Contains(t, s, "01:00:01,000 --> 01:00:02,000")
+}
