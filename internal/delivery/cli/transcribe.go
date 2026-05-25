@@ -110,10 +110,15 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 			}
 			if len(args) == 0 {
 				return &EscalateToTUI{
-					Provider: f.api,
-					Model:    f.model,
-					Language: f.language,
-					Formats:  mustFormats(f),
+					Provider:       f.api,
+					Model:          f.model,
+					Language:       f.language,
+					Formats:        mustFormats(f),
+					Diarize:        f.diarize,
+					RemoveFillers:  f.removeFillers,
+					FillerLines:    f.fillerLines,
+					PaddingStartMs: f.paddingStartMs,
+					PaddingEndMs:   f.paddingEndMs,
 				}
 			}
 			return runTranscribe(c.Context(), d, f, args)
@@ -192,10 +197,15 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 		// Escalation rule: if no provider is configured at all, escalate to TUI.
 		if f.api == "" && d.Config.DefaultProvider == "" {
 			return &EscalateToTUI{
-				InputPath: firstOr(files, ""),
-				Model:     f.model,
-				Language:  f.language,
-				Formats:   formats,
+				InputPath:      firstOr(files, ""),
+				Model:          f.model,
+				Language:       f.language,
+				Formats:        formats,
+				Diarize:        f.diarize,
+				RemoveFillers:  f.removeFillers,
+				FillerLines:    f.fillerLines,
+				PaddingStartMs: f.paddingStartMs,
+				PaddingEndMs:   f.paddingEndMs,
 			}
 		}
 	}
@@ -344,6 +354,13 @@ type EscalateToTUI struct {
 	Model     string
 	Language  string
 	Formats   []domain.OutputFormat
+
+	// Advanced / optional flags (Phase 4b).
+	Diarize        bool
+	RemoveFillers  bool
+	FillerLines    bool
+	PaddingStartMs int
+	PaddingEndMs   int
 }
 
 func (e *EscalateToTUI) Error() string { return "escalating to TUI for missing inputs" }

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -17,6 +18,13 @@ type Prefill struct {
 	Model     string
 	Language  string
 	Formats   []domain.OutputFormat
+
+	// Advanced / optional flags from Phase 4b.
+	Diarize        bool
+	RemoveFillers  bool
+	FillerLines    bool // positive form (true = emit UPPERCASE filler lines in DaVinci)
+	PaddingStartMs int
+	PaddingEndMs   int
 }
 
 type Deps struct {
@@ -60,14 +68,37 @@ func (a *App) advanceFromInputs() {
 }
 
 func (a *App) buildRequest() domain.Request {
-	return domain.Request{
-		InputPath: a.pre.InputPath,
-		Provider:  a.pre.Provider,
-		Model:     a.pre.Model,
-		Language:  a.pre.Language,
-		Formats:   a.pre.Formats,
-		UseCache:  true,
+	req := domain.Request{
+		InputPath:     a.pre.InputPath,
+		Provider:      a.pre.Provider,
+		Model:         a.pre.Model,
+		Language:      a.pre.Language,
+		Formats:       a.pre.Formats,
+		UseCache:      true,
+		SpeakerLabels: a.pre.Diarize,
 	}
+
+	// Only build DaVinciOpts when davinci_srt is selected and any option is non-default.
+	if hasFormatSlice(a.pre.Formats, domain.FormatDavinciSRT) {
+		opts := &domain.DaVinciOptions{
+			RemoveFillers:       a.pre.RemoveFillers,
+			SuppressFillerLines: !a.pre.FillerLines, // FillerLines=true → SuppressFillerLines=false
+			PaddingStart:        time.Duration(a.pre.PaddingStartMs) * time.Millisecond,
+			PaddingEnd:          time.Duration(a.pre.PaddingEndMs) * time.Millisecond,
+		}
+		req.DaVinciOpts = opts
+	}
+
+	return req
+}
+
+func hasFormatSlice(fmts []domain.OutputFormat, target domain.OutputFormat) bool {
+	for _, f := range fmts {
+		if f == target {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *App) Init() tea.Cmd { return a.cur.Init() }

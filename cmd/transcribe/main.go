@@ -118,11 +118,16 @@ func main() {
 			var esc *cli.EscalateToTUI
 			if errors.As(err, &esc) {
 				_, e := tui.Run(ctx, tui.Deps{Service: svc, Config: cfg, Logger: log}, tui.Prefill{
-					InputPath: esc.InputPath,
-					Provider:  domain.ProviderID(esc.Provider),
-					Model:     esc.Model,
-					Language:  esc.Language,
-					Formats:   esc.Formats,
+					InputPath:      esc.InputPath,
+					Provider:       domain.ProviderID(esc.Provider),
+					Model:          esc.Model,
+					Language:       esc.Language,
+					Formats:        esc.Formats,
+					Diarize:        esc.Diarize,
+					RemoveFillers:  esc.RemoveFillers,
+					FillerLines:    esc.FillerLines,
+					PaddingStartMs: esc.PaddingStartMs,
+					PaddingEndMs:   esc.PaddingEndMs,
 				})
 				if e != nil && !errors.Is(e, context.Canceled) {
 					fmt.Fprintln(os.Stderr, e)
