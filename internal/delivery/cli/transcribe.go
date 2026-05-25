@@ -83,7 +83,7 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().IntVar(&f.silentMs, "silent-portion-ms", 1500, "pause threshold for davinci mode (ms)")
 	cmd.Flags().IntVar(&f.silentPortions, "silent-portions", 1500, "pause threshold for davinci mode (ms); alias for --silent-portion-ms")
 	cmd.Flags().IntVar(&f.paddingStartMs, "padding-start", 0, "shift subtitle starts earlier by up to this many ms (davinci mode)")
-	cmd.Flags().IntVar(&f.paddingEndMs, "padding-end", 0, "shrink subtitle ends later by up to this many ms (davinci mode)")
+	cmd.Flags().IntVar(&f.paddingEndMs, "padding-end", 0, "shrink subtitle end times earlier by up to this many ms (davinci mode)")
 	cmd.Flags().IntVar(&f.wordsPerSubtitle, "words-per-subtitle", 0, "max words per subtitle block (0 = default 7); mutually exclusive with --chars-per-line")
 	cmd.Flags().BoolVar(&f.showPauses, "show-pauses", true, "emit (...) markers for pauses >= --silent-portions (davinci mode)")
 	cmd.Flags().IntVar(&f.startHour, "start-hour", 0, "hour offset added to all SRT/DaVinci timecodes")

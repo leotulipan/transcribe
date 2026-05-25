@@ -154,3 +154,63 @@ func TestDavinciPaddingEnd_ZeroIsNoOp(t *testing.T) {
 	require.Equal(t, 400*time.Millisecond, res.Words[0].End)
 	require.Equal(t, 800*time.Millisecond, res.Words[1].End)
 }
+
+// TestDavinciPaddingEnd_AppliesFullyEvenWhenPauseFollows verifies that
+// PaddingEnd is applied in full when the next real word is far away (even
+// though that gap would trigger a pause marker).  Before the order fix, the
+// synthetic "(...)" marker sat between the words, making the gap appear as 0
+// and capping the shrink to 0ms — the real word's End was never adjusted.
+func TestDavinciPaddingEnd_AppliesFullyEvenWhenPauseFollows(t *testing.T) {
+	// Gap between word 0 End (500ms) and word 1 Start (3000ms) = 2500ms.
+	// That gap exceeds the 1500ms threshold, so a pause marker will be
+	// inserted — but padding must be applied first, before the marker exists.
+	// half-gap = 1250ms >> PaddingEnd (50ms), so the full 50ms must be applied.
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "hello", Start: 0, End: 500 * time.Millisecond},
+			{Text: "world", Start: 3000 * time.Millisecond, End: 3500 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 1500 * time.Millisecond,
+		PaddingEnd:             50 * time.Millisecond,
+	})
+	// Find "hello" in the output (pause marker was inserted; it is not "hello").
+	var helloEnd time.Duration = -1
+	for _, w := range res.Words {
+		if w.Text == "hello" {
+			helloEnd = w.End
+		}
+	}
+	require.NotEqual(t, time.Duration(-1), helloEnd, "word 'hello' must appear in output")
+	require.Equal(t, 450*time.Millisecond, helloEnd,
+		"PaddingEnd must apply the full 50ms even when a pause marker follows")
+}
+
+// TestDavinciPaddingStart_AppliesFullyEvenWhenPausePrecedes verifies that
+// PaddingStart is applied in full when the preceding real word is far away
+// (even though that gap would trigger a pause marker).
+func TestDavinciPaddingStart_AppliesFullyEvenWhenPausePrecedes(t *testing.T) {
+	// Gap between word 0 End (500ms) and word 1 Start (3000ms) = 2500ms.
+	// half-gap = 1250ms >> PaddingStart (50ms), so the full 50ms must be applied.
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "hello", Start: 0, End: 500 * time.Millisecond},
+			{Text: "world", Start: 3000 * time.Millisecond, End: 3500 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 1500 * time.Millisecond,
+		PaddingStart:           50 * time.Millisecond,
+	})
+	// Find "world" in the output.
+	var worldStart time.Duration = -1
+	for _, w := range res.Words {
+		if w.Text == "world" {
+			worldStart = w.Start
+		}
+	}
+	require.NotEqual(t, time.Duration(-1), worldStart, "word 'world' must appear in output")
+	require.Equal(t, 2950*time.Millisecond, worldStart,
+		"PaddingStart must apply the full 50ms even when a pause marker precedes")
+}
