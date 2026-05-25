@@ -21,6 +21,11 @@ func NewDaVinci() *DaVinci { return &DaVinci{} }
 func (DaVinci) Format() domain.OutputFormat { return domain.FormatDavinciSRT }
 
 func (DaVinci) Write(r *domain.Result, dst string, opts domain.WriteOpts) error {
+	maxWords := davinciMaxWordsPerBlock
+	if opts.WordsPerSubtitle > 0 {
+		maxWords = opts.WordsPerSubtitle
+	}
+
 	var b strings.Builder
 	index := 1
 
@@ -49,7 +54,7 @@ func (DaVinci) Write(r *domain.Result, dst string, opts domain.WriteOpts) error 
 			// gap-induced break
 			if len(bucket) > 0 {
 				last := bucket[len(bucket)-1]
-				if w.Start-last.End > davinciMaxGap || len(bucket) >= davinciMaxWordsPerBlock {
+				if w.Start-last.End > davinciMaxGap || len(bucket) >= maxWords {
 					flush()
 				}
 			}
@@ -69,9 +74,9 @@ func writeBlock(b *strings.Builder, idx int, words []domain.Word, opts domain.Wr
 	end := words[len(words)-1].End
 	b.WriteString(itoa(idx))
 	b.WriteByte('\n')
-	b.WriteString(formatTimecode(start))
+	b.WriteString(formatTimecodeOffset(start, opts.StartHour))
 	b.WriteString(" --> ")
-	b.WriteString(formatTimecode(end))
+	b.WriteString(formatTimecodeOffset(end, opts.StartHour))
 	b.WriteByte('\n')
 	if opts.SpeakerLabels && words[0].Speaker != "" {
 		b.WriteString("[Speaker ")

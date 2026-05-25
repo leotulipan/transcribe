@@ -12,3 +12,41 @@ func TestTranscribeCmd_HasPaddingStartFlag(t *testing.T) {
 	require.NotNil(t, f, "--padding-start flag must be registered")
 	require.Equal(t, "0", f.DefValue, "default must be 0")
 }
+
+func TestTranscribeCmd_HasNewPhase5aFlags(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	flags := []struct {
+		name     string
+		defValue string
+	}{
+		{"words-per-subtitle", "0"},
+		{"silent-portions", "1500"},
+		{"padding-end", "0"},
+		{"show-pauses", "true"},
+		{"start-hour", "0"},
+	}
+	for _, tc := range flags {
+		t.Run(tc.name, func(t *testing.T) {
+			f := cmd.Flags().Lookup(tc.name)
+			require.NotNil(t, f, "--%s flag must be registered", tc.name)
+			require.Equal(t, tc.defValue, f.DefValue, "--%s default mismatch", tc.name)
+		})
+	}
+}
+
+func TestTranscribeCmd_SilentPortionMsBackwardCompat(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	f := cmd.Flags().Lookup("silent-portion-ms")
+	require.NotNil(t, f, "--silent-portion-ms (legacy flag) must still be registered")
+	require.Equal(t, "1500", f.DefValue)
+}
+
+func TestTranscribeCmd_WordsPerSubtitleAndCharsPerLineMutex(t *testing.T) {
+	cmd := newTranscribeCmd(Deps{})
+	// Both flags non-zero → error.
+	require.NoError(t, cmd.Flags().Set("words-per-subtitle", "3"))
+	require.NoError(t, cmd.Flags().Set("chars-per-line", "50"))
+	err := cmd.RunE(cmd, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "mutually exclusive")
+}

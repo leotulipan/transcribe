@@ -31,7 +31,7 @@ func applyDavinci(r *domain.Result, opts *domain.DaVinciOptions) {
 	var out []domain.Word
 	prevEnd := time.Duration(-1)
 	for i, w := range r.Words {
-		if i > 0 && threshold > 0 {
+		if i > 0 && threshold > 0 && !opts.SuppressPauses {
 			gap := w.Start - prevEnd
 			if gap >= threshold {
 				out = append(out, domain.Word{
@@ -80,6 +80,24 @@ func applyDavinci(r *domain.Result, opts *domain.DaVinciOptions) {
 				w.Start = 0
 			}
 			prevWordEnd = r.Words[i].End
+		}
+	}
+
+	if opts.PaddingEnd > 0 {
+		for i := range r.Words {
+			w := &r.Words[i]
+			shrink := opts.PaddingEnd
+			if i+1 < len(r.Words) {
+				gap := r.Words[i+1].Start - w.End
+				halfGap := gap / 2
+				if halfGap < shrink {
+					shrink = halfGap
+				}
+			}
+			w.End -= shrink
+			if w.End < w.Start {
+				w.End = w.Start
+			}
 		}
 	}
 }

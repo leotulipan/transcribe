@@ -77,6 +77,11 @@ func wrapByChars(words []domain.Word, maxChars int) [][]domain.Word {
 	return lines
 }
 
+// formatTimecodeOffset renders an SRT-style timecode with an added hour offset.
+func formatTimecodeOffset(d time.Duration, startHour int) string {
+	return formatTimecode(d + time.Duration(startHour)*time.Hour)
+}
+
 // formatTimecode renders an SRT-style timecode "HH:MM:SS,mmm".
 func formatTimecode(d time.Duration) string {
 	if d < 0 {

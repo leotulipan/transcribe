@@ -4,24 +4,28 @@ import "time"
 
 // Request describes a single transcription job submitted to the service.
 type Request struct {
-	InputPath       string
-	Provider        ProviderID
-	Model           string         // "" = provider default
-	Language        string         // ISO-639-1; "" = auto-detect
-	Formats         []OutputFormat
-	OutputDir       string         // "" = next to input
-	DaVinciOpts     *DaVinciOptions
-	UseCache        bool
-	MaxCharsPerLine int            // 0 = no wrapping; positive = max chars per rendered subtitle line
-	SpeakerLabels   bool           // request diarization from the provider
+	InputPath        string
+	Provider         ProviderID
+	Model            string         // "" = provider default
+	Language         string         // ISO-639-1; "" = auto-detect
+	Formats          []OutputFormat
+	OutputDir        string         // "" = next to input
+	DaVinciOpts      *DaVinciOptions
+	UseCache         bool
+	MaxCharsPerLine  int            // 0 = no wrapping; positive = max chars per rendered subtitle line
+	WordsPerSubtitle int            // 0 = format default (7); positive overrides groupWords maxWords
+	StartHour        int            // hour offset added to every timecode in SRT / DaVinci output
+	SpeakerLabels    bool           // request diarization from the provider
 }
 
 // WriteOpts carries per-write rendering knobs that are derived from Request
 // and forwarded to FormatWriter.Write. Separating these from domain.Result
 // keeps provider output clean of delivery concerns.
 type WriteOpts struct {
-	MaxCharsPerLine int  // 0 = no wrapping
-	SpeakerLabels   bool // prefix each subtitle block with [Speaker X]:
+	MaxCharsPerLine  int  // 0 = no wrapping
+	SpeakerLabels    bool // prefix each subtitle block with [Speaker X]:
+	WordsPerSubtitle int  // 0 = use format default (7); positive overrides groupWords maxWords
+	StartHour        int  // hour offset added to every timecode in SRT / DaVinci output
 }
 
 // Result is the normalized output every provider produces.
@@ -59,9 +63,11 @@ type Speaker struct {
 type DaVinciOptions struct {
 	SilentPortionThreshold time.Duration
 	PaddingStart           time.Duration
+	PaddingEnd             time.Duration // shrink each word's End symmetrically to PaddingStart
 	FillerWords            []string
 	RemoveFillers          bool
 	SuppressFillerLines    bool
+	SuppressPauses         bool // when true, no (...) markers are inserted even on long gaps
 }
 
 // DefaultFillerWords is what DaVinciOptions.FillerWords defaults to when empty.

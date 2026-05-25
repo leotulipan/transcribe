@@ -210,6 +210,39 @@ func TestDavinciApply_RemoveFillersTakesPrecedenceOverSuppressFillerLines(t *tes
 	require.Equal(t, "hello", res.Words[0].Text)
 }
 
+func TestDavinciApply_SuppressPausesTrue_NoMarkersInserted(t *testing.T) {
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "first", Start: 0, End: 500 * time.Millisecond},
+			// 2.0s gap — well above the 1500ms default threshold
+			{Text: "second", Start: 2500 * time.Millisecond, End: 3000 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 1500 * time.Millisecond,
+		SuppressPauses:         true,
+	})
+	require.Len(t, res.Words, 2, "SuppressPauses=true must not insert (...) markers")
+	for _, w := range res.Words {
+		require.NotEqual(t, "(...)", w.Text, "no pause markers when SuppressPauses=true")
+	}
+}
+
+func TestDavinciApply_SuppressPausesFalse_MarkersInsertedNormally(t *testing.T) {
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "first", Start: 0, End: 500 * time.Millisecond},
+			{Text: "second", Start: 2500 * time.Millisecond, End: 3000 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 1500 * time.Millisecond,
+		SuppressPauses:         false,
+	})
+	require.Len(t, res.Words, 3, "SuppressPauses=false (default) must insert (...) marker")
+	require.Equal(t, "(...)", res.Words[1].Text)
+}
+
 func TestDavinciApply_RemoveFillers_PauseAfterRemovedFillerStillInserts(t *testing.T) {
 	// real word → filler (removed) → long gap → real word
 	// prevEnd must advance to the filler's End so the gap is measured from there.

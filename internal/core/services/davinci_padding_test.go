@@ -84,3 +84,73 @@ func TestDavinciPadding_ZeroIsNoOp(t *testing.T) {
 	require.Equal(t, 200*time.Millisecond, res.Words[0].Start)
 	require.Equal(t, 600*time.Millisecond, res.Words[1].Start)
 }
+
+// --padding-end tests mirror --padding-start semantics but shrink End instead.
+
+func TestDavinciPaddingEnd_SubtractsFromEnd(t *testing.T) {
+	// Words separated by 200ms gaps; padding-end is 50ms → half-gap = 100ms > 50ms,
+	// so the full 50ms is subtracted from every word's End.
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "one", Start: 200 * time.Millisecond, End: 400 * time.Millisecond},
+			{Text: "two", Start: 600 * time.Millisecond, End: 800 * time.Millisecond},
+			{Text: "three", Start: 1000 * time.Millisecond, End: 1200 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 5000 * time.Millisecond,
+		PaddingEnd:             50 * time.Millisecond,
+	})
+	require.Equal(t, 350*time.Millisecond, res.Words[0].End, "word 0: full padding subtracted from End")
+	require.Equal(t, 750*time.Millisecond, res.Words[1].End, "word 1: full padding subtracted from End")
+	// Last word: no next word → full PaddingEnd subtracted, clamped to >= Start.
+	require.Equal(t, 1150*time.Millisecond, res.Words[2].End, "word 2 (last): full padding subtracted from End")
+}
+
+func TestDavinciPaddingEnd_CapsAtHalfNextGap(t *testing.T) {
+	// Gap between word 0 end (300ms) and word 1 start (360ms) = 60ms.
+	// half-gap = 30ms; padding-end = 50ms → cap applies → subtract only 30ms.
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "one", Start: 100 * time.Millisecond, End: 300 * time.Millisecond},
+			{Text: "two", Start: 360 * time.Millisecond, End: 600 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 5000 * time.Millisecond,
+		PaddingEnd:             50 * time.Millisecond,
+	})
+	// word 0: gap to next = 60ms; half-gap = 30ms < 50ms → subtract 30ms
+	require.Equal(t, 270*time.Millisecond, res.Words[0].End, "word 0: capped at half-gap")
+	// word 1 (last): no next word → full padding (600ms - 50ms = 550ms)
+	require.Equal(t, 550*time.Millisecond, res.Words[1].End, "word 1 (last): full padding subtracted")
+}
+
+func TestDavinciPaddingEnd_NeverCrossesStart(t *testing.T) {
+	// Word with End barely above Start; large PaddingEnd must be clamped to Start.
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "brief", Start: 500 * time.Millisecond, End: 510 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 5000 * time.Millisecond,
+		PaddingEnd:             200 * time.Millisecond,
+	})
+	require.Equal(t, res.Words[0].Start, res.Words[0].End, "End must clamp to Start, not go below it")
+}
+
+func TestDavinciPaddingEnd_ZeroIsNoOp(t *testing.T) {
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "one", Start: 200 * time.Millisecond, End: 400 * time.Millisecond},
+			{Text: "two", Start: 600 * time.Millisecond, End: 800 * time.Millisecond},
+		},
+	}
+	applyDavinci(res, &domain.DaVinciOptions{
+		SilentPortionThreshold: 5000 * time.Millisecond,
+		PaddingEnd:             0,
+	})
+	require.Equal(t, 400*time.Millisecond, res.Words[0].End)
+	require.Equal(t, 800*time.Millisecond, res.Words[1].End)
+}

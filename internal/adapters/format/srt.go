@@ -20,14 +20,18 @@ func NewSRT() *SRT { return &SRT{} }
 func (SRT) Format() domain.OutputFormat { return domain.FormatSRT }
 
 func (SRT) Write(r *domain.Result, dst string, opts domain.WriteOpts) error {
-	blocks := groupWords(r.Words, srtMaxWordsPerBlock, srtMaxGap)
+	maxWords := srtMaxWordsPerBlock
+	if opts.WordsPerSubtitle > 0 {
+		maxWords = opts.WordsPerSubtitle
+	}
+	blocks := groupWords(r.Words, maxWords, srtMaxGap)
 	var b strings.Builder
 	for i, blk := range blocks {
 		b.WriteString(itoa(i + 1))
 		b.WriteByte('\n')
-		b.WriteString(formatTimecode(blk.Start))
+		b.WriteString(formatTimecodeOffset(blk.Start, opts.StartHour))
 		b.WriteString(" --> ")
-		b.WriteString(formatTimecode(blk.End))
+		b.WriteString(formatTimecodeOffset(blk.End, opts.StartHour))
 		b.WriteByte('\n')
 		if opts.SpeakerLabels && len(blk.Words) > 0 && blk.Words[0].Speaker != "" {
 			b.WriteString("[Speaker ")

@@ -187,7 +187,12 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 
 	// Stage 9 — write outputs
 	emit(domain.ProgressEvent{Stage: domain.StageWriting})
-	writeOpts := domain.WriteOpts{MaxCharsPerLine: req.MaxCharsPerLine, SpeakerLabels: req.SpeakerLabels}
+	writeOpts := domain.WriteOpts{
+		MaxCharsPerLine:  req.MaxCharsPerLine,
+		SpeakerLabels:    req.SpeakerLabels,
+		WordsPerSubtitle: req.WordsPerSubtitle,
+		StartHour:        req.StartHour,
+	}
 	for i, f := range req.Formats {
 		w, ok := deps.Writers[f]
 		if !ok {

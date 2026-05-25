@@ -14,24 +14,29 @@ import (
 )
 
 type transcribeFlags struct {
-	api            string
-	model          string
-	language       string
-	outputs        []string
-	outDir         string
-	cache          bool
-	davinci        bool
-	wordSRT        bool
-	silentMs       int
-	paddingStartMs int
-	jsonMode       bool
-	progress       bool
-	fillerWords    []string
-	removeFillers  bool
-	fillerLines    bool
-	charsPerLine   int
-	diarize        bool
-	speakerLabels  bool
+	api              string
+	model            string
+	language         string
+	outputs          []string
+	outDir           string
+	cache            bool
+	davinci          bool
+	wordSRT          bool
+	silentMs         int
+	silentPortions   int  // alias for silentMs; last one set wins
+	paddingStartMs   int
+	paddingEndMs     int
+	jsonMode         bool
+	progress         bool
+	fillerWords      []string
+	removeFillers    bool
+	fillerLines      bool
+	charsPerLine     int
+	wordsPerSubtitle int
+	showPauses       bool
+	startHour        int
+	diarize          bool
+	speakerLabels    bool
 }
 
 func newTranscribeCmd(d Deps) *cobra.Command {
@@ -44,6 +49,14 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 			// Mirror semantic: --speaker-labels defaults to --diarize when not explicitly set.
 			if !c.Flags().Changed("speaker-labels") {
 				f.speakerLabels = f.diarize
+			}
+			// --silent-portions is an alias for --silent-portion-ms; last one set wins.
+			if c.Flags().Changed("silent-portions") {
+				f.silentMs = f.silentPortions
+			}
+			// Mutex: --words-per-subtitle and --chars-per-line cannot be combined.
+			if f.wordsPerSubtitle > 0 && f.charsPerLine > 0 {
+				return fmt.Errorf("--words-per-subtitle and --chars-per-line are mutually exclusive")
 			}
 			if len(args) == 0 && f.jsonMode {
 				return fmt.Errorf("at least one input file is required in --json mode")
@@ -67,8 +80,13 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().BoolVar(&f.cache, "use-cache", true, "reuse sidecar transcripts when present")
 	cmd.Flags().BoolVar(&f.davinci, "davinci", false, "convenience flag: enable davinci_srt output")
 	cmd.Flags().BoolVar(&f.wordSRT, "word-srt", false, "convenience flag: enable word_srt output")
-	cmd.Flags().IntVar(&f.silentMs, "silent-portion-ms", 1500, "pause threshold for davinci mode")
+	cmd.Flags().IntVar(&f.silentMs, "silent-portion-ms", 1500, "pause threshold for davinci mode (ms)")
+	cmd.Flags().IntVar(&f.silentPortions, "silent-portions", 1500, "pause threshold for davinci mode (ms); alias for --silent-portion-ms")
 	cmd.Flags().IntVar(&f.paddingStartMs, "padding-start", 0, "shift subtitle starts earlier by up to this many ms (davinci mode)")
+	cmd.Flags().IntVar(&f.paddingEndMs, "padding-end", 0, "shrink subtitle ends later by up to this many ms (davinci mode)")
+	cmd.Flags().IntVar(&f.wordsPerSubtitle, "words-per-subtitle", 0, "max words per subtitle block (0 = default 7); mutually exclusive with --chars-per-line")
+	cmd.Flags().BoolVar(&f.showPauses, "show-pauses", true, "emit (...) markers for pauses >= --silent-portions (davinci mode)")
+	cmd.Flags().IntVar(&f.startHour, "start-hour", 0, "hour offset added to all SRT/DaVinci timecodes")
 	cmd.Flags().BoolVar(&f.jsonMode, "json", false, "agent-callable JSON output, no TUI escalation")
 	cmd.Flags().BoolVar(&f.progress, "progress", false, "with --json, emit JSONL progress events")
 	cmd.Flags().StringSliceVar(&f.fillerWords, "filler-words", nil, "comma-separated filler words (default: um,uh,ähm,äh,hm,hmm)")
@@ -110,22 +128,26 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 	provider := domain.ProviderID(f.api)
 	for _, file := range expanded {
 		req := domain.Request{
-			InputPath:       file,
-			Provider:        provider,
-			Model:           f.model,
-			Language:        f.language,
-			Formats:         formats,
-			OutputDir:       f.outDir,
-			UseCache:        f.cache,
-			MaxCharsPerLine: f.charsPerLine,
-			SpeakerLabels:   f.speakerLabels, // f.speakerLabels mirrors f.diarize unless --speaker-labels is explicit
+			InputPath:        file,
+			Provider:         provider,
+			Model:            f.model,
+			Language:         f.language,
+			Formats:          formats,
+			OutputDir:        f.outDir,
+			UseCache:         f.cache,
+			MaxCharsPerLine:  f.charsPerLine,
+			WordsPerSubtitle: f.wordsPerSubtitle,
+			StartHour:        f.startHour,
+			SpeakerLabels:    f.speakerLabels, // f.speakerLabels mirrors f.diarize unless --speaker-labels is explicit
 		}
 		if hasFormat(formats, domain.FormatDavinciSRT) {
 			opts := &domain.DaVinciOptions{
 				SilentPortionThreshold: parseSilentMs(f.silentMs),
 				PaddingStart:           parseSilentMs(f.paddingStartMs),
+				PaddingEnd:             parseSilentMs(f.paddingEndMs),
 				RemoveFillers:          f.removeFillers,
 				SuppressFillerLines:    !f.fillerLines,
+				SuppressPauses:         !f.showPauses,
 			}
 			if len(f.fillerWords) > 0 {
 				opts.FillerWords = f.fillerWords
