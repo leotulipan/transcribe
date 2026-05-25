@@ -3,6 +3,7 @@ package format
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,4 +34,39 @@ func TestDaVinci_Write_Golden(t *testing.T) {
 	golden, err := os.ReadFile("testdata/sample.davinci.srt.golden")
 	require.NoError(t, err)
 	require.Equal(t, string(golden), string(got))
+}
+
+func TestDaVinci_PauseMarkerHasNoSpeakerPrefixWhenLabelsEnabled(t *testing.T) {
+	res := &domain.Result{
+		Words: []domain.Word{
+			{Text: "Hello", Start: 0 * time.Millisecond, End: 500 * time.Millisecond, Speaker: "A"},
+			{Text: "(...)", Start: 500 * time.Millisecond, End: 2000 * time.Millisecond, Speaker: ""},
+			{Text: "World", Start: 2000 * time.Millisecond, End: 2500 * time.Millisecond, Speaker: "A"},
+		},
+	}
+	dir := t.TempDir()
+	dst := filepath.Join(dir, "out.davinci.srt")
+	require.NoError(t, NewDaVinci().Write(res, dst, domain.WriteOpts{SpeakerLabels: true}))
+
+	got, err := os.ReadFile(dst)
+	require.NoError(t, err)
+	gotStr := string(got)
+
+	// Pause marker block (block 2) should not have speaker prefix
+	require.Contains(t, gotStr, "[Speaker A]: Hello")
+	require.Contains(t, gotStr, "(...)")
+	require.NotContains(t, gotStr, "[Speaker ]: (...)")
+	// Verify structure: pause marker block exists without speaker prefix
+	lines := strings.Split(gotStr, "\n")
+	pauseBlockFound := false
+	for i, line := range lines {
+		if line == "(...)" {
+			pauseBlockFound = true
+			// The line before should not be a speaker prefix
+			if i > 0 {
+				require.NotContains(t, lines[i-1], "[Speaker")
+			}
+		}
+	}
+	require.True(t, pauseBlockFound, "pause marker block not found in output")
 }

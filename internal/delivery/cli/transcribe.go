@@ -32,7 +32,6 @@ type transcribeFlags struct {
 	charsPerLine   int
 	diarize        bool
 	speakerLabels  bool
-	speakerLabelsSet bool // tracks whether --speaker-labels was explicitly passed
 }
 
 func newTranscribeCmd(d Deps) *cobra.Command {
