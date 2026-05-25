@@ -74,6 +74,7 @@ func (f *FFmpeg) Chunk(ctx context.Context, in domain.AudioFile, maxBytes int64,
 		partial := partialPath(final)
 
 		// Apply overlap: start earlier than the nominal boundary (but not before 0).
+		// Overlap extends backward into the previous chunk only; chunk duration stays chunkDur.
 		startOffset := nominalOffset - overlapDur
 		if startOffset < 0 {
 			startOffset = 0

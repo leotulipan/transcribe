@@ -101,7 +101,6 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 		}
 		prepOpts := ports.PrepareOpts{
 			UseInput:           req.UseInput,
-			UsePCM:             req.UsePCM,
 			SizeThresholdBytes: req.SizeThresholdBytes,
 		}
 		if hit := lookupIntermediate(workDir, src, srcMTime, req.Provider, model, prov.MaxUploadBytes(), targetCodec); hit != nil {

@@ -42,9 +42,6 @@ type PrepareOpts struct {
     // of codec, container, or size.
     UseInput bool
 
-    // UsePCM overrides the preferred transcode target with pcm_s16le (WAV).
-    UsePCM bool
-
     // SizeThresholdBytes widens the as-is path: when > 0 and the source is
     // codec-compatible, the file is returned as-is even when its size exceeds the
     // provider's maxBytes limit (up to this threshold). The user accepts that the
