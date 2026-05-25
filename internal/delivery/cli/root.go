@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/spf13/cobra"
@@ -23,17 +24,21 @@ func NewRoot(d Deps) *cobra.Command {
 		Short:        "Transcribe audio and video files via multiple AI providers",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		// Apply log-level flags before any subcommand runs; also handle -V/--version.
-		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+		// Handle version flag at root level (no subcommand).
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if showVersion {
 				if d.Version != "" {
-					cmd.Println(d.Version)
+					fmt.Fprintln(cmd.OutOrStdout(), d.Version)
 				} else {
-					cmd.Println("(dev)")
+					fmt.Fprintln(cmd.OutOrStdout(), "(dev)")
 				}
-				// Signal callers to exit cleanly.
 				return nil
 			}
+			// No flags and no subcommand: show help.
+			return cmd.Help()
+		},
+		// Apply log-level flags before any subcommand runs.
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if d.LevelVar == nil {
 				return nil
 			}

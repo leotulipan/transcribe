@@ -80,3 +80,33 @@ func TestRoot_PersistentFlagsRegistered(t *testing.T) {
 	require.NotNil(t, root.PersistentFlags().Lookup("debug"), "--debug must be a persistent flag")
 	require.NotNil(t, root.PersistentFlags().Lookup("verbose"), "--verbose must be a persistent flag")
 }
+
+func TestRoot_VersionFlagPrintsVersionAndExits(t *testing.T) {
+	var buf bytes.Buffer
+	root := NewRoot(Deps{Version: "test-1.2.3", LevelVar: new(slog.LevelVar)})
+	root.SetOut(&buf)
+	root.SetArgs([]string{"--version"})
+	err := root.Execute()
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), "test-1.2.3")
+}
+
+func TestRoot_VersionFlagShortAliasPrintsVersionAndExits(t *testing.T) {
+	var buf bytes.Buffer
+	root := NewRoot(Deps{Version: "test-2.0.0", LevelVar: new(slog.LevelVar)})
+	root.SetOut(&buf)
+	root.SetArgs([]string{"-V"})
+	err := root.Execute()
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), "test-2.0.0")
+}
+
+func TestRoot_NoArgsShowsHelp(t *testing.T) {
+	var buf bytes.Buffer
+	root := NewRoot(Deps{Version: "1.0.0", LevelVar: new(slog.LevelVar)})
+	root.SetOut(&buf)
+	root.SetArgs([]string{})
+	err := root.Execute()
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), "Transcribe audio and video files via multiple AI providers")
+}
