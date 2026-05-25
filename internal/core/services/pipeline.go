@@ -360,6 +360,9 @@ func cleanupEmptyWorkDir(workDir string) {
 // source.
 func outputPath(req domain.Request, f domain.OutputFormat) string {
 	base := strings.TrimSuffix(filepath.Base(req.InputPath), filepath.Ext(req.InputPath))
+	if req.UseJSONInput {
+		base = stripTranscribeSuffix(base)
+	}
 	dir := req.OutputDir
 	if dir == "" {
 		dir = filepath.Dir(req.InputPath)
@@ -376,4 +379,23 @@ func outputPath(req domain.Request, f domain.OutputFormat) string {
 		ext = "." + string(f)
 	}
 	return filepath.Join(dir, base+ext)
+}
+
+// stripTranscribeSuffix removes a trailing ".transcribe.<something>" pair from
+// the filename base (the part after the last path separator, with the final
+// extension already stripped). For example:
+//
+//	"myfile.transcribe.groq"   → "myfile"
+//	"myfile.transcribe.openai" → "myfile"
+//	"weird"                    → "weird"   (no match — returned unchanged)
+//
+// The check is purely filename-driven so it works even when the provider in
+// req.Provider differs from the one baked into the sidecar filename.
+func stripTranscribeSuffix(base string) string {
+	parts := strings.Split(base, ".")
+	// Need at least 3 segments: <name> . transcribe . <provider>
+	if len(parts) >= 3 && parts[len(parts)-2] == "transcribe" {
+		return strings.Join(parts[:len(parts)-2], ".")
+	}
+	return base
 }

@@ -380,6 +380,61 @@ func TestPipelineRun_SaveCleanedJSONWritesEvenWhenCacheDisabled(t *testing.T) {
 	require.Equal(t, 1, cache.saves, "SaveCleanedJSON=true must write JSON even when UseCache=false")
 }
 
+// ---------------------------------------------------------------------------
+// outputPath unit tests
+// ---------------------------------------------------------------------------
+
+func TestOutputPath_StripsTranscribeSuffixWhenUseJSONInput(t *testing.T) {
+	req := domain.Request{
+		InputPath:    "/tmp/data/myfile.transcribe.groq.json",
+		Provider:     domain.ProviderGroq,
+		UseJSONInput: true,
+	}
+	got := outputPath(req, domain.FormatText)
+	require.Equal(t, filepath.FromSlash("/tmp/data/myfile.txt"), got)
+}
+
+func TestOutputPath_StripsTranscribeSuffixWhenProviderInPathDiffers(t *testing.T) {
+	// Provider in path is openai; req.Provider is groq. Stripping is filename-driven.
+	req := domain.Request{
+		InputPath:    "/tmp/data/myfile.transcribe.openai.json",
+		Provider:     domain.ProviderGroq,
+		UseJSONInput: true,
+	}
+	got := outputPath(req, domain.FormatSRT)
+	require.Equal(t, filepath.FromSlash("/tmp/data/myfile.srt"), got)
+}
+
+func TestOutputPath_NoUseJSONInput_BehavesAsBefore(t *testing.T) {
+	req := domain.Request{
+		InputPath: "/tmp/data/myfile.mp3",
+		Provider:  domain.ProviderGroq,
+	}
+	got := outputPath(req, domain.FormatText)
+	require.Equal(t, filepath.FromSlash("/tmp/data/myfile.txt"), got)
+}
+
+func TestOutputPath_UseJSONInput_NonSidecarJSON(t *testing.T) {
+	// Input is a plain .json (not a sidecar); don't strip anything magical.
+	req := domain.Request{
+		InputPath:    "/tmp/data/weird.json",
+		Provider:     domain.ProviderGroq,
+		UseJSONInput: true,
+	}
+	got := outputPath(req, domain.FormatText)
+	require.Equal(t, filepath.FromSlash("/tmp/data/weird.txt"), got)
+}
+
+func TestOutputPath_UseJSONInput_DavinciSRT(t *testing.T) {
+	req := domain.Request{
+		InputPath:    "/tmp/data/myfile.transcribe.groq.json",
+		Provider:     domain.ProviderGroq,
+		UseJSONInput: true,
+	}
+	got := outputPath(req, domain.FormatDavinciSRT)
+	require.Equal(t, filepath.FromSlash("/tmp/data/myfile.davinci.srt"), got)
+}
+
 func TestPipelineRun_NoSaveWhenBothFalse(t *testing.T) {
 	dir := t.TempDir()
 	inputPath := filepath.Join(dir, "talk.mp3")
