@@ -17,15 +17,23 @@ type Deps struct {
 }
 
 func NewRoot(d Deps) *cobra.Command {
-	var debug, verbose bool
+	var debug, verbose, showVersion bool
 	root := &cobra.Command{
-		Use:           "transcribe",
-		Short:         "Transcribe audio and video files via multiple AI providers",
-		Version:       d.Version,
+		Use:          "transcribe",
+		Short:        "Transcribe audio and video files via multiple AI providers",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		// Apply log-level flags before any subcommand runs.
-		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+		// Apply log-level flags before any subcommand runs; also handle -V/--version.
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			if showVersion {
+				if d.Version != "" {
+					cmd.Println(d.Version)
+				} else {
+					cmd.Println("(dev)")
+				}
+				// Signal callers to exit cleanly.
+				return nil
+			}
 			if d.LevelVar == nil {
 				return nil
 			}
@@ -40,8 +48,10 @@ func NewRoot(d Deps) *cobra.Command {
 			return nil
 		},
 	}
-	root.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug-level logging")
-	root.PersistentFlags().BoolVar(&verbose, "verbose", false, "enable info-level logging (default is warn)")
+	root.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug-level logging")
+	root.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable info-level logging (default is warn)")
+	// -V for --version frees -v for --verbose (cobra would auto-claim -v for version).
+	root.Flags().BoolVarP(&showVersion, "version", "V", false, "show version and exit")
 	root.AddCommand(newTranscribeCmd(d))
 	root.AddCommand(newProvidersCmd(d))
 	root.AddCommand(newSetupCmd(d))
