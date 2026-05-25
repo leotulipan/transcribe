@@ -36,7 +36,10 @@ type ModelCapabilities struct {
 }
 
 type ProviderOpts struct {
-    Model         string
-    Language      string
-    SpeakerLabels bool // request diarization; providers that don't support it silently ignore this
+	Model         string
+	Language      string
+	SpeakerLabels bool     // request diarization; providers that don't support it silently ignore this
+	NumSpeakers   int      // 0 = unset; 1..32 valid; only meaningful when SpeakerLabels=true
+	KeyTerms      []string // assemblyai keyterms_prompt; empty = unset
+	SpeechModels  []string // assemblyai speech_models fallback list; empty = unset
 }

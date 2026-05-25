@@ -40,6 +40,9 @@ type transcribeFlags struct {
 	fps              float64
 	fpsOffsetStart   int
 	fpsOffsetEnd     int
+	numSpeakers      int
+	keyTermsPrompt   string
+	speechModels     string
 }
 
 func newTranscribeCmd(d Deps) *cobra.Command {
@@ -60,6 +63,11 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 			// Mutex: --words-per-subtitle and --chars-per-line cannot be combined.
 			if f.wordsPerSubtitle > 0 && f.charsPerLine > 0 {
 				return fmt.Errorf("--words-per-subtitle and --chars-per-line are mutually exclusive")
+			}
+			// Validate num-speakers range before any TUI escalation so the error
+			// surfaces unconditionally (even when no input files are provided).
+			if f.numSpeakers < 0 || f.numSpeakers > 32 {
+				return fmt.Errorf("--num-speakers must be between 0 and 32 (got %d)", f.numSpeakers)
 			}
 			if len(args) == 0 && f.jsonMode {
 				return fmt.Errorf("at least one input file is required in --json mode")
@@ -101,6 +109,9 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().Float64Var(&f.fps, "fps", 0, "video frame rate for snapping subtitle boundaries to frame grid (0 = no snapping)")
 	cmd.Flags().IntVar(&f.fpsOffsetStart, "fps-offset-start", -1, "frame offset added to snapped Start times (-1 = appear 1 frame earlier)")
 	cmd.Flags().IntVar(&f.fpsOffsetEnd, "fps-offset-end", 0, "frame offset added to snapped End times")
+	cmd.Flags().IntVar(&f.numSpeakers, "num-speakers", 0, "expected number of speakers 1..32 (assemblyai+elevenlabs; requires --diarize; 0 = unset)")
+	cmd.Flags().StringVar(&f.keyTermsPrompt, "keyterms-prompt", "", "comma-separated key terms to boost recognition (assemblyai)")
+	cmd.Flags().StringVar(&f.speechModels, "speech-models", "", "comma-separated fallback speech models (assemblyai)")
 	return cmd
 }
 
@@ -109,6 +120,8 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 	if err != nil {
 		return err
 	}
+	keyTerms := parseCommaSeparated(f.keyTermsPrompt)
+	speechModels := parseCommaSeparated(f.speechModels)
 	if !f.jsonMode {
 		// Escalation rule: if no provider is configured at all, escalate to TUI.
 		if f.api == "" && d.Config.DefaultProvider == "" {
@@ -145,6 +158,9 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 			WordsPerSubtitle: f.wordsPerSubtitle,
 			StartHour:        f.startHour,
 			SpeakerLabels:    f.speakerLabels, // f.speakerLabels mirrors f.diarize unless --speaker-labels is explicit
+			NumSpeakers:      f.numSpeakers,
+			KeyTerms:         keyTerms,
+			SpeechModels:     speechModels,
 		}
 		if hasFormat(formats, domain.FormatDavinciSRT) {
 			opts := &domain.DaVinciOptions{
@@ -266,5 +282,23 @@ func firstOr(s []string, def string) string {
 // mustFormats parses formats from flags, returning an empty slice on error.
 func mustFormats(f *transcribeFlags) []domain.OutputFormat {
 	out, _ := parseFormats(f.outputs, f.davinci, f.wordSRT)
+	return out
+}
+
+// parseCommaSeparated splits a comma-delimited string into trimmed, non-empty entries.
+func parseCommaSeparated(s string) []string {
+	if s == "" {
+		return nil
+	}
+	raw := strings.Split(s, ",")
+	out := make([]string, 0, len(raw))
+	for _, part := range raw {
+		if t := strings.TrimSpace(part); t != "" {
+			out = append(out, t)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
 	return out
 }

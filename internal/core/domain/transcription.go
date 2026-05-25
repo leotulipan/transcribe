@@ -16,6 +16,9 @@ type Request struct {
 	WordsPerSubtitle int            // 0 = format default (7); positive overrides groupWords maxWords
 	StartHour        int            // hour offset added to every timecode in SRT / DaVinci output
 	SpeakerLabels    bool           // request diarization from the provider
+	NumSpeakers      int            // 0 = unset; 1..32 valid; only meaningful when SpeakerLabels=true
+	KeyTerms         []string       // comma-parsed keyterms; empty = unset
+	SpeechModels     []string       // fallback speech model list; empty = unset
 }
 
 // WriteOpts carries per-write rendering knobs that are derived from Request

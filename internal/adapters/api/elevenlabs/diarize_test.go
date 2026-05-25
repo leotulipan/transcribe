@@ -31,6 +31,18 @@ func readMultipartField(t *testing.T, r *http.Request, field string) string {
 	return vals[0]
 }
 
+// readMultipartForm returns the entire parsed form so callers can inspect
+// presence/absence of optional fields.
+func readMultipartForm(t *testing.T, r *http.Request) map[string][]string {
+	t.Helper()
+	_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	require.NoError(t, err)
+	mr := multipart.NewReader(r.Body, params["boundary"])
+	form, err := mr.ReadForm(1 << 20)
+	require.NoError(t, err)
+	return form.Value
+}
+
 func TestDiarize_RequestPayloadIncludesDiarizeFlag(t *testing.T) {
 	fixture, err := os.ReadFile("../../../../testdata/elevenlabs_diarize.json")
 	require.NoError(t, err)
@@ -104,4 +116,55 @@ func TestDiarize_OptedOutLeavesSpeakerEmpty(t *testing.T) {
 	}
 	// The fixture has no speaker_id fields, so the strings should be empty.
 	require.True(t, strings.Contains(string(fixture), "Hello"), "sanity: fixture loaded")
+}
+
+func TestElevenLabs_RequestIncludesSpeakersExpected(t *testing.T) {
+	fixture, err := os.ReadFile("../../../../testdata/elevenlabs_diarize.json")
+	require.NoError(t, err)
+
+	var gotForm map[string][]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotForm = readMultipartForm(t, r)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(fixture)
+	}))
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err = c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "scribe_v1", SpeakerLabels: true, NumSpeakers: 3},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "true", gotForm["diarize"][0], "diarize must be true")
+	require.Equal(t, "3", gotForm["speakers_expected"][0], "speakers_expected must be 3")
+}
+
+func TestElevenLabs_NoSpeakersExpectedWhenSpeakerLabelsFalse(t *testing.T) {
+	fixture, err := os.ReadFile("../../../../testdata/elevenlabs_sample.json")
+	require.NoError(t, err)
+
+	var gotForm map[string][]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotForm = readMultipartForm(t, r)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(fixture)
+	}))
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err = c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "scribe_v1", SpeakerLabels: false, NumSpeakers: 3},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "false", gotForm["diarize"][0], "diarize must be false")
+	_, hasSpeakersExpected := gotForm["speakers_expected"]
+	require.False(t, hasSpeakersExpected, "speakers_expected must not appear when SpeakerLabels=false")
 }

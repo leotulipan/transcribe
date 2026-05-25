@@ -102,7 +102,7 @@ func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts po
 	}
 
 	// Step 2: Submit transcript request.
-	transcriptID, err := c.submitTranscript(ctx, uploadURL, model, opts.Language, opts.SpeakerLabels)
+	transcriptID, err := c.submitTranscript(ctx, uploadURL, model, opts)
 	if err != nil {
 		return nil, &domain.ErrProvider{
 			Provider:  domain.ProviderAssemblyAI,
@@ -174,18 +174,27 @@ func (c *Client) uploadFile(ctx context.Context, path string) (string, error) {
 }
 
 // submitTranscript posts a transcript request and returns the transcript ID.
-func (c *Client) submitTranscript(ctx context.Context, audioURL, model, language string, speakerLabels bool) (string, error) {
+func (c *Client) submitTranscript(ctx context.Context, audioURL, model string, opts ports.ProviderOpts) (string, error) {
 	body := map[string]interface{}{
-		"audio_url":    audioURL,
-		"speech_model": model,
-		"language_code": language,
+		"audio_url":     audioURL,
+		"speech_model":  model,
+		"language_code": opts.Language,
 	}
-	if language == "" {
+	if opts.Language == "" {
 		delete(body, "language_code")
 		body["language_detection"] = true
 	}
-	if speakerLabels {
+	if opts.SpeakerLabels {
 		body["speaker_labels"] = true
+		if opts.NumSpeakers > 0 {
+			body["speakers_expected"] = opts.NumSpeakers
+		}
+	}
+	if len(opts.KeyTerms) > 0 {
+		body["keyterms_prompt"] = opts.KeyTerms
+	}
+	if len(opts.SpeechModels) > 0 {
+		body["speech_models"] = opts.SpeechModels
 	}
 	payload, err := json.Marshal(body)
 	if err != nil {

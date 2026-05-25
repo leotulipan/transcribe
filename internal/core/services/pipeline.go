@@ -153,7 +153,14 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 				Path: c.Path, SizeBytes: c.SizeBytes, Codec: prepared.Codec, Container: prepared.Container,
 				IsTemp: prepared.IsTemp, Complete: c.Complete,
 			}
-			r, terr := prov.Transcribe(ctx, chunkAudio, ports.ProviderOpts{Model: model, Language: req.Language, SpeakerLabels: req.SpeakerLabels})
+			r, terr := prov.Transcribe(ctx, chunkAudio, ports.ProviderOpts{
+					Model:         model,
+					Language:      req.Language,
+					SpeakerLabels: req.SpeakerLabels,
+					NumSpeakers:   req.NumSpeakers,
+					KeyTerms:      req.KeyTerms,
+					SpeechModels:  req.SpeechModels,
+				})
 			if terr != nil {
 				err = terr
 				return nil, terr

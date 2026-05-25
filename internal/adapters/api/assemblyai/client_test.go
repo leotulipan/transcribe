@@ -2,6 +2,8 @@ package assemblyai
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -117,4 +119,118 @@ func TestClient_UploadFailureReturnsError(t *testing.T) {
 	var pe *domain.ErrProvider
 	require.ErrorAs(t, err, &pe)
 	require.Equal(t, domain.ProviderAssemblyAI, pe.Provider)
+}
+
+// captureTranscriptPayload starts a test server that captures the JSON body
+// sent to /v2/transcript and returns a minimal transcript response so the
+// client can proceed. The captured payload is written to *got.
+func captureTranscriptPayload(t *testing.T, got *map[string]interface{}) *httptest.Server {
+	t.Helper()
+	origInterval := pollInterval
+	pollInterval = 1 * time.Millisecond
+	t.Cleanup(func() { pollInterval = origInterval })
+
+	fixture, err := os.ReadFile("../../../../testdata/assemblyai_sample.json")
+	require.NoError(t, err)
+
+	var polled atomic.Bool
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/v2/upload":
+			_, _ = w.Write([]byte(`{"upload_url":"http://` + r.Host + `/audio/x"}`))
+		case "/v2/transcript":
+			body, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(body, got)
+			_, _ = w.Write([]byte(`{"id":"abc","status":"queued"}`))
+		case "/v2/transcript/abc":
+			if polled.Swap(true) {
+				_, _ = w.Write(fixture)
+			} else {
+				_, _ = w.Write([]byte(`{"id":"abc","status":"processing"}`))
+			}
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+}
+
+func TestAssemblyAI_RequestIncludesNumSpeakers(t *testing.T) {
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "best", SpeakerLabels: true, NumSpeakers: 3},
+	)
+	require.NoError(t, err)
+	require.Equal(t, true, got["speaker_labels"], "speaker_labels must be true")
+	require.InDelta(t, float64(3), got["speakers_expected"], 0.001, "speakers_expected must be 3")
+}
+
+func TestAssemblyAI_RequestIncludesKeyTerms(t *testing.T) {
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "best", KeyTerms: []string{"foo", "bar"}},
+	)
+	require.NoError(t, err)
+	raw, ok := got["keyterms_prompt"].([]interface{})
+	require.True(t, ok, "keyterms_prompt must be an array")
+	require.Len(t, raw, 2)
+	require.Equal(t, "foo", raw[0])
+	require.Equal(t, "bar", raw[1])
+}
+
+func TestAssemblyAI_RequestIncludesSpeechModels(t *testing.T) {
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "best", SpeechModels: []string{"universal-3-pro", "universal-2"}},
+	)
+	require.NoError(t, err)
+	raw, ok := got["speech_models"].([]interface{})
+	require.True(t, ok, "speech_models must be an array")
+	require.Len(t, raw, 2)
+	require.Equal(t, "universal-3-pro", raw[0])
+	require.Equal(t, "universal-2", raw[1])
+}
+
+func TestAssemblyAI_NoSpeakersExpectedWhenSpeakerLabelsFalse(t *testing.T) {
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "best", SpeakerLabels: false, NumSpeakers: 3},
+	)
+	require.NoError(t, err)
+	_, hasSpeakersExpected := got["speakers_expected"]
+	require.False(t, hasSpeakersExpected, "speakers_expected must not appear when SpeakerLabels=false")
+	_, hasSpeakerLabels := got["speaker_labels"]
+	require.False(t, hasSpeakerLabels, "speaker_labels must not appear when SpeakerLabels=false")
 }

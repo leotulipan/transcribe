@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/leotulipan/transcribe/internal/adapters/api/internal/retry"
@@ -87,7 +88,7 @@ func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts po
 	}
 	var raw []byte
 	err := retry.Do(ctx, 3, 5*time.Second, func() error {
-		body, contentType, err := buildMultipart(audio.Path, model, opts.Language, opts.SpeakerLabels)
+		body, contentType, err := buildMultipart(audio.Path, model, opts)
 		if err != nil {
 			return err
 		}
@@ -123,7 +124,7 @@ func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts po
 	return parse(raw, model)
 }
 
-func buildMultipart(path, model, language string, diarize bool) (*bytes.Buffer, string, error) {
+func buildMultipart(path, model string, opts ports.ProviderOpts) (*bytes.Buffer, string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, "", err
@@ -138,14 +139,19 @@ func buildMultipart(path, model, language string, diarize bool) (*bytes.Buffer, 
 		return nil, "", err
 	}
 	diarizeVal := "false"
-	if diarize {
+	if opts.SpeakerLabels {
 		diarizeVal = "true"
 	}
 	if err := mw.WriteField("diarize", diarizeVal); err != nil {
 		return nil, "", err
 	}
-	if language != "" {
-		if err := mw.WriteField("language_code", language); err != nil {
+	if opts.SpeakerLabels && opts.NumSpeakers > 0 {
+		if err := mw.WriteField("speakers_expected", strconv.Itoa(opts.NumSpeakers)); err != nil {
+			return nil, "", err
+		}
+	}
+	if opts.Language != "" {
+		if err := mw.WriteField("language_code", opts.Language); err != nil {
 			return nil, "", err
 		}
 	}
