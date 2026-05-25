@@ -20,6 +20,17 @@ func NewText(out io.Writer, level slog.Level) ports.Logger {
 	return &slogLogger{inner: slog.New(h)}
 }
 
+// NewLevelled builds a text logger whose level can be mutated at runtime via lv.
+// slog.LevelVar is the idiomatic way to change verbosity after construction without
+// rebuilding the handler chain.
+func NewLevelled(out io.Writer, lv *slog.LevelVar) ports.Logger {
+	if out == nil {
+		out = os.Stderr
+	}
+	h := slog.NewTextHandler(out, &slog.HandlerOptions{Level: lv})
+	return &slogLogger{inner: slog.New(h)}
+}
+
 func NewJSON(out io.Writer, level slog.Level) ports.Logger {
 	if out == nil {
 		out = os.Stderr

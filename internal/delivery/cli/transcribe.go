@@ -58,6 +58,9 @@ type transcribeFlags struct {
 	saveCleanedJSON bool   // persist normalized JSON even when UseCache=false
 	useJSONInput    bool   // treat input path as a pre-saved sidecar JSON; skip API call
 	extensions      string // comma-separated extension filter for directory enumeration
+
+	// Logging & discovery flags (Phase 5f).
+	list bool // print providers+models and exit without transcribing
 }
 
 func newTranscribeCmd(d Deps) *cobra.Command {
@@ -67,6 +70,11 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 		Short: "Transcribe one or more files",
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
+			// --list: print providers and exit without touching any inputs.
+			if f.list {
+				printProviders(d, os.Stdout)
+				return nil
+			}
 			// Mirror semantic: --speaker-labels defaults to --diarize when not explicitly set.
 			if !c.Flags().Changed("speaker-labels") {
 				f.speakerLabels = f.diarize
@@ -153,6 +161,8 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().BoolVar(&f.saveCleanedJSON, "save-cleaned-json", false, "persist the normalized pre-format JSON next to outputs even when --use-cache=false")
 	cmd.Flags().BoolVar(&f.useJSONInput, "use-json-input", false, "accept a previously-saved sidecar JSON as input and skip the API call")
 	cmd.Flags().StringVar(&f.extensions, "extensions", "", "comma-separated file extensions to filter directory enumeration (e.g. mp3,m4a)")
+	// Logging & discovery flags (Phase 5f).
+	cmd.Flags().BoolVar(&f.list, "list", false, "list available APIs and their models, then exit")
 	return cmd
 }
 

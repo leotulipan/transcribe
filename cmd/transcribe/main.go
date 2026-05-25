@@ -76,7 +76,11 @@ func main() {
 		fmt.Fprintln(os.Stderr, "config:", err)
 		os.Exit(3)
 	}
-	log := logging.NewText(os.Stderr, slog.LevelInfo)
+	// Start at Warn; cobra PersistentPreRunE promotes to Info or Debug when
+	// --verbose or --debug is passed, using slog.LevelVar for zero-rebuild mutation.
+	logLevel := &slog.LevelVar{}
+	logLevel.Set(slog.LevelWarn)
+	log := logging.NewLevelled(os.Stderr, logLevel)
 
 	svc, err := delivery.BuildService(cfg, log)
 	if err != nil {
@@ -108,7 +112,7 @@ func main() {
 			os.Exit(cli.ExitCodeFor(err))
 		}
 	default:
-		root := cli.NewRoot(cli.Deps{Service: svc, Config: cfg, Logger: log, Version: version})
+		root := cli.NewRoot(cli.Deps{Service: svc, Config: cfg, Logger: log, Version: version, LevelVar: logLevel})
 		if err := root.ExecuteContext(ctx); err != nil {
 			// CLI may signal escalation via a typed error
 			var esc *cli.EscalateToTUI
