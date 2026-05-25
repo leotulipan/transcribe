@@ -26,6 +26,7 @@ import (
 var sttCaps = ports.ModelCapabilities{
 	WordTimestamps:    true,
 	SegmentTimestamps: false,
+	Diarization:       true,
 	LanguageHint:      true,
 	AcceptedInputs: []domain.AudioFormat{
 		{Codec: "mp3"}, {Codec: "mp4"}, {Codec: "m4a"}, {Codec: "wav"},

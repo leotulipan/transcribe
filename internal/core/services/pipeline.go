@@ -153,7 +153,7 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 				Path: c.Path, SizeBytes: c.SizeBytes, Codec: prepared.Codec, Container: prepared.Container,
 				IsTemp: prepared.IsTemp, Complete: c.Complete,
 			}
-			r, terr := prov.Transcribe(ctx, chunkAudio, ports.ProviderOpts{Model: model, Language: req.Language})
+			r, terr := prov.Transcribe(ctx, chunkAudio, ports.ProviderOpts{Model: model, Language: req.Language, SpeakerLabels: req.SpeakerLabels})
 			if terr != nil {
 				err = terr
 				return nil, terr
@@ -187,7 +187,7 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 
 	// Stage 9 — write outputs
 	emit(domain.ProgressEvent{Stage: domain.StageWriting})
-	writeOpts := domain.WriteOpts{MaxCharsPerLine: req.MaxCharsPerLine}
+	writeOpts := domain.WriteOpts{MaxCharsPerLine: req.MaxCharsPerLine, SpeakerLabels: req.SpeakerLabels}
 	for i, f := range req.Formats {
 		w, ok := deps.Writers[f]
 		if !ok {

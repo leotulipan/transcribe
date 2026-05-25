@@ -36,6 +36,7 @@ type ModelCapabilities struct {
 }
 
 type ProviderOpts struct {
-    Model    string
-    Language string
+    Model         string
+    Language      string
+    SpeakerLabels bool // request diarization; providers that don't support it silently ignore this
 }

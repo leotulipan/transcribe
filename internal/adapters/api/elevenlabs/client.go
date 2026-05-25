@@ -87,7 +87,7 @@ func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts po
 	}
 	var raw []byte
 	err := retry.Do(ctx, 3, 5*time.Second, func() error {
-		body, contentType, err := buildMultipart(audio.Path, model, opts.Language)
+		body, contentType, err := buildMultipart(audio.Path, model, opts.Language, opts.SpeakerLabels)
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts po
 	return parse(raw, model)
 }
 
-func buildMultipart(path, model, language string) (*bytes.Buffer, string, error) {
+func buildMultipart(path, model, language string, diarize bool) (*bytes.Buffer, string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, "", err
@@ -137,7 +137,11 @@ func buildMultipart(path, model, language string) (*bytes.Buffer, string, error)
 	if err := mw.WriteField("timestamps_granularity", "word"); err != nil {
 		return nil, "", err
 	}
-	if err := mw.WriteField("diarize", "false"); err != nil {
+	diarizeVal := "false"
+	if diarize {
+		diarizeVal = "true"
+	}
+	if err := mw.WriteField("diarize", diarizeVal); err != nil {
 		return nil, "", err
 	}
 	if language != "" {

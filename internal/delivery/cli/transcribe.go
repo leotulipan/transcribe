@@ -30,6 +30,9 @@ type transcribeFlags struct {
 	removeFillers  bool
 	fillerLines    bool
 	charsPerLine   int
+	diarize        bool
+	speakerLabels  bool
+	speakerLabelsSet bool // tracks whether --speaker-labels was explicitly passed
 }
 
 func newTranscribeCmd(d Deps) *cobra.Command {
@@ -39,6 +42,10 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 		Short: "Transcribe one or more files",
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
+			// Mirror semantic: --speaker-labels defaults to --diarize when not explicitly set.
+			if !c.Flags().Changed("speaker-labels") {
+				f.speakerLabels = f.diarize
+			}
 			if len(args) == 0 && f.jsonMode {
 				return fmt.Errorf("at least one input file is required in --json mode")
 			}
@@ -69,6 +76,8 @@ func newTranscribeCmd(d Deps) *cobra.Command {
 	cmd.Flags().BoolVar(&f.removeFillers, "remove-fillers", false, "drop filler words from output entirely")
 	cmd.Flags().BoolVar(&f.fillerLines, "filler-lines", true, "uppercase fillers so DaVinci renders them on their own line")
 	cmd.Flags().IntVar(&f.charsPerLine, "chars-per-line", 0, "max chars per rendered subtitle line (0 = no wrapping)")
+	cmd.Flags().BoolVar(&f.diarize, "diarize", false, "request speaker diarization from the provider (assemblyai, elevenlabs)")
+	cmd.Flags().BoolVar(&f.speakerLabels, "speaker-labels", false, "prefix subtitle blocks with [Speaker X]: (default: mirrors --diarize)")
 	return cmd
 }
 
@@ -110,6 +119,7 @@ func runTranscribe(ctx context.Context, d Deps, f *transcribeFlags, files []stri
 			OutputDir:       f.outDir,
 			UseCache:        f.cache,
 			MaxCharsPerLine: f.charsPerLine,
+			SpeakerLabels:   f.speakerLabels, // f.speakerLabels mirrors f.diarize unless --speaker-labels is explicit
 		}
 		if hasFormat(formats, domain.FormatDavinciSRT) {
 			opts := &domain.DaVinciOptions{

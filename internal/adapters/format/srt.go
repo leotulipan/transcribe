@@ -29,6 +29,11 @@ func (SRT) Write(r *domain.Result, dst string, opts domain.WriteOpts) error {
 		b.WriteString(" --> ")
 		b.WriteString(formatTimecode(blk.End))
 		b.WriteByte('\n')
+		if opts.SpeakerLabels && len(blk.Words) > 0 && blk.Words[0].Speaker != "" {
+			b.WriteString("[Speaker ")
+			b.WriteString(blk.Words[0].Speaker)
+			b.WriteString("]: ")
+		}
 		lines := wrapByChars(blk.Words, opts.MaxCharsPerLine)
 		for li, line := range lines {
 			if li > 0 {

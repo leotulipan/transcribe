@@ -12,6 +12,7 @@ var modelCaps = map[string]ports.ModelCapabilities{
 	"best": {
 		WordTimestamps:    true,
 		SegmentTimestamps: false,
+		Diarization:       true,
 		LanguageHint:      true,
 		AcceptedInputs: []domain.AudioFormat{
 			{Codec: "mp3"}, {Codec: "wav"}, {Codec: "mp4"}, {Codec: "m4a"},
@@ -22,6 +23,7 @@ var modelCaps = map[string]ports.ModelCapabilities{
 	"nano": {
 		WordTimestamps:    true,
 		SegmentTimestamps: false,
+		Diarization:       true,
 		LanguageHint:      true,
 		AcceptedInputs: []domain.AudioFormat{
 			{Codec: "mp3"}, {Codec: "wav"}, {Codec: "mp4"}, {Codec: "m4a"},
