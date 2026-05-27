@@ -26,9 +26,53 @@ type mainWindow struct {
 	provider   *widget.Select
 	model      *widget.Select
 	language   *widget.Entry
+	outputDir  *widget.Entry
 	fmtText    *widget.Check
 	fmtSRT     *widget.Check
+	fmtWordSRT *widget.Check
 	fmtDavinci *widget.Check
+
+	// Advanced — subtitle wrapping
+	charsPerLine     *widget.Entry
+	wordsPerSubtitle *widget.Entry
+	startHour        *widget.Entry
+
+	// Advanced — diarization
+	diarize       *widget.Check
+	speakerLabels *widget.Check
+	numSpeakers   *widget.Entry
+
+	// Advanced — DaVinci timing
+	paddingStartMs *widget.Entry
+	paddingEndMs   *widget.Entry
+	silentMs       *widget.Entry
+	fps            *widget.Entry
+	fpsOffsetStart *widget.Entry
+	fpsOffsetEnd   *widget.Entry
+	showPauses     *widget.Check
+
+	// Advanced — fillers
+	removeFillers *widget.Check
+	fillerLines   *widget.Check
+	fillerWords   *widget.Entry
+
+	// Advanced — audio pipeline
+	sizeThresholdMB *widget.Entry
+	chunkLengthSec  *widget.Entry
+	overlapSec      *widget.Entry
+	useInput        *widget.Check
+	usePCM          *widget.Check
+	keep            *widget.Check
+	keepFLAC        *widget.Check
+
+	// Advanced — I/O
+	force           *widget.Check
+	saveCleanedJSON *widget.Check
+	extensions      *widget.Entry
+
+	// Advanced — provider hints
+	keyTermsPrompt *widget.Entry
+	speechModels   *widget.Entry
 
 	bar         *widget.ProgressBarInfinite
 	determinate *widget.ProgressBar
@@ -85,10 +129,54 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	m.language = widget.NewEntry()
 	m.language.SetPlaceHolder("language (blank = auto)")
 	m.language.SetText(d.Config().DefaultLanguage)
+	m.outputDir = widget.NewEntry()
+	m.outputDir.SetPlaceHolder("output directory (blank = next to input)")
 	m.fmtText = widget.NewCheck("text", nil)
 	m.fmtText.SetChecked(true)
 	m.fmtSRT = widget.NewCheck("srt", nil)
+	m.fmtWordSRT = widget.NewCheck("word_srt", nil)
 	m.fmtDavinci = widget.NewCheck("davinci_srt", nil)
+
+	// Advanced widgets. All entries are plain text; runtime parses them into
+	// the right type and falls back to the default if the user clears the
+	// field. This keeps the UI simple at the cost of one bit of validation.
+	m.charsPerLine = numEntry("0 = no wrap")
+	m.wordsPerSubtitle = numEntry("0 = default 7 (DaVinci)")
+	m.startHour = numEntry("0")
+	m.diarize = widget.NewCheck("diarize (request speaker IDs from provider)", nil)
+	m.speakerLabels = widget.NewCheck("prefix subtitles with [Speaker X]:", nil)
+	m.numSpeakers = numEntry("0 = unset; 1..32")
+	m.paddingStartMs = numEntry("ms (shift starts earlier)")
+	m.paddingEndMs = numEntry("ms (shrink ends earlier)")
+	m.silentMs = numEntry("1500")
+	m.silentMs.SetText("1500")
+	m.fps = numEntry("0 = no snapping (e.g. 23.976)")
+	m.fpsOffsetStart = numEntry("-1 (one frame earlier)")
+	m.fpsOffsetStart.SetText("-1")
+	m.fpsOffsetEnd = numEntry("0")
+	m.showPauses = widget.NewCheck("show (...) pause markers (DaVinci)", nil)
+	m.showPauses.SetChecked(true)
+	m.removeFillers = widget.NewCheck("drop filler words from output", nil)
+	m.fillerLines = widget.NewCheck("uppercase fillers (own line in DaVinci)", nil)
+	m.fillerLines.SetChecked(true)
+	m.fillerWords = widget.NewEntry()
+	m.fillerWords.SetPlaceHolder("um,uh,ähm,äh,hm,hmm (blank = default)")
+	m.sizeThresholdMB = numEntry("100 (MB)")
+	m.sizeThresholdMB.SetText("100")
+	m.chunkLengthSec = numEntry("0 = derive from byte budget")
+	m.overlapSec = numEntry("0 = no overlap")
+	m.useInput = widget.NewCheck("send original file as-is (no conversion)", nil)
+	m.usePCM = widget.NewCheck("convert to PCM WAV instead of preferred codec", nil)
+	m.keep = widget.NewCheck("retain all intermediate files", nil)
+	m.keepFLAC = widget.NewCheck("retain FLAC intermediates", nil)
+	m.force = widget.NewCheck("force re-transcribe (ignore cached sidecar)", nil)
+	m.saveCleanedJSON = widget.NewCheck("save normalized sidecar JSON", nil)
+	m.extensions = widget.NewEntry()
+	m.extensions.SetPlaceHolder("mp3,m4a (filter for folder enumeration)")
+	m.keyTermsPrompt = widget.NewEntry()
+	m.keyTermsPrompt.SetPlaceHolder("term1,term2 (assemblyai)")
+	m.speechModels = widget.NewEntry()
+	m.speechModels.SetPlaceHolder("model1,model2 (assemblyai fallbacks)")
 
 	// Progress + log
 	m.bar = widget.NewProgressBarInfinite()
@@ -106,7 +194,62 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 
 	settingsBtn := widget.NewButton("Settings…", m.onSettings)
 
-	layout := container.NewVBox(
+	advanced := widget.NewAccordion(
+		widget.NewAccordionItem("Subtitle wrapping",
+			widget.NewForm(
+				widget.NewFormItem("Chars per line", m.charsPerLine),
+				widget.NewFormItem("Words per subtitle", m.wordsPerSubtitle),
+				widget.NewFormItem("Start hour", m.startHour),
+			),
+		),
+		widget.NewAccordionItem("Diarization",
+			container.NewVBox(m.diarize, m.speakerLabels,
+				widget.NewForm(widget.NewFormItem("Num speakers", m.numSpeakers)),
+			),
+		),
+		widget.NewAccordionItem("DaVinci timing",
+			container.NewVBox(m.showPauses,
+				widget.NewForm(
+					widget.NewFormItem("Padding start (ms)", m.paddingStartMs),
+					widget.NewFormItem("Padding end (ms)", m.paddingEndMs),
+					widget.NewFormItem("Silent threshold (ms)", m.silentMs),
+					widget.NewFormItem("FPS", m.fps),
+					widget.NewFormItem("FPS offset start (frames)", m.fpsOffsetStart),
+					widget.NewFormItem("FPS offset end (frames)", m.fpsOffsetEnd),
+				),
+			),
+		),
+		widget.NewAccordionItem("Filler words",
+			container.NewVBox(m.removeFillers, m.fillerLines,
+				widget.NewForm(widget.NewFormItem("Filler words (csv)", m.fillerWords)),
+			),
+		),
+		widget.NewAccordionItem("Audio pipeline",
+			container.NewVBox(m.useInput, m.usePCM, m.keep, m.keepFLAC,
+				widget.NewForm(
+					widget.NewFormItem("Size threshold (MB)", m.sizeThresholdMB),
+					widget.NewFormItem("Chunk length (s)", m.chunkLengthSec),
+					widget.NewFormItem("Overlap (s)", m.overlapSec),
+				),
+			),
+		),
+		widget.NewAccordionItem("I/O & workflow",
+			container.NewVBox(m.force, m.saveCleanedJSON,
+				widget.NewForm(
+					widget.NewFormItem("Output dir", m.outputDir),
+					widget.NewFormItem("Extensions (csv)", m.extensions),
+				),
+			),
+		),
+		widget.NewAccordionItem("Provider hints (assemblyai)",
+			widget.NewForm(
+				widget.NewFormItem("Key terms (csv)", m.keyTermsPrompt),
+				widget.NewFormItem("Speech models (csv)", m.speechModels),
+			),
+		),
+	)
+
+	form := container.NewVBox(
 		widget.NewLabelWithStyle("File or folder", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		container.NewBorder(nil, nil, nil, container.NewHBox(browseFile, browseDir), m.pathEntry),
 
@@ -119,7 +262,10 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 		m.language,
 
 		widget.NewLabelWithStyle("Output formats", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		container.NewHBox(m.fmtText, m.fmtSRT, m.fmtDavinci),
+		container.NewHBox(m.fmtText, m.fmtSRT, m.fmtWordSRT, m.fmtDavinci),
+
+		widget.NewLabelWithStyle("Advanced", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		advanced,
 
 		widget.NewLabelWithStyle("Progress", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		m.bar, m.determinate, m.logArea,
@@ -127,7 +273,10 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 		container.NewHBox(m.startBtn, m.cancelBtn, settingsBtn),
 	)
 
-	w.SetContent(container.NewPadded(layout))
+	// Wrap the whole form in a scroll container — the Advanced accordion can
+	// easily push content past the window height when several sections are
+	// expanded at once.
+	w.SetContent(container.NewScroll(container.NewPadded(form)))
 	w.SetCloseIntercept(m.onWindowClose)
 
 	// Trigger initial model list
@@ -269,16 +418,60 @@ func (m *mainWindow) startNextJob(formats []domain.OutputFormat) {
 		m.logf("[%d/%d] %s", m.batchIndex+1, len(m.batchFiles), filepathBase(file))
 	}
 
+	chars := atoiOr(m.charsPerLine.Text, 0)
+	words := atoiOr(m.wordsPerSubtitle.Text, 0)
+	if chars > 0 && words > 0 {
+		m.finishBatch(fmt.Errorf("chars-per-line and words-per-subtitle are mutually exclusive — clear one"))
+		return
+	}
+	useCache := true
+	if m.force.Checked {
+		useCache = false
+	}
+	diarize := m.diarize.Checked
+	speakerLabels := m.speakerLabels.Checked
+	if !speakerLabels && diarize {
+		// Mirror CLI: --speaker-labels defaults to --diarize when unset.
+		speakerLabels = true
+	}
+	sizeMB := atofOr(m.sizeThresholdMB.Text, 100)
 	req := domain.Request{
-		InputPath: file,
-		Provider:  domain.ProviderID(m.provider.Selected),
-		Model:     m.model.Selected,
-		Language:  strings.TrimSpace(m.language.Text),
-		Formats:   formats,
-		UseCache:  true,
+		InputPath:             file,
+		Provider:              domain.ProviderID(m.provider.Selected),
+		Model:                 m.model.Selected,
+		Language:              strings.TrimSpace(m.language.Text),
+		Formats:               formats,
+		OutputDir:             strings.TrimSpace(m.outputDir.Text),
+		UseCache:              useCache,
+		MaxCharsPerLine:       chars,
+		WordsPerSubtitle:      words,
+		StartHour:             atoiOr(m.startHour.Text, 0),
+		SpeakerLabels:         speakerLabels,
+		NumSpeakers:           atoiOr(m.numSpeakers.Text, 0),
+		KeyTerms:              csv(m.keyTermsPrompt.Text),
+		SpeechModels:          csv(m.speechModels.Text),
+		SizeThresholdBytes:    int64(sizeMB * 1024 * 1024),
+		ChunkLengthSec:        atoiOr(m.chunkLengthSec.Text, 0),
+		OverlapSec:            atoiOr(m.overlapSec.Text, 0),
+		UseInput:              m.useInput.Checked,
+		UsePCM:                m.usePCM.Checked,
+		KeepIntermediates:     m.keep.Checked,
+		KeepFLACIntermediates: m.keepFLAC.Checked,
+		SaveCleanedJSON:       m.saveCleanedJSON.Checked,
 	}
 	if m.fmtDavinci.Checked {
-		req.DaVinciOpts = &domain.DaVinciOptions{}
+		req.DaVinciOpts = &domain.DaVinciOptions{
+			SilentPortionThreshold: time.Duration(atoiOr(m.silentMs.Text, 1500)) * time.Millisecond,
+			PaddingStart:           time.Duration(atoiOr(m.paddingStartMs.Text, 0)) * time.Millisecond,
+			PaddingEnd:             time.Duration(atoiOr(m.paddingEndMs.Text, 0)) * time.Millisecond,
+			RemoveFillers:          m.removeFillers.Checked,
+			SuppressFillerLines:    !m.fillerLines.Checked,
+			SuppressPauses:         !m.showPauses.Checked,
+			FPS:                    atofOr(m.fps.Text, 0),
+			FPSOffsetStart:         atoiOr(m.fpsOffsetStart.Text, -1),
+			FPSOffsetEnd:           atoiOr(m.fpsOffsetEnd.Text, 0),
+			FillerWords:            csv(m.fillerWords.Text),
+		}
 	}
 
 	job, err := runJob(m.ctx, m.deps.Service(), req,
@@ -342,8 +535,65 @@ func (m *mainWindow) selectedFormats() []domain.OutputFormat {
 	if m.fmtSRT.Checked {
 		out = append(out, domain.FormatSRT)
 	}
+	if m.fmtWordSRT.Checked {
+		out = append(out, domain.FormatWordSRT)
+	}
 	if m.fmtDavinci.Checked {
 		out = append(out, domain.FormatDavinciSRT)
+	}
+	return out
+}
+
+// numEntry constructs a single-line text entry suitable for numeric input.
+// We don't use Fyne's validator here because empty == "use default" is the
+// most common interaction; runtime parsers fall back to defaults on blank.
+func numEntry(placeholder string) *widget.Entry {
+	e := widget.NewEntry()
+	e.SetPlaceHolder(placeholder)
+	return e
+}
+
+// atoiOr parses s as an int, returning fallback when s is empty or invalid.
+func atoiOr(s string, fallback int) int {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return fallback
+	}
+	var n int
+	if _, err := fmt.Sscanf(s, "%d", &n); err != nil {
+		return fallback
+	}
+	return n
+}
+
+// atofOr parses s as a float64, returning fallback when s is empty or invalid.
+func atofOr(s string, fallback float64) float64 {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return fallback
+	}
+	var f float64
+	if _, err := fmt.Sscanf(s, "%g", &f); err != nil {
+		return fallback
+	}
+	return f
+}
+
+// csv splits a comma-separated entry into trimmed, non-empty tokens.
+func csv(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	if len(out) == 0 {
+		return nil
 	}
 	return out
 }
@@ -493,14 +743,27 @@ func (m *mainWindow) lockUI(lock bool) {
 			}
 		}
 	}
-	set(!lock, m.startBtn, m.provider, m.model, m.fmtText, m.fmtSRT, m.fmtDavinci)
+	set(!lock, m.startBtn, m.provider, m.model,
+		m.fmtText, m.fmtSRT, m.fmtWordSRT, m.fmtDavinci,
+		m.diarize, m.speakerLabels, m.showPauses,
+		m.removeFillers, m.fillerLines,
+		m.useInput, m.usePCM, m.keep, m.keepFLAC,
+		m.force, m.saveCleanedJSON,
+	)
 	set(lock, m.cancelBtn)
-	if lock {
-		m.pathEntry.Disable()
-		m.language.Disable()
-	} else {
-		m.pathEntry.Enable()
-		m.language.Enable()
+	entries := []*widget.Entry{
+		m.pathEntry, m.language, m.outputDir,
+		m.charsPerLine, m.wordsPerSubtitle, m.startHour, m.numSpeakers,
+		m.paddingStartMs, m.paddingEndMs, m.silentMs, m.fps, m.fpsOffsetStart, m.fpsOffsetEnd,
+		m.fillerWords, m.sizeThresholdMB, m.chunkLengthSec, m.overlapSec,
+		m.extensions, m.keyTermsPrompt, m.speechModels,
+	}
+	for _, e := range entries {
+		if lock {
+			e.Disable()
+		} else {
+			e.Enable()
+		}
 	}
 }
 
