@@ -33,12 +33,10 @@ var modelCaps = map[string]ports.ModelCapabilities{
 	},
 }
 
+// Models returns the supported model IDs in best→worst order so UIs can
+// surface the strongest option first. Map iteration would be random.
 func Models() []string {
-	out := make([]string, 0, len(modelCaps))
-	for k := range modelCaps {
-		out = append(out, k)
-	}
-	return out
+	return []string{"best", "nano"}
 }
 
 func DefaultModel() string { return "best" }

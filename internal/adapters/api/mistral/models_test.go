@@ -9,7 +9,7 @@ import (
 )
 
 func TestDefaultModel(t *testing.T) {
-	require.Equal(t, "voxtral-mini-latest", DefaultModel())
+	require.Equal(t, "voxtral-small-latest", DefaultModel())
 }
 
 func TestCapabilities_DefaultModelHasSegmentTimestamps(t *testing.T) {

@@ -35,12 +35,43 @@ func New(deps Deps) *Service { return &Service{deps: deps} }
 
 var _ ports.TranscribeService = (*Service)(nil)
 
+// providerOrder is the canonical display order for configured providers.
+// Anything not listed is appended after, alphabetically. Map iteration alone
+// would be random and produce a jumpy UI between runs.
+var providerOrder = []domain.ProviderID{
+	domain.ProviderElevenLabs,
+	domain.ProviderAssemblyAI,
+	domain.ProviderGroq,
+	domain.ProviderOpenAI,
+	domain.ProviderGemini,
+	domain.ProviderMistral,
+}
+
 func (s *Service) ListProviders() []domain.ProviderID {
 	out := make([]domain.ProviderID, 0, len(s.deps.Providers))
+	seen := make(map[domain.ProviderID]bool, len(s.deps.Providers))
+	for _, id := range providerOrder {
+		if _, ok := s.deps.Providers[id]; ok {
+			out = append(out, id)
+			seen[id] = true
+		}
+	}
 	for k := range s.deps.Providers {
-		out = append(out, k)
+		if !seen[k] {
+			out = append(out, k)
+		}
 	}
 	return out
+}
+
+// DefaultModel returns the configured default model for a provider, or "" if
+// the provider isn't wired up.
+func (s *Service) DefaultModel(id domain.ProviderID) string {
+	p, ok := s.deps.Providers[id]
+	if !ok {
+		return ""
+	}
+	return p.DefaultModel()
 }
 
 func (s *Service) ListModels(id domain.ProviderID) ([]string, error) {

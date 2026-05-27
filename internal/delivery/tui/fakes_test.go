@@ -18,6 +18,8 @@ func (s *fakeSvc) ListProviders() []domain.ProviderID {
 	return []domain.ProviderID{domain.ProviderGroq, domain.ProviderOpenAI}
 }
 
+func (s *fakeSvc) DefaultModel(_ domain.ProviderID) string { return "whisper-large-v3" }
+
 func (s *fakeSvc) ListModels(p domain.ProviderID) ([]string, error) {
 	return []string{"whisper-large-v3", "whisper-large-v3-turbo"}, nil
 }

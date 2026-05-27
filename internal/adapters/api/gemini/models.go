@@ -35,12 +35,21 @@ var modelCaps = map[string]ports.ModelCapabilities{
 	"gemini-pro-latest":         geminiCaps,
 }
 
+// Models returns the supported model IDs in best→worst order so UIs can
+// surface the strongest option first. Map iteration would be random.
 func Models() []string {
-	out := make([]string, 0, len(modelCaps))
-	for k := range modelCaps {
-		out = append(out, k)
+	return []string{
+		"gemini-3.1-pro-preview",
+		"gemini-3.1-flash-lite",
+		"gemini-3-pro-preview",
+		"gemini-3-flash-preview",
+		"gemini-pro-latest",
+		"gemini-flash-latest",
+		"gemini-2.5-pro",
+		"gemini-2.5-flash",
+		"gemini-2.5-flash-lite",
+		"gemini-2.0-flash",
 	}
-	return out
 }
 
 func DefaultModel() string { return "gemini-2.5-flash" }

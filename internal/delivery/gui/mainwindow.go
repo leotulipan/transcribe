@@ -75,8 +75,8 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	}
 	m.provider = widget.NewSelect(providerIDs, m.onProviderChanged)
 	m.model = widget.NewSelect(nil, nil)
-	if len(providerIDs) > 0 {
-		m.provider.SetSelected(providerIDs[0])
+	if initial := preferredProvider(providerIDs); initial != "" {
+		m.provider.SetSelected(initial)
 	}
 	refreshModels := widget.NewButton("↻", m.onRefreshModels)
 	refreshModels.SetIcon(nil) // text-only; emoji renders consistently in Fyne
@@ -131,10 +131,24 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	w.SetCloseIntercept(m.onWindowClose)
 
 	// Trigger initial model list
-	if len(providerIDs) > 0 {
-		m.onProviderChanged(providerIDs[0])
+	if initial := preferredProvider(providerIDs); initial != "" {
+		m.onProviderChanged(initial)
 	}
 	return m
+}
+
+// preferredProvider picks ElevenLabs when configured (best parity with the
+// Python CLI's default), falling back to the first available provider.
+func preferredProvider(ids []string) string {
+	if len(ids) == 0 {
+		return ""
+	}
+	for _, id := range ids {
+		if id == string(domain.ProviderElevenLabs) {
+			return id
+		}
+	}
+	return ids[0]
 }
 
 func (m *mainWindow) onBrowseFile() {
@@ -165,16 +179,35 @@ func (m *mainWindow) onProviderChanged(id string) {
 		m.model.Refresh()
 		return
 	}
-	models, err := m.deps.Service().ListModels(domain.ProviderID(id))
+	svc := m.deps.Service()
+	models, err := svc.ListModels(domain.ProviderID(id))
 	if err != nil {
 		m.logf("provider %s: %v", id, err)
 		return
 	}
 	m.model.Options = models
-	if len(models) > 0 {
-		m.model.SetSelected(models[0])
+	if sel := pickDefaultModel(svc.DefaultModel(domain.ProviderID(id)), models); sel != "" {
+		m.model.SetSelected(sel)
 	}
 	m.model.Refresh()
+}
+
+// pickDefaultModel returns the provider's DefaultModel() when it appears in
+// the dropdown list (always true for the hardcoded fallback; may be false
+// after DiscoverModels populates a curated remote list). Falls back to the
+// first list entry so the dropdown is never blank.
+func pickDefaultModel(preferred string, models []string) string {
+	if preferred != "" {
+		for _, m := range models {
+			if m == preferred {
+				return preferred
+			}
+		}
+	}
+	if len(models) > 0 {
+		return models[0]
+	}
+	return ""
 }
 
 func (m *mainWindow) onStart() {
@@ -390,8 +423,8 @@ func (m *mainWindow) onRefreshModels() {
 				}
 			}
 			m.model.Options = models
-			if len(models) > 0 {
-				m.model.SetSelected(models[0])
+			if sel := pickDefaultModel(svc.DefaultModel(pid), models); sel != "" {
+				m.model.SetSelected(sel)
 			}
 			m.model.Refresh()
 			m.logf("refreshed %s: %d models", pid, len(models))

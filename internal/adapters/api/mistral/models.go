@@ -28,15 +28,19 @@ var modelCaps = map[string]ports.ModelCapabilities{
 	"voxtral-small-2507":           voxtralCaps,
 }
 
+// Models returns the supported model IDs in best→worst order so UIs can
+// surface the strongest option first. Map iteration would be random.
 func Models() []string {
-	out := make([]string, 0, len(modelCaps))
-	for k := range modelCaps {
-		out = append(out, k)
+	return []string{
+		"voxtral-small-latest",
+		"voxtral-small-2507",
+		"voxtral-mini-latest",
+		"voxtral-mini-transcribe-2507",
+		"voxtral-mini-2507",
 	}
-	return out
 }
 
-func DefaultModel() string { return "voxtral-mini-latest" }
+func DefaultModel() string { return "voxtral-small-latest" }
 
 func Capabilities(model string) ports.ModelCapabilities {
 	return modelCaps[model] // zero value if unknown — fail-safe

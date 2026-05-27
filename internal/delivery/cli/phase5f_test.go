@@ -22,6 +22,12 @@ type stubService struct {
 }
 
 func (s *stubService) ListProviders() []domain.ProviderID { return s.providers }
+func (s *stubService) DefaultModel(id domain.ProviderID) string {
+	if ms := s.models[id]; len(ms) > 0 {
+		return ms[0]
+	}
+	return ""
+}
 func (s *stubService) ListModels(id domain.ProviderID) ([]string, error) {
 	return s.models[id], nil
 }

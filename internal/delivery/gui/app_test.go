@@ -17,6 +17,7 @@ import (
 type fakeService struct{ id string }
 
 func (f *fakeService) ListProviders() []domain.ProviderID { return nil }
+func (f *fakeService) DefaultModel(domain.ProviderID) string { return "" }
 func (f *fakeService) ListModels(domain.ProviderID) ([]string, error) {
 	return nil, nil
 }

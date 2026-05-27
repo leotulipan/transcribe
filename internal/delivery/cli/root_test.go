@@ -16,8 +16,9 @@ import (
 // rootStubService satisfies ports.TranscribeService for root-level tests.
 type rootStubService struct{}
 
-func (rootStubService) ListProviders() []domain.ProviderID                              { return nil }
-func (rootStubService) ListModels(_ domain.ProviderID) ([]string, error)                { return nil, nil }
+func (rootStubService) ListProviders() []domain.ProviderID               { return nil }
+func (rootStubService) DefaultModel(_ domain.ProviderID) string           { return "" }
+func (rootStubService) ListModels(_ domain.ProviderID) ([]string, error)  { return nil, nil }
 func (rootStubService) DiscoverModels(_ context.Context, _ domain.ProviderID) ([]string, error) {
 	return nil, nil
 }

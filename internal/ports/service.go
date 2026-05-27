@@ -19,6 +19,10 @@ type TranscribeService interface {
     // discovered lists from the config when present).
     ListModels(p domain.ProviderID) ([]string, error)
 
+    // DefaultModel returns the canonical default model for a provider — the
+    // one UIs should pre-select. Returns "" if the provider is unknown.
+    DefaultModel(p domain.ProviderID) string
+
     // DiscoverModels invokes the provider's live "list models" endpoint.
     // Returns an error if the provider doesn't support live discovery.
     DiscoverModels(ctx context.Context, p domain.ProviderID) ([]string, error)

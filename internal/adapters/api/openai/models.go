@@ -27,12 +27,12 @@ var modelCaps = map[string]ports.ModelCapabilities{
 	"gpt-4o-mini-transcribe":   sttCaps,
 }
 
+// Models returns the supported model IDs in best→worst order so UIs can
+// surface the strongest option first. whisper-1 is listed first because it's
+// the only OpenAI model that returns word-level timestamps (required for SRT).
+// Map iteration would be random.
 func Models() []string {
-	out := make([]string, 0, len(modelCaps))
-	for k := range modelCaps {
-		out = append(out, k)
-	}
-	return out
+	return []string{"whisper-1", "gpt-4o-transcribe", "gpt-4o-transcribe-diarize", "gpt-4o-mini-transcribe"}
 }
 
 func DefaultModel() string { return "whisper-1" }
