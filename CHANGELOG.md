@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-05-27
+
+Feature-parity release. The Go CLI now matches the Python tool's flag surface
+and the GUI exposes everything the CLI can do.
+
+### Added
+- CLI: short-flag aliases for parity with Python (`-a/-l/-o/-c/-C/-D/-m/-p`
+  `/-w/-d/-v/-e/-r/-j/-J`). `-V` is the version flag; `-c` enables the new
+  `--chars-per-line` wrapper.
+- CLI: 28 new flags wiring the previously-only-Python behaviors —
+  `--chars-per-line`, `--words-per-subtitle`, `--word-srt`, `--start-hour`,
+  `--diarize`, `--speaker-labels`, `--num-speakers`, `--keyterms-prompt`,
+  `--speech-models`, `--padding-start`, `--padding-end`, `--fps`,
+  `--fps-offset-start`, `--fps-offset-end`, `--show-pauses`,
+  `--silent-portion-ms`, `--silent-portions` (alias),
+  `--filler-words`, `--remove-fillers`, `--filler-lines`,
+  `--size-threshold`, `--chunk-length`, `--overlap`, `--use-input`,
+  `--use-pcm`, `--keep`, `--keep-flac`,
+  `--force`, `--save-cleaned-json`, `--use-json-input`, `--extensions`,
+  `--list`, `--debug`, `--verbose`, `--api-key`.
+- End-to-end diarization support for assemblyai + elevenlabs, including
+  `[Speaker X]:` prefixes in SRT/DaVinci output.
+- Word-level SRT output (one subtitle per word) for click-to-edit workflows.
+- DaVinci subtitle padding (`--padding-start`/`--padding-end`) and frame-grid
+  snapping (`--fps`, `--fps-offset-start`, `--fps-offset-end`).
+- TUI interactive setup wizard for first-run API-key entry, plus an extended
+  options flow with a language picker and advanced flags.
+- GUI: collapsible Advanced section exposing the full CLI flag surface —
+  subtitle wrapping, diarization, DaVinci timing, fillers, audio pipeline,
+  I/O & workflow, and provider hints.
+- `DefaultModel(provider)` on the service port so UIs can pre-select a
+  sensible model without poking adapter internals.
+
+### Changed
+- Provider adapters now return their model list as a deterministic
+  best→worst slice (was random map iteration). UIs surface the strongest
+  option first.
+- `Service.ListProviders()` is sorted in a canonical order (ElevenLabs,
+  AssemblyAI, Groq, OpenAI, Gemini, Mistral) so the GUI dropdown is stable
+  between runs.
+- GUI defaults: provider dropdown picks ElevenLabs when configured;
+  model dropdown initialises to `provider.DefaultModel()`.
+- `mistral` default model: `voxtral-mini-latest` → `voxtral-small-latest`
+  (higher tier).
+
+### Fixed
+- `--start-hour` is now honoured in word-level SRT output (previously it
+  only applied to the standard SRT writer).
+- DaVinci padding is applied before pause markers, not after, so pause gaps
+  aren't accidentally clipped.
+
+### Known follow-ups (deferred)
+- Chunker overlap dedup: `--overlap` shifts chunk starts but the merger does
+  not yet de-duplicate the overlapping words.
+- `--silent-portions` always wins over `--silent-portion-ms` when both are
+  set (cobra limitation; not true last-wins).
+- TUI: pressing Esc on the advanced screen quits the app instead of
+  returning to the format step.
+
 ## [0.9.0] - 2026-05-18
 
 First proper release of the Go port. The Python tool (`audio_transcribe/`)
@@ -80,7 +139,8 @@ only the Go binary at `bin/transcribe.exe` + `bin/transcribe-gui.exe`.
 ### Changed
 - Moved from individual API scripts to unified CLI tool
 
-[Unreleased]: https://github.com/leotulipan/transcribe/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/leotulipan/transcribe/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/leotulipan/transcribe/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/leotulipan/transcribe/compare/v0.2.0...v0.9.0
 [0.2.0]: https://github.com/leotulipan/transcribe/compare/v0.1.4...v0.2.0
 
