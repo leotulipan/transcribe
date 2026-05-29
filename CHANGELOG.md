@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- GUI: top toolbar (Start / Cancel / Settings / About) pinned outside the
+  scroll area so primary actions stay reachable when the Advanced accordion
+  is expanded; bottom button row kept for muscle memory.
+- GUI: About dialog with build version, leotulipan.at, GitHub link, and
+  license. Version is injected via `-ldflags "-X main.version=…"`.
+- GUI: window-chrome icon (top-left of the window) now uses the project
+  icon instead of Fyne's default. Embedded as a PNG via `go:embed`.
+- GUI: Settings dialog auto-opens on launch when no API keys are
+  configured, so first-run users land directly on the key form.
+- GUI: per-provider "Get key" hyperlinks in Settings — ElevenLabs uses
+  the dub.link affiliate URL; the rest point at each provider's canonical
+  key page (most have a free tier or free credits).
+- AssemblyAI: model registry expanded to surface the Universal / SLAM
+  family (`universal-3-pro`, `universal-3`, `universal-2`, `slam-1`)
+  alongside the legacy `best` / `nano`. Default changed to
+  `universal-3-pro`. The existing `--speech-models csv` flag still
+  passes an ordered fallback array per AssemblyAI's docs.
+
+### Changed
+- ElevenLabs: dynamic model discovery (`GET /v1/models`) now filters to
+  the `scribe_*` STT family. Previously the unfiltered list pulled in
+  TTS models (`eleven_v3`, `eleven_multilingual_v2`, …) and any pick
+  resulted in HTTP 400 `unsupported_model` at transcribe time. Falls back
+  to the hardcoded list if zero `scribe_*` IDs are returned.
+- README rewritten for installer users: Quick start lives at the top
+  (download → run installer → drop file → Start), all six providers are
+  listed with key-page links, Python tooling references removed, and the
+  developer section is now a short appendix at the end.
+
 ## [0.10.0] - 2026-05-27
 
 Feature-parity release. The Go CLI now matches the Python tool's flag surface
