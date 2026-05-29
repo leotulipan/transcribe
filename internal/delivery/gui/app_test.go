@@ -49,6 +49,7 @@ func TestDeps_ReloadSwapsServiceAndConfig(t *testing.T) {
 			require.Equal(t, "v2", c.APIKeys[domain.ProviderGroq])
 			return svc2, nil
 		},
+		"test",
 	)
 
 	// Before reload, the original service and config are visible.
@@ -63,9 +64,10 @@ func TestDeps_ReloadSwapsServiceAndConfig(t *testing.T) {
 }
 
 func TestDeps_ReloadErrorsWhenNotWired(t *testing.T) {
-	d := NewDeps(&fakeService{}, ports.Config{}, nil, nil, nil, nil)
+	d := NewDeps(&fakeService{}, ports.Config{}, nil, nil, nil, nil, "")
 	err := d.Reload()
 	require.ErrorIs(t, err, ErrReloadNotWired)
+	require.Equal(t, "dev", d.Version, "empty version should fall back to 'dev'")
 }
 
 func TestDeps_ReloadPreservesOldServiceForInFlightCallers(t *testing.T) {
@@ -76,6 +78,7 @@ func TestDeps_ReloadPreservesOldServiceForInFlightCallers(t *testing.T) {
 	d := NewDeps(svc1, ports.Config{}, nil, nil,
 		func() (ports.Config, error) { return ports.Config{}, nil },
 		func(ports.Config) (ports.TranscribeService, error) { return svc2, nil },
+		"test",
 	)
 
 	captured := d.Service()
@@ -95,6 +98,7 @@ func TestDeps_ConcurrentReadsAndReloads(t *testing.T) {
 			n := calls.Add(1)
 			return &fakeService{id: string(rune('a' + n%26))}, nil
 		},
+		"test",
 	)
 
 	var wg sync.WaitGroup

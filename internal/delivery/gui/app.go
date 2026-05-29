@@ -25,6 +25,10 @@ type Deps struct {
 	LoadConfig   func() (ports.Config, error)
 	BuildService func(ports.Config) (ports.TranscribeService, error)
 
+	// Version is the build version string injected by main via ldflags.
+	// Surfaced in the About dialog. Empty string falls back to "dev".
+	Version string
+
 	mu      sync.RWMutex
 	service ports.TranscribeService
 	config  ports.Config
@@ -36,17 +40,23 @@ var ErrReloadNotWired = errors.New("gui: Reload requires LoadConfig and BuildSer
 
 // NewDeps constructs a Deps with the initial service + config already loaded.
 // The reload closures are optional but recommended; without them Reload
-// is a no-op error.
+// is a no-op error. version is the build version string surfaced in the
+// About dialog ("" → "dev").
 func NewDeps(svc ports.TranscribeService, cfg ports.Config, log ports.Logger,
 	saveConfig func(ports.Config) error,
 	loadConfig func() (ports.Config, error),
 	buildService func(ports.Config) (ports.TranscribeService, error),
+	version string,
 ) *Deps {
+	if version == "" {
+		version = "dev"
+	}
 	return &Deps{
 		Logger:       log,
 		SaveConfig:   saveConfig,
 		LoadConfig:   loadConfig,
 		BuildService: buildService,
+		Version:      version,
 		service:      svc,
 		config:       cfg,
 	}
@@ -92,8 +102,15 @@ func (d *Deps) Reload() error {
 // in-flight job and ends the program loop.
 func Run(ctx context.Context, deps *Deps) error {
 	a := app.NewWithID(appID)
+	a.SetIcon(appIcon)
 	win := newMainWindow(a, ctx, deps)
 	win.Show()
+	// First-run: if no API keys are configured, open Settings so the user
+	// can paste them before clicking Start. Cheap check; safe to call on
+	// every launch because once any key is set the dialog stays closed.
+	if !hasAnyAPIKey(deps.Config()) {
+		win.onSettings()
+	}
 	a.Run()
 	return nil
 }

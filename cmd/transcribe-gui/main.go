@@ -38,11 +38,10 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	deps := gui.NewDeps(svc, cfg, log, saveCfg, loadCfg, buildSvc)
+	deps := gui.NewDeps(svc, cfg, log, saveCfg, loadCfg, buildSvc, version)
 	err = gui.Run(ctx, deps)
 	if err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(cli.ExitCodeFor(err))
 	}
-	_ = version
 }

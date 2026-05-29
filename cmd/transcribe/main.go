@@ -99,7 +99,7 @@ func main() {
 		buildSvc := func(c ports.Config) (ports.TranscribeService, error) {
 			return delivery.BuildService(c, log)
 		}
-		deps := gui.NewDeps(svc, cfg, log, saveCfg, loadCfg, buildSvc)
+		deps := gui.NewDeps(svc, cfg, log, saveCfg, loadCfg, buildSvc, version)
 		err = gui.Run(ctx, deps)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			fmt.Fprintln(os.Stderr, err)

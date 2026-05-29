@@ -79,6 +79,11 @@ type mainWindow struct {
 	logArea     *widget.Entry
 	startBtn    *widget.Button
 	cancelBtn   *widget.Button
+	// Mirror buttons pinned to the top toolbar so Start/Cancel stay
+	// reachable even when the Advanced accordion has pushed the bottom row
+	// out of view. Kept in sync with startBtn/cancelBtn by lockUI.
+	topStartBtn  *widget.Button
+	topCancelBtn *widget.Button
 
 	currentJob ports.Job
 
@@ -176,7 +181,7 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	m.keyTermsPrompt = widget.NewEntry()
 	m.keyTermsPrompt.SetPlaceHolder("term1,term2 (assemblyai)")
 	m.speechModels = widget.NewEntry()
-	m.speechModels.SetPlaceHolder("model1,model2 (assemblyai fallbacks)")
+	m.speechModels.SetPlaceHolder("e.g. universal-3-pro,universal-2 — tried in order, falls back on language mismatch (assemblyai)")
 
 	// Progress + log
 	m.bar = widget.NewProgressBarInfinite()
@@ -187,12 +192,24 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	m.logArea.SetMinRowsVisible(8)
 	m.logArea.Disable()
 
-	// Actions
+	// Actions — bottom row (legacy position, kept so users with muscle
+	// memory still find it under the scroll area).
 	m.startBtn = widget.NewButton("Start", m.onStart)
 	m.cancelBtn = widget.NewButton("Cancel", m.onCancel)
 	m.cancelBtn.Disable()
 
 	settingsBtn := widget.NewButton("Settings…", m.onSettings)
+
+	// Top toolbar mirrors. Fyne won't let one widget live in two parents,
+	// so we instantiate fresh buttons that share the same handlers; lockUI
+	// disables / enables both in lockstep.
+	m.topStartBtn = widget.NewButton("Start", m.onStart)
+	m.topStartBtn.Importance = widget.HighImportance
+	m.topCancelBtn = widget.NewButton("Cancel", m.onCancel)
+	m.topCancelBtn.Disable()
+	topSettingsBtn := widget.NewButton("Settings…", m.onSettings)
+	readmeBtn := widget.NewButton("Readme", m.onReadme)
+	aboutBtn := widget.NewButton("About…", m.onAbout)
 
 	advanced := widget.NewAccordion(
 		widget.NewAccordionItem("Subtitle wrapping",
@@ -273,10 +290,18 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 		container.NewHBox(m.startBtn, m.cancelBtn, settingsBtn),
 	)
 
-	// Wrap the whole form in a scroll container — the Advanced accordion can
-	// easily push content past the window height when several sections are
-	// expanded at once.
-	w.SetContent(container.NewScroll(container.NewPadded(form)))
+	// Top toolbar stays pinned outside the scroll container so the primary
+	// actions remain reachable regardless of how far the user has scrolled
+	// the Advanced accordion.
+	topBar := container.NewHBox(
+		m.topStartBtn, m.topCancelBtn, topSettingsBtn, readmeBtn, aboutBtn,
+	)
+	scrolled := container.NewScroll(container.NewPadded(form))
+	w.SetContent(container.NewBorder(
+		container.NewPadded(topBar), // top
+		nil, nil, nil,
+		scrolled, // center
+	))
 	w.SetCloseIntercept(m.onWindowClose)
 
 	// Trigger initial model list
@@ -284,6 +309,17 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 		m.onProviderChanged(initial)
 	}
 	return m
+}
+
+// hasAnyAPIKey reports whether any provider has a non-blank API key in the
+// loaded config. Used at launch to decide whether to auto-open Settings.
+func hasAnyAPIKey(cfg ports.Config) bool {
+	for _, v := range cfg.APIKeys {
+		if strings.TrimSpace(v) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // preferredProvider picks ElevenLabs when configured (best parity with the
@@ -743,14 +779,14 @@ func (m *mainWindow) lockUI(lock bool) {
 			}
 		}
 	}
-	set(!lock, m.startBtn, m.provider, m.model,
+	set(!lock, m.startBtn, m.topStartBtn, m.provider, m.model,
 		m.fmtText, m.fmtSRT, m.fmtWordSRT, m.fmtDavinci,
 		m.diarize, m.speakerLabels, m.showPauses,
 		m.removeFillers, m.fillerLines,
 		m.useInput, m.usePCM, m.keep, m.keepFLAC,
 		m.force, m.saveCleanedJSON,
 	)
-	set(lock, m.cancelBtn)
+	set(lock, m.cancelBtn, m.topCancelBtn)
 	entries := []*widget.Entry{
 		m.pathEntry, m.language, m.outputDir,
 		m.charsPerLine, m.wordsPerSubtitle, m.startHour, m.numSpeakers,

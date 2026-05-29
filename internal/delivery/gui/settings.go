@@ -39,9 +39,28 @@ func newSettingsWindow(parent fyne.Window, d *Deps, onSaved func()) *settingsWin
 	gemini := keyEntry(domain.ProviderGemini)
 	mistral := keyEntry(domain.ProviderMistral)
 
+	// keyRow pairs a password entry with a per-provider hyperlink (affiliate
+	// or canonical key page). Border layout keeps the entry expanding while
+	// the link stays right-aligned at its natural width.
+	keyRow := func(entry *widget.Entry, linkLabel, linkURL string) *fyne.Container {
+		link := widget.NewHyperlink(linkLabel, mustParseURL(linkURL))
+		return container.NewBorder(nil, nil, nil, link, entry)
+	}
+	groqRow := keyRow(groq, "Get key", "https://console.groq.com/keys")
+	openaiRow := keyRow(openai, "Get key", "https://platform.openai.com/settings/organization/api-keys")
+	assemblyRow := keyRow(assembly, "Get key (free credits)", "https://www.assemblyai.com/dashboard/signup")
+	elevenRow := keyRow(eleven, "Get key (free credits)", "https://dub.link/elevenlabs")
+	geminiRow := keyRow(gemini, "Get key (free tier)", "https://aistudio.google.com/apikey")
+	mistralRow := keyRow(mistral, "Get key (free tier)", "https://console.mistral.ai/api-keys")
+
 	ffmpegEntry := widget.NewEntry()
 	ffmpegEntry.SetText(cfg.FFmpegPath)
 	ffmpegEntry.SetPlaceHolder("auto-discover via PATH")
+	ffmpegRow := container.NewBorder(nil, nil, nil,
+		widget.NewHyperlink("Install ffmpeg",
+			mustParseURL("https://winstall.app/apps/Gyan.FFmpeg")),
+		ffmpegEntry,
+	)
 
 	langEntry := widget.NewEntry()
 	langEntry.SetText(cfg.DefaultLanguage)
@@ -97,13 +116,13 @@ func newSettingsWindow(parent fyne.Window, d *Deps, onSaved func()) *settingsWin
 	cancel := widget.NewButton("Close", func() { w.Close() })
 
 	form := widget.NewForm(
-		widget.NewFormItem("Groq", groq),
-		widget.NewFormItem("OpenAI", openai),
-		widget.NewFormItem("AssemblyAI", assembly),
-		widget.NewFormItem("ElevenLabs", eleven),
-		widget.NewFormItem("Gemini", gemini),
-		widget.NewFormItem("Mistral", mistral),
-		widget.NewFormItem("FFmpeg path", ffmpegEntry),
+		widget.NewFormItem("Groq", groqRow),
+		widget.NewFormItem("OpenAI", openaiRow),
+		widget.NewFormItem("AssemblyAI", assemblyRow),
+		widget.NewFormItem("ElevenLabs", elevenRow),
+		widget.NewFormItem("Gemini", geminiRow),
+		widget.NewFormItem("Mistral", mistralRow),
+		widget.NewFormItem("FFmpeg path", ffmpegRow),
 		widget.NewFormItem("Default language", langEntry),
 	)
 	content := container.NewBorder(
