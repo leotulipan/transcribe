@@ -137,9 +137,11 @@ transcribe -V                                           # version
 
 Notable flags: `-a/--api`, `-l/--language`, `-o/--output text,srt,word_srt,davinci_srt`,
 `-D/--davinci-srt`, `-m/--model`, `--diarize`, `--speaker-labels`,
-`--remove-fillers`, `--filler-lines`, `--padding-start`, `--padding-end`,
-`--fps`, `--chunk-length`, `--force`. Run `transcribe --help` for the full
-surface.
+`--num-speakers`, `--remove-fillers`, `--filler-lines`, `--padding-start`,
+`--padding-end`, `--fps`, `--chunk-length`, `--force`. There's also a
+`transcribe merge` subcommand for multi-mic podcasts (see
+[Speaker labels & diarization](#speaker-labels--diarization)). Run
+`transcribe --help` for the full surface.
 
 ## Output formats
 
@@ -153,6 +155,51 @@ surface.
 When a `.json` sidecar exists for an input file, the tool reuses it instead
 of re-transcribing — so you can re-render different formats without paying
 the API a second time.
+
+## Speaker labels & diarization
+
+For a single recording with multiple voices, ask the provider to separate
+speakers with `--diarize` (supported by ElevenLabs and AssemblyAI):
+
+```
+transcribe interview.mp3 --api elevenlabs --diarize --output srt,text
+```
+
+Each subtitle block and text paragraph is then prefixed with the speaker, e.g.
+`[Speaker 0]:` / `[Speaker 1]:`. Use `--num-speakers N` to hint how many voices
+to expect, and `--speaker-labels` to control the prefix independently of
+`--diarize`. Note that provider diarization is **anonymous** — speakers are
+numbered per run, not identified by name.
+
+### Multi-mic podcast merge
+
+When each participant is recorded on a separate track (one mic each), you get
+far cleaner results by transcribing the tracks individually and merging them.
+The `merge` subcommand does exactly that:
+
+```
+transcribe merge ^
+  --speaker Julia=CON-259_julia.wav ^
+  --speaker Gast=CON-259_guest.wav ^
+  --api elevenlabs --language de
+```
+
+This produces:
+
+- **Per track** — `CON-259_julia.srt` / `.txt` / `.json` and the same for the
+  guest, each a clean single-speaker transcript.
+- **Combined** — `CON-259_combined.srt` and `CON-259_combined.txt`, interleaving
+  both tracks chronologically with your own labels (`[Julia]:` / `[Gast]:`).
+  There is no combined `.json` — the merged view is always derived from the two
+  per-track JSON sidecars.
+
+Pass `--speaker LABEL=FILE` once per track (two or more). If the tracks don't
+start at exactly the same moment, align one with
+`--offset LABEL=DURATION` (e.g. `--offset Gast=1.2s`, negative values allowed).
+
+> **Tip:** because each track is transcribed on its own, diarization isn't
+> needed here — the label you assign *is* the speaker. This is the most reliable
+> way to get named speakers, since no provider can recognise "Julia" by voice.
 
 ## File size limits
 

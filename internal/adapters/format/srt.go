@@ -33,10 +33,8 @@ func (SRT) Write(r *domain.Result, dst string, opts domain.WriteOpts) error {
 		b.WriteString(" --> ")
 		b.WriteString(formatTimecodeOffset(blk.End, opts.StartHour))
 		b.WriteByte('\n')
-		if opts.SpeakerLabels && len(blk.Words) > 0 && blk.Words[0].Speaker != "" {
-			b.WriteString("[Speaker ")
-			b.WriteString(blk.Words[0].Speaker)
-			b.WriteString("]: ")
+		if opts.SpeakerLabels && len(blk.Words) > 0 {
+			b.WriteString(speakerPrefix(blk.Words[0].Speaker))
 		}
 		lines := wrapByChars(blk.Words, opts.MaxCharsPerLine)
 		for li, line := range lines {

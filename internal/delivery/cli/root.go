@@ -65,6 +65,7 @@ func NewRoot(d Deps) *cobra.Command {
 	root.Flags().BoolVarP(&showVersion, "version", "V", false, "show version and exit")
 	root.PersistentFlags().BoolVar(&setupMode, "setup", false, "launch interactive API key setup wizard")
 	root.AddCommand(newTranscribeCmd(d))
+	root.AddCommand(newMergeCmd(d))
 	root.AddCommand(newProvidersCmd(d))
 	root.AddCommand(newSetupCmd(d))
 	root.AddCommand(newTestKeysCmd(d))
