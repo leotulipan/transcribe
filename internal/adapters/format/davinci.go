@@ -78,10 +78,8 @@ func writeBlock(b *strings.Builder, idx int, words []domain.Word, opts domain.Wr
 	b.WriteString(" --> ")
 	b.WriteString(formatTimecodeOffset(end, opts.StartHour))
 	b.WriteByte('\n')
-	if opts.SpeakerLabels && words[0].Speaker != "" {
-		b.WriteString("[Speaker ")
-		b.WriteString(words[0].Speaker)
-		b.WriteString("]: ")
+	if opts.SpeakerLabels {
+		b.WriteString(speakerPrefix(words[0].Speaker))
 	}
 	lines := wrapByChars(words, opts.MaxCharsPerLine)
 	for li, line := range lines {

@@ -1,0 +1,2231 @@
+{
+  "language_code": null,
+  "segments": [
+    {
+      "text": "Habe ich begonnen, dieses Wissen zu teilen",
+      "start_time": 0.059,
+      "end_time": 2.039,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "Habe",
+          "start_time": 0.059,
+          "end_time": 0.119
+        },
+        {
+          "text": " ",
+          "start_time": 0.119,
+          "end_time": 0.14
+        },
+        {
+          "text": "ich",
+          "start_time": 0.14,
+          "end_time": 0.219
+        },
+        {
+          "text": " ",
+          "start_time": 0.219,
+          "end_time": 0.259
+        },
+        {
+          "text": "begonnen,",
+          "start_time": 0.259,
+          "end_time": 0.539
+        },
+        {
+          "text": " ",
+          "start_time": 0.539,
+          "end_time": 0.579
+        },
+        {
+          "text": "dieses",
+          "start_time": 0.579,
+          "end_time": 0.839
+        },
+        {
+          "text": " ",
+          "start_time": 0.839,
+          "end_time": 0.899
+        },
+        {
+          "text": "Wissen",
+          "start_time": 0.899,
+          "end_time": 1.48
+        },
+        {
+          "text": " ",
+          "start_time": 1.48,
+          "end_time": 1.539
+        },
+        {
+          "text": "zu",
+          "start_time": 1.539,
+          "end_time": 1.659
+        },
+        {
+          "text": " ",
+          "start_time": 1.659,
+          "end_time": 1.699
+        },
+        {
+          "text": "teilen",
+          "start_time": 1.699,
+          "end_time": 2.039
+        }
+      ]
+    },
+    {
+      "text": "und durch ein paar Zuf\u00e4lle, \u00e4h, bin ich",
+      "start_time": 2.079,
+      "end_time": 4.4,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "und",
+          "start_time": 2.079,
+          "end_time": 2.2
+        },
+        {
+          "text": " ",
+          "start_time": 2.2,
+          "end_time": 2.2
+        },
+        {
+          "text": "durch",
+          "start_time": 2.2,
+          "end_time": 2.5
+        },
+        {
+          "text": " ",
+          "start_time": 2.5,
+          "end_time": 2.539
+        },
+        {
+          "text": "ein",
+          "start_time": 2.539,
+          "end_time": 2.679
+        },
+        {
+          "text": " ",
+          "start_time": 2.679,
+          "end_time": 2.719
+        },
+        {
+          "text": "paar",
+          "start_time": 2.72,
+          "end_time": 2.899
+        },
+        {
+          "text": " ",
+          "start_time": 2.899,
+          "end_time": 3.139
+        },
+        {
+          "text": "Zuf\u00e4lle,",
+          "start_time": 3.139,
+          "end_time": 3.619
+        },
+        {
+          "text": " ",
+          "start_time": 3.619,
+          "end_time": 3.939
+        },
+        {
+          "text": "\u00e4h,",
+          "start_time": 3.939,
+          "end_time": 3.959
+        },
+        {
+          "text": " ",
+          "start_time": 3.959,
+          "end_time": 4.139
+        },
+        {
+          "text": "bin",
+          "start_time": 4.139,
+          "end_time": 4.239
+        },
+        {
+          "text": " ",
+          "start_time": 4.239,
+          "end_time": 4.299
+        },
+        {
+          "text": "ich",
+          "start_time": 4.299,
+          "end_time": 4.4
+        }
+      ]
+    },
+    {
+      "text": "dann sozusagen auf YouTube gelandet und",
+      "start_time": 4.46,
+      "end_time": 7.019,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "dann",
+          "start_time": 4.46,
+          "end_time": 4.619
+        },
+        {
+          "text": " ",
+          "start_time": 4.619,
+          "end_time": 4.739
+        },
+        {
+          "text": "sozusagen",
+          "start_time": 4.739,
+          "end_time": 5.279
+        },
+        {
+          "text": " ",
+          "start_time": 5.279,
+          "end_time": 5.499
+        },
+        {
+          "text": "auf",
+          "start_time": 5.5,
+          "end_time": 5.599
+        },
+        {
+          "text": " ",
+          "start_time": 5.599,
+          "end_time": 5.659
+        },
+        {
+          "text": "YouTube",
+          "start_time": 5.659,
+          "end_time": 5.96
+        },
+        {
+          "text": " ",
+          "start_time": 5.96,
+          "end_time": 6.0
+        },
+        {
+          "text": "gelandet",
+          "start_time": 6.0,
+          "end_time": 6.539
+        },
+        {
+          "text": " ",
+          "start_time": 6.539,
+          "end_time": 6.659
+        },
+        {
+          "text": "und",
+          "start_time": 6.659,
+          "end_time": 7.019
+        }
+      ]
+    },
+    {
+      "text": "hab dann einige Zeit sp\u00e4ter dann",
+      "start_time": 7.179,
+      "end_time": 8.96,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "hab",
+          "start_time": 7.179,
+          "end_time": 7.339
+        },
+        {
+          "text": " ",
+          "start_time": 7.339,
+          "end_time": 7.399
+        },
+        {
+          "text": "dann",
+          "start_time": 7.399,
+          "end_time": 7.539
+        },
+        {
+          "text": " ",
+          "start_time": 7.539,
+          "end_time": 7.96
+        },
+        {
+          "text": "einige",
+          "start_time": 7.96,
+          "end_time": 8.179
+        },
+        {
+          "text": " ",
+          "start_time": 8.179,
+          "end_time": 8.299
+        },
+        {
+          "text": "Zeit",
+          "start_time": 8.3,
+          "end_time": 8.46
+        },
+        {
+          "text": " ",
+          "start_time": 8.46,
+          "end_time": 8.519
+        },
+        {
+          "text": "sp\u00e4ter",
+          "start_time": 8.519,
+          "end_time": 8.8
+        },
+        {
+          "text": " ",
+          "start_time": 8.8,
+          "end_time": 8.859
+        },
+        {
+          "text": "dann",
+          "start_time": 8.859,
+          "end_time": 8.96
+        }
+      ]
+    },
+    {
+      "text": "eigentlich erst begonnen, dieses Wissen",
+      "start_time": 9.019,
+      "end_time": 10.559,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "eigentlich",
+          "start_time": 9.019,
+          "end_time": 9.3
+        },
+        {
+          "text": " ",
+          "start_time": 9.3,
+          "end_time": 9.38
+        },
+        {
+          "text": "erst",
+          "start_time": 9.38,
+          "end_time": 9.539
+        },
+        {
+          "text": " ",
+          "start_time": 9.539,
+          "end_time": 9.599
+        },
+        {
+          "text": "begonnen,",
+          "start_time": 9.599,
+          "end_time": 9.96
+        },
+        {
+          "text": " ",
+          "start_time": 9.96,
+          "end_time": 10.019
+        },
+        {
+          "text": "dieses",
+          "start_time": 10.019,
+          "end_time": 10.28
+        },
+        {
+          "text": " ",
+          "start_time": 10.28,
+          "end_time": 10.319
+        },
+        {
+          "text": "Wissen",
+          "start_time": 10.319,
+          "end_time": 10.559
+        }
+      ]
+    },
+    {
+      "text": "halt auch wirklich hauptberuflich mit",
+      "start_time": 10.619,
+      "end_time": 12.319,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "halt",
+          "start_time": 10.619,
+          "end_time": 10.699
+        },
+        {
+          "text": " ",
+          "start_time": 10.699,
+          "end_time": 10.739
+        },
+        {
+          "text": "auch",
+          "start_time": 10.739,
+          "end_time": 10.84
+        },
+        {
+          "text": " ",
+          "start_time": 10.84,
+          "end_time": 10.88
+        },
+        {
+          "text": "wirklich",
+          "start_time": 10.88,
+          "end_time": 11.159
+        },
+        {
+          "text": " ",
+          "start_time": 11.159,
+          "end_time": 11.3
+        },
+        {
+          "text": "hauptberuflich",
+          "start_time": 11.3,
+          "end_time": 12.179
+        },
+        {
+          "text": " ",
+          "start_time": 12.179,
+          "end_time": 12.219
+        },
+        {
+          "text": "mit",
+          "start_time": 12.219,
+          "end_time": 12.319
+        }
+      ]
+    },
+    {
+      "text": "Leuten, \u00e4h, dann dementsprechend zu",
+      "start_time": 12.38,
+      "end_time": 13.679,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "Leuten,",
+          "start_time": 12.38,
+          "end_time": 12.699
+        },
+        {
+          "text": " ",
+          "start_time": 12.699,
+          "end_time": 12.84
+        },
+        {
+          "text": "\u00e4h,",
+          "start_time": 12.84,
+          "end_time": 12.92
+        },
+        {
+          "text": " ",
+          "start_time": 12.92,
+          "end_time": 13.019
+        },
+        {
+          "text": "dann",
+          "start_time": 13.019,
+          "end_time": 13.119
+        },
+        {
+          "text": " ",
+          "start_time": 13.119,
+          "end_time": 13.159
+        },
+        {
+          "text": "dementsprechend",
+          "start_time": 13.159,
+          "end_time": 13.599
+        },
+        {
+          "text": " ",
+          "start_time": 13.599,
+          "end_time": 13.639
+        },
+        {
+          "text": "zu",
+          "start_time": 13.639,
+          "end_time": 13.679
+        }
+      ]
+    },
+    {
+      "text": "teilen.",
+      "start_time": 13.759,
+      "end_time": 13.96,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "teilen.",
+          "start_time": 13.759,
+          "end_time": 13.96
+        }
+      ]
+    },
+    {
+      "text": "Sehr spannend und, \u00e4hm, vor allem das ist",
+      "start_time": 14.159,
+      "end_time": 16.7,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "Sehr",
+          "start_time": 14.159,
+          "end_time": 14.319
+        },
+        {
+          "text": " ",
+          "start_time": 14.319,
+          "end_time": 14.479
+        },
+        {
+          "text": "spannend",
+          "start_time": 14.479,
+          "end_time": 14.939
+        },
+        {
+          "text": " ",
+          "start_time": 14.939,
+          "end_time": 15.039
+        },
+        {
+          "text": "und,",
+          "start_time": 15.039,
+          "end_time": 15.199
+        },
+        {
+          "text": " ",
+          "start_time": 15.199,
+          "end_time": 15.459
+        },
+        {
+          "text": "\u00e4hm,",
+          "start_time": 15.46,
+          "end_time": 15.619
+        },
+        {
+          "text": " ",
+          "start_time": 15.619,
+          "end_time": 15.819
+        },
+        {
+          "text": "vor",
+          "start_time": 15.819,
+          "end_time": 15.88
+        },
+        {
+          "text": " ",
+          "start_time": 15.88,
+          "end_time": 15.939
+        },
+        {
+          "text": "allem",
+          "start_time": 15.939,
+          "end_time": 16.139
+        },
+        {
+          "text": " ",
+          "start_time": 16.139,
+          "end_time": 16.439
+        },
+        {
+          "text": "das",
+          "start_time": 16.44,
+          "end_time": 16.54
+        },
+        {
+          "text": " ",
+          "start_time": 16.54,
+          "end_time": 16.6
+        },
+        {
+          "text": "ist",
+          "start_time": 16.6,
+          "end_time": 16.7
+        }
+      ]
+    },
+    {
+      "text": "jetzt nat\u00fcrlich vielleicht also einmal bei",
+      "start_time": 16.719,
+      "end_time": 18.859,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "jetzt",
+          "start_time": 16.719,
+          "end_time": 16.859
+        },
+        {
+          "text": " ",
+          "start_time": 16.859,
+          "end_time": 16.919
+        },
+        {
+          "text": "nat\u00fcrlich",
+          "start_time": 16.92,
+          "end_time": 17.379
+        },
+        {
+          "text": " ",
+          "start_time": 17.379,
+          "end_time": 17.539
+        },
+        {
+          "text": "vielleicht",
+          "start_time": 17.539,
+          "end_time": 17.859
+        },
+        {
+          "text": " ",
+          "start_time": 17.859,
+          "end_time": 17.999
+        },
+        {
+          "text": "also",
+          "start_time": 18.0,
+          "end_time": 18.159
+        },
+        {
+          "text": " ",
+          "start_time": 18.159,
+          "end_time": 18.299
+        },
+        {
+          "text": "einmal",
+          "start_time": 18.299,
+          "end_time": 18.579
+        },
+        {
+          "text": " ",
+          "start_time": 18.579,
+          "end_time": 18.76
+        },
+        {
+          "text": "bei",
+          "start_time": 18.76,
+          "end_time": 18.859
+        }
+      ]
+    },
+    {
+      "text": "dir eines, eines, es hat diesen",
+      "start_time": 18.92,
+      "end_time": 21.359,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "dir",
+          "start_time": 18.92,
+          "end_time": 19.079
+        },
+        {
+          "text": " ",
+          "start_time": 19.079,
+          "end_time": 19.18
+        },
+        {
+          "text": "eines,",
+          "start_time": 19.18,
+          "end_time": 19.52
+        },
+        {
+          "text": " ",
+          "start_time": 19.52,
+          "end_time": 19.559
+        },
+        {
+          "text": "eines,",
+          "start_time": 19.559,
+          "end_time": 19.899
+        },
+        {
+          "text": " ",
+          "start_time": 19.899,
+          "end_time": 20.359
+        },
+        {
+          "text": "es",
+          "start_time": 20.359,
+          "end_time": 20.459
+        },
+        {
+          "text": " ",
+          "start_time": 20.459,
+          "end_time": 20.519
+        },
+        {
+          "text": "hat",
+          "start_time": 20.52,
+          "end_time": 20.819
+        },
+        {
+          "text": " ",
+          "start_time": 20.819,
+          "end_time": 21.139
+        },
+        {
+          "text": "diesen",
+          "start_time": 21.139,
+          "end_time": 21.359
+        }
+      ]
+    },
+    {
+      "text": "Business-Aspekt nat\u00fcrlich, aber es ist ja",
+      "start_time": 21.399,
+      "end_time": 24.079,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "Business-Aspekt",
+          "start_time": 21.399,
+          "end_time": 22.319
+        },
+        {
+          "text": " ",
+          "start_time": 22.319,
+          "end_time": 22.379
+        },
+        {
+          "text": "nat\u00fcrlich,",
+          "start_time": 22.379,
+          "end_time": 22.799
+        },
+        {
+          "text": " ",
+          "start_time": 22.799,
+          "end_time": 22.899
+        },
+        {
+          "text": "aber",
+          "start_time": 22.899,
+          "end_time": 23.18
+        },
+        {
+          "text": " ",
+          "start_time": 23.18,
+          "end_time": 23.459
+        },
+        {
+          "text": "es",
+          "start_time": 23.459,
+          "end_time": 23.539
+        },
+        {
+          "text": " ",
+          "start_time": 23.539,
+          "end_time": 23.619
+        },
+        {
+          "text": "ist",
+          "start_time": 23.619,
+          "end_time": 23.76
+        },
+        {
+          "text": " ",
+          "start_time": 23.76,
+          "end_time": 23.979
+        },
+        {
+          "text": "ja",
+          "start_time": 23.979,
+          "end_time": 24.079
+        }
+      ]
+    },
+    {
+      "text": "das erfolgreich im Business zu sein oder",
+      "start_time": 24.26,
+      "end_time": 26.199,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "das",
+          "start_time": 24.26,
+          "end_time": 24.399
+        },
+        {
+          "text": " ",
+          "start_time": 24.399,
+          "end_time": 24.579
+        },
+        {
+          "text": "erfolgreich",
+          "start_time": 24.579,
+          "end_time": 25.1
+        },
+        {
+          "text": " ",
+          "start_time": 25.1,
+          "end_time": 25.139
+        },
+        {
+          "text": "im",
+          "start_time": 25.139,
+          "end_time": 25.239
+        },
+        {
+          "text": " ",
+          "start_time": 25.239,
+          "end_time": 25.299
+        },
+        {
+          "text": "Business",
+          "start_time": 25.299,
+          "end_time": 25.559
+        },
+        {
+          "text": " ",
+          "start_time": 25.559,
+          "end_time": 25.599
+        },
+        {
+          "text": "zu",
+          "start_time": 25.599,
+          "end_time": 25.68
+        },
+        {
+          "text": " ",
+          "start_time": 25.68,
+          "end_time": 25.739
+        },
+        {
+          "text": "sein",
+          "start_time": 25.739,
+          "end_time": 25.939
+        },
+        {
+          "text": " ",
+          "start_time": 25.939,
+          "end_time": 26.039
+        },
+        {
+          "text": "oder",
+          "start_time": 26.039,
+          "end_time": 26.199
+        }
+      ]
+    },
+    {
+      "text": "generell erfolgreich und leicht oder mit",
+      "start_time": 26.399,
+      "end_time": 28.76,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "generell",
+          "start_time": 26.399,
+          "end_time": 26.819
+        },
+        {
+          "text": " ",
+          "start_time": 26.819,
+          "end_time": 26.879
+        },
+        {
+          "text": "erfolgreich",
+          "start_time": 26.879,
+          "end_time": 27.579
+        },
+        {
+          "text": " ",
+          "start_time": 27.579,
+          "end_time": 27.659
+        },
+        {
+          "text": "und",
+          "start_time": 27.659,
+          "end_time": 27.819
+        },
+        {
+          "text": " ",
+          "start_time": 27.819,
+          "end_time": 28.079
+        },
+        {
+          "text": "leicht",
+          "start_time": 28.079,
+          "end_time": 28.359
+        },
+        {
+          "text": " ",
+          "start_time": 28.359,
+          "end_time": 28.499
+        },
+        {
+          "text": "oder",
+          "start_time": 28.5,
+          "end_time": 28.599
+        },
+        {
+          "text": " ",
+          "start_time": 28.599,
+          "end_time": 28.659
+        },
+        {
+          "text": "mit",
+          "start_time": 28.659,
+          "end_time": 28.76
+        }
+      ]
+    },
+    {
+      "text": "Leichtigkeit das Leben zu bestreiten ist",
+      "start_time": 28.819,
+      "end_time": 31.979,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "Leichtigkeit",
+          "start_time": 28.819,
+          "end_time": 29.459
+        },
+        {
+          "text": " ",
+          "start_time": 29.459,
+          "end_time": 29.579
+        },
+        {
+          "text": "das",
+          "start_time": 29.579,
+          "end_time": 29.719
+        },
+        {
+          "text": " ",
+          "start_time": 29.719,
+          "end_time": 29.84
+        },
+        {
+          "text": "Leben",
+          "start_time": 29.84,
+          "end_time": 30.139
+        },
+        {
+          "text": " ",
+          "start_time": 30.139,
+          "end_time": 30.42
+        },
+        {
+          "text": "zu",
+          "start_time": 30.42,
+          "end_time": 30.779
+        },
+        {
+          "text": " ",
+          "start_time": 30.779,
+          "end_time": 30.839
+        },
+        {
+          "text": "bestreiten",
+          "start_time": 30.84,
+          "end_time": 31.619
+        },
+        {
+          "text": " ",
+          "start_time": 31.619,
+          "end_time": 31.859
+        },
+        {
+          "text": "ist",
+          "start_time": 31.859,
+          "end_time": 31.979
+        }
+      ]
+    },
+    {
+      "text": "ja nicht reduziert aufs Business.",
+      "start_time": 32.02,
+      "end_time": 33.7,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "ja",
+          "start_time": 32.02,
+          "end_time": 32.119
+        },
+        {
+          "text": " ",
+          "start_time": 32.119,
+          "end_time": 32.159
+        },
+        {
+          "text": "nicht",
+          "start_time": 32.159,
+          "end_time": 32.399
+        },
+        {
+          "text": " ",
+          "start_time": 32.399,
+          "end_time": 32.479
+        },
+        {
+          "text": "reduziert",
+          "start_time": 32.479,
+          "end_time": 33.04
+        },
+        {
+          "text": " ",
+          "start_time": 33.04,
+          "end_time": 33.079
+        },
+        {
+          "text": "aufs",
+          "start_time": 33.079,
+          "end_time": 33.279
+        },
+        {
+          "text": " ",
+          "start_time": 33.279,
+          "end_time": 33.34
+        },
+        {
+          "text": "Business.",
+          "start_time": 33.34,
+          "end_time": 33.7
+        }
+      ]
+    },
+    {
+      "text": "Deswegen, \u00e4h, w\u00fcrde ich, wollte ich da",
+      "start_time": 33.759,
+      "end_time": 35.799,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "Deswegen,",
+          "start_time": 33.759,
+          "end_time": 34.259
+        },
+        {
+          "text": " ",
+          "start_time": 34.259,
+          "end_time": 34.619
+        },
+        {
+          "text": "\u00e4h,",
+          "start_time": 34.619,
+          "end_time": 34.719
+        },
+        {
+          "text": " ",
+          "start_time": 34.719,
+          "end_time": 34.979
+        },
+        {
+          "text": "w\u00fcrde",
+          "start_time": 34.979,
+          "end_time": 35.099
+        },
+        {
+          "text": " ",
+          "start_time": 35.099,
+          "end_time": 35.139
+        },
+        {
+          "text": "ich,",
+          "start_time": 35.139,
+          "end_time": 35.299
+        },
+        {
+          "text": " ",
+          "start_time": 35.299,
+          "end_time": 35.419
+        },
+        {
+          "text": "wollte",
+          "start_time": 35.419,
+          "end_time": 35.58
+        },
+        {
+          "text": " ",
+          "start_time": 35.58,
+          "end_time": 35.599
+        },
+        {
+          "text": "ich",
+          "start_time": 35.599,
+          "end_time": 35.68
+        },
+        {
+          "text": " ",
+          "start_time": 35.68,
+          "end_time": 35.719
+        },
+        {
+          "text": "da",
+          "start_time": 35.719,
+          "end_time": 35.799
+        }
+      ]
+    },
+    {
+      "text": "gleich mit einhaken, dass alle, die jetzt",
+      "start_time": 35.86,
+      "end_time": 38.06,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "gleich",
+          "start_time": 35.86,
+          "end_time": 36.079
+        },
+        {
+          "text": " ",
+          "start_time": 36.079,
+          "end_time": 36.339
+        },
+        {
+          "text": "mit",
+          "start_time": 36.34,
+          "end_time": 36.5
+        },
+        {
+          "text": " ",
+          "start_time": 36.5,
+          "end_time": 36.559
+        },
+        {
+          "text": "einhaken,",
+          "start_time": 36.559,
+          "end_time": 37.279
+        },
+        {
+          "text": " ",
+          "start_time": 37.279,
+          "end_time": 37.479
+        },
+        {
+          "text": "dass",
+          "start_time": 37.479,
+          "end_time": 37.599
+        },
+        {
+          "text": " ",
+          "start_time": 37.599,
+          "end_time": 37.68
+        },
+        {
+          "text": "alle,",
+          "start_time": 37.68,
+          "end_time": 37.86
+        },
+        {
+          "text": " ",
+          "start_time": 37.86,
+          "end_time": 37.899
+        },
+        {
+          "text": "die",
+          "start_time": 37.899,
+          "end_time": 37.959
+        },
+        {
+          "text": " ",
+          "start_time": 37.959,
+          "end_time": 37.979
+        },
+        {
+          "text": "jetzt",
+          "start_time": 37.979,
+          "end_time": 38.06
+        }
+      ]
+    },
+    {
+      "text": "vielleicht sagen: \u201eUh, da geht's",
+      "start_time": 38.079,
+      "end_time": 38.899,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "vielleicht",
+          "start_time": 38.079,
+          "end_time": 38.239
+        },
+        {
+          "text": " ",
+          "start_time": 38.239,
+          "end_time": 38.259
+        },
+        {
+          "text": "sagen:",
+          "start_time": 38.259,
+          "end_time": 38.399
+        },
+        {
+          "text": " ",
+          "start_time": 38.399,
+          "end_time": 38.439
+        },
+        {
+          "text": "\u201eUh,",
+          "start_time": 38.439,
+          "end_time": 38.599
+        },
+        {
+          "text": " ",
+          "start_time": 38.599,
+          "end_time": 38.659
+        },
+        {
+          "text": "da",
+          "start_time": 38.659,
+          "end_time": 38.7
+        },
+        {
+          "text": " ",
+          "start_time": 38.7,
+          "end_time": 38.759
+        },
+        {
+          "text": "geht's",
+          "start_time": 38.759,
+          "end_time": 38.899
+        }
+      ]
+    },
+    {
+      "text": "Business\", das ist vielleicht nicht. Ganz",
+      "start_time": 39.079,
+      "end_time": 40.559,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "Business\",",
+          "start_time": 39.079,
+          "end_time": 39.34
+        },
+        {
+          "text": " ",
+          "start_time": 39.34,
+          "end_time": 39.419
+        },
+        {
+          "text": "das",
+          "start_time": 39.419,
+          "end_time": 39.52
+        },
+        {
+          "text": " ",
+          "start_time": 39.52,
+          "end_time": 39.579
+        },
+        {
+          "text": "ist",
+          "start_time": 39.579,
+          "end_time": 39.659
+        },
+        {
+          "text": " ",
+          "start_time": 39.659,
+          "end_time": 39.7
+        },
+        {
+          "text": "vielleicht",
+          "start_time": 39.7,
+          "end_time": 39.959
+        },
+        {
+          "text": " ",
+          "start_time": 39.959,
+          "end_time": 40.02
+        },
+        {
+          "text": "nicht.",
+          "start_time": 40.02,
+          "end_time": 40.159
+        },
+        {
+          "text": " ",
+          "start_time": 40.159,
+          "end_time": 40.379
+        },
+        {
+          "text": "Ganz",
+          "start_time": 40.379,
+          "end_time": 40.559
+        }
+      ]
+    },
+    {
+      "text": "im Gegenteil, all diese Aspekte, die wir",
+      "start_time": 40.599,
+      "end_time": 42.759,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "im",
+          "start_time": 40.599,
+          "end_time": 40.719
+        },
+        {
+          "text": " ",
+          "start_time": 40.719,
+          "end_time": 40.799
+        },
+        {
+          "text": "Gegenteil,",
+          "start_time": 40.799,
+          "end_time": 41.299
+        },
+        {
+          "text": " ",
+          "start_time": 41.299,
+          "end_time": 41.399
+        },
+        {
+          "text": "all",
+          "start_time": 41.399,
+          "end_time": 41.5
+        },
+        {
+          "text": " ",
+          "start_time": 41.5,
+          "end_time": 41.579
+        },
+        {
+          "text": "diese",
+          "start_time": 41.579,
+          "end_time": 41.84
+        },
+        {
+          "text": " ",
+          "start_time": 41.84,
+          "end_time": 41.939
+        },
+        {
+          "text": "Aspekte,",
+          "start_time": 41.939,
+          "end_time": 42.52
+        },
+        {
+          "text": " ",
+          "start_time": 42.52,
+          "end_time": 42.559
+        },
+        {
+          "text": "die",
+          "start_time": 42.559,
+          "end_time": 42.639
+        },
+        {
+          "text": " ",
+          "start_time": 42.639,
+          "end_time": 42.7
+        },
+        {
+          "text": "wir",
+          "start_time": 42.7,
+          "end_time": 42.759
+        }
+      ]
+    },
+    {
+      "text": "jetzt besprechen, haben nat\u00fcrlich ganz",
+      "start_time": 42.799,
+      "end_time": 44.579,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "jetzt",
+          "start_time": 42.799,
+          "end_time": 42.919
+        },
+        {
+          "text": " ",
+          "start_time": 42.919,
+          "end_time": 42.979
+        },
+        {
+          "text": "besprechen,",
+          "start_time": 42.979,
+          "end_time": 43.599
+        },
+        {
+          "text": " ",
+          "start_time": 43.599,
+          "end_time": 43.819
+        },
+        {
+          "text": "haben",
+          "start_time": 43.819,
+          "end_time": 43.919
+        },
+        {
+          "text": " ",
+          "start_time": 43.919,
+          "end_time": 43.959
+        },
+        {
+          "text": "nat\u00fcrlich",
+          "start_time": 43.959,
+          "end_time": 44.279
+        },
+        {
+          "text": " ",
+          "start_time": 44.279,
+          "end_time": 44.36
+        },
+        {
+          "text": "ganz",
+          "start_time": 44.36,
+          "end_time": 44.579
+        }
+      ]
+    },
+    {
+      "text": "gro\u00dfe Relevanz abseits von, von",
+      "start_time": 44.659,
+      "end_time": 47.559,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "gro\u00dfe",
+          "start_time": 44.659,
+          "end_time": 45.039
+        },
+        {
+          "text": " ",
+          "start_time": 45.039,
+          "end_time": 45.139
+        },
+        {
+          "text": "Relevanz",
+          "start_time": 45.139,
+          "end_time": 46.019
+        },
+        {
+          "text": " ",
+          "start_time": 46.019,
+          "end_time": 46.119
+        },
+        {
+          "text": "abseits",
+          "start_time": 46.119,
+          "end_time": 46.68
+        },
+        {
+          "text": " ",
+          "start_time": 46.68,
+          "end_time": 46.759
+        },
+        {
+          "text": "von,",
+          "start_time": 46.759,
+          "end_time": 47.119
+        },
+        {
+          "text": " ",
+          "start_time": 47.119,
+          "end_time": 47.319
+        },
+        {
+          "text": "von",
+          "start_time": 47.319,
+          "end_time": 47.559
+        }
+      ]
+    },
+    {
+      "text": "gesch\u00e4ftlich erfolgreich sein. Ja, weil-",
+      "start_time": 48.0,
+      "end_time": 50.419,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "gesch\u00e4ftlich",
+          "start_time": 48.0,
+          "end_time": 48.639
+        },
+        {
+          "text": " ",
+          "start_time": 48.639,
+          "end_time": 48.7
+        },
+        {
+          "text": "erfolgreich",
+          "start_time": 48.7,
+          "end_time": 49.399
+        },
+        {
+          "text": " ",
+          "start_time": 49.399,
+          "end_time": 49.479
+        },
+        {
+          "text": "sein.",
+          "start_time": 49.479,
+          "end_time": 49.719
+        },
+        {
+          "text": " ",
+          "start_time": 49.719,
+          "end_time": 49.959
+        },
+        {
+          "text": "Ja,",
+          "start_time": 49.959,
+          "end_time": 50.0
+        },
+        {
+          "text": " ",
+          "start_time": 50.0,
+          "end_time": 50.119
+        },
+        {
+          "text": "weil-",
+          "start_time": 50.119,
+          "end_time": 50.419
+        }
+      ]
+    },
+    {
+      "text": "Ja",
+      "start_time": 50.459,
+      "end_time": 50.5,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "Ja",
+          "start_time": 50.459,
+          "end_time": 50.5
+        }
+      ]
+    },
+    {
+      "text": "... es gibt ganz viele Ebenen des",
+      "start_time": 50.599,
+      "end_time": 52.699,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "...",
+          "start_time": 50.599,
+          "end_time": 50.599
+        },
+        {
+          "text": " ",
+          "start_time": 50.599,
+          "end_time": 50.68
+        },
+        {
+          "text": "es",
+          "start_time": 50.68,
+          "end_time": 50.719
+        },
+        {
+          "text": " ",
+          "start_time": 50.719,
+          "end_time": 50.759
+        },
+        {
+          "text": "gibt",
+          "start_time": 50.759,
+          "end_time": 50.979
+        },
+        {
+          "text": " ",
+          "start_time": 50.979,
+          "end_time": 51.039
+        },
+        {
+          "text": "ganz",
+          "start_time": 51.039,
+          "end_time": 51.259
+        },
+        {
+          "text": " ",
+          "start_time": 51.259,
+          "end_time": 51.379
+        },
+        {
+          "text": "viele",
+          "start_time": 51.379,
+          "end_time": 51.599
+        },
+        {
+          "text": " ",
+          "start_time": 51.599,
+          "end_time": 51.759
+        },
+        {
+          "text": "Ebenen",
+          "start_time": 51.759,
+          "end_time": 52.439
+        },
+        {
+          "text": " ",
+          "start_time": 52.439,
+          "end_time": 52.479
+        },
+        {
+          "text": "des",
+          "start_time": 52.479,
+          "end_time": 52.699
+        }
+      ]
+    },
+    {
+      "text": "Miteinanders und der, des pers\u00f6nlichen",
+      "start_time": 53.059,
+      "end_time": 55.18,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "Miteinanders",
+          "start_time": 53.059,
+          "end_time": 53.879
+        },
+        {
+          "text": " ",
+          "start_time": 53.879,
+          "end_time": 53.959
+        },
+        {
+          "text": "und",
+          "start_time": 53.959,
+          "end_time": 54.259
+        },
+        {
+          "text": " ",
+          "start_time": 54.259,
+          "end_time": 54.319
+        },
+        {
+          "text": "der,",
+          "start_time": 54.319,
+          "end_time": 54.519
+        },
+        {
+          "text": " ",
+          "start_time": 54.519,
+          "end_time": 54.599
+        },
+        {
+          "text": "des",
+          "start_time": 54.599,
+          "end_time": 54.739
+        },
+        {
+          "text": " ",
+          "start_time": 54.739,
+          "end_time": 54.779
+        },
+        {
+          "text": "pers\u00f6nlichen",
+          "start_time": 54.779,
+          "end_time": 55.18
+        }
+      ]
+    },
+    {
+      "text": "Weiterkommens, wo genau diese, die",
+      "start_time": 55.259,
+      "end_time": 57.959,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "Weiterkommens,",
+          "start_time": 55.259,
+          "end_time": 56.279
+        },
+        {
+          "text": " ",
+          "start_time": 56.279,
+          "end_time": 56.379
+        },
+        {
+          "text": "wo",
+          "start_time": 56.379,
+          "end_time": 56.539
+        },
+        {
+          "text": " ",
+          "start_time": 56.539,
+          "end_time": 56.599
+        },
+        {
+          "text": "genau",
+          "start_time": 56.599,
+          "end_time": 57.039
+        },
+        {
+          "text": " ",
+          "start_time": 57.039,
+          "end_time": 57.099
+        },
+        {
+          "text": "diese,",
+          "start_time": 57.099,
+          "end_time": 57.52
+        },
+        {
+          "text": " ",
+          "start_time": 57.52,
+          "end_time": 57.819
+        },
+        {
+          "text": "die",
+          "start_time": 57.819,
+          "end_time": 57.959
+        }
+      ]
+    },
+    {
+      "text": "Selbstsabotage und diese, diese",
+      "start_time": 58.02,
+      "end_time": 60.599,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "Selbstsabotage",
+          "start_time": 58.02,
+          "end_time": 59.359
+        },
+        {
+          "text": " ",
+          "start_time": 59.359,
+          "end_time": 59.479
+        },
+        {
+          "text": "und",
+          "start_time": 59.479,
+          "end_time": 59.679
+        },
+        {
+          "text": " ",
+          "start_time": 59.679,
+          "end_time": 59.739
+        },
+        {
+          "text": "diese,",
+          "start_time": 59.739,
+          "end_time": 60.299
+        },
+        {
+          "text": " ",
+          "start_time": 60.299,
+          "end_time": 60.34
+        },
+        {
+          "text": "diese",
+          "start_time": 60.34,
+          "end_time": 60.599
+        }
+      ]
+    },
+    {
+      "text": "Reibungspunkte eine Rolle spielen.",
+      "start_time": 60.659,
+      "end_time": 62.419,
+      "speaker": {
+        "id": "speaker_1",
+        "name": "Speaker 1"
+      },
+      "words": [
+        {
+          "text": "Reibungspunkte",
+          "start_time": 60.659,
+          "end_time": 61.479
+        },
+        {
+          "text": " ",
+          "start_time": 61.479,
+          "end_time": 61.5
+        },
+        {
+          "text": "eine",
+          "start_time": 61.5,
+          "end_time": 61.599
+        },
+        {
+          "text": " ",
+          "start_time": 61.599,
+          "end_time": 61.68
+        },
+        {
+          "text": "Rolle",
+          "start_time": 61.68,
+          "end_time": 61.899
+        },
+        {
+          "text": " ",
+          "start_time": 61.899,
+          "end_time": 61.999
+        },
+        {
+          "text": "spielen.",
+          "start_time": 62.0,
+          "end_time": 62.419
+        }
+      ]
+    },
+    {
+      "text": "Ja, also das ist auch ein wichtiger",
+      "start_time": 62.5,
+      "end_time": 63.639,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "Ja,",
+          "start_time": 62.5,
+          "end_time": 62.579
+        },
+        {
+          "text": " ",
+          "start_time": 62.579,
+          "end_time": 62.719
+        },
+        {
+          "text": "also",
+          "start_time": 62.719,
+          "end_time": 62.84
+        },
+        {
+          "text": " ",
+          "start_time": 62.84,
+          "end_time": 62.879
+        },
+        {
+          "text": "das",
+          "start_time": 62.879,
+          "end_time": 62.959
+        },
+        {
+          "text": " ",
+          "start_time": 62.959,
+          "end_time": 62.979
+        },
+        {
+          "text": "ist",
+          "start_time": 62.979,
+          "end_time": 63.04
+        },
+        {
+          "text": " ",
+          "start_time": 63.04,
+          "end_time": 63.059
+        },
+        {
+          "text": "auch",
+          "start_time": 63.059,
+          "end_time": 63.139
+        },
+        {
+          "text": " ",
+          "start_time": 63.139,
+          "end_time": 63.18
+        },
+        {
+          "text": "ein",
+          "start_time": 63.18,
+          "end_time": 63.259
+        },
+        {
+          "text": " ",
+          "start_time": 63.259,
+          "end_time": 63.299
+        },
+        {
+          "text": "wichtiger",
+          "start_time": 63.299,
+          "end_time": 63.639
+        }
+      ]
+    },
+    {
+      "text": "Aspekt, den du ansprichst. Also ich habe",
+      "start_time": 63.699,
+      "end_time": 65.259,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "Aspekt,",
+          "start_time": 63.699,
+          "end_time": 64.0
+        },
+        {
+          "text": " ",
+          "start_time": 64.0,
+          "end_time": 64.04
+        },
+        {
+          "text": "den",
+          "start_time": 64.04,
+          "end_time": 64.139
+        },
+        {
+          "text": " ",
+          "start_time": 64.139,
+          "end_time": 64.18
+        },
+        {
+          "text": "du",
+          "start_time": 64.18,
+          "end_time": 64.259
+        },
+        {
+          "text": " ",
+          "start_time": 64.259,
+          "end_time": 64.319
+        },
+        {
+          "text": "ansprichst.",
+          "start_time": 64.319,
+          "end_time": 64.839
+        },
+        {
+          "text": " ",
+          "start_time": 64.839,
+          "end_time": 64.879
+        },
+        {
+          "text": "Also",
+          "start_time": 64.879,
+          "end_time": 64.959
+        },
+        {
+          "text": " ",
+          "start_time": 64.959,
+          "end_time": 65.019
+        },
+        {
+          "text": "ich",
+          "start_time": 65.019,
+          "end_time": 65.059
+        },
+        {
+          "text": " ",
+          "start_time": 65.059,
+          "end_time": 65.119
+        },
+        {
+          "text": "habe",
+          "start_time": 65.119,
+          "end_time": 65.259
+        }
+      ]
+    },
+    {
+      "text": "nat\u00fcrlich meine Spezialisierung auf",
+      "start_time": 65.299,
+      "end_time": 66.959,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "nat\u00fcrlich",
+          "start_time": 65.299,
+          "end_time": 65.699
+        },
+        {
+          "text": " ",
+          "start_time": 65.699,
+          "end_time": 65.739
+        },
+        {
+          "text": "meine",
+          "start_time": 65.739,
+          "end_time": 65.919
+        },
+        {
+          "text": " ",
+          "start_time": 65.919,
+          "end_time": 65.959
+        },
+        {
+          "text": "Spezialisierung",
+          "start_time": 65.959,
+          "end_time": 66.659
+        },
+        {
+          "text": " ",
+          "start_time": 66.659,
+          "end_time": 66.699
+        },
+        {
+          "text": "auf",
+          "start_time": 66.699,
+          "end_time": 66.959
+        }
+      ]
+    },
+    {
+      "text": "Business und Selbstst\u00e4ndigkeit, aber jedes",
+      "start_time": 67.0,
+      "end_time": 68.959,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "Business",
+          "start_time": 67.0,
+          "end_time": 67.319
+        },
+        {
+          "text": " ",
+          "start_time": 67.319,
+          "end_time": 67.36
+        },
+        {
+          "text": "und",
+          "start_time": 67.36,
+          "end_time": 67.439
+        },
+        {
+          "text": " ",
+          "start_time": 67.439,
+          "end_time": 67.519
+        },
+        {
+          "text": "Selbstst\u00e4ndigkeit,",
+          "start_time": 67.519,
+          "end_time": 68.18
+        },
+        {
+          "text": " ",
+          "start_time": 68.18,
+          "end_time": 68.22
+        },
+        {
+          "text": "aber",
+          "start_time": 68.22,
+          "end_time": 68.54
+        },
+        {
+          "text": " ",
+          "start_time": 68.54,
+          "end_time": 68.68
+        },
+        {
+          "text": "jedes",
+          "start_time": 68.68,
+          "end_time": 68.959
+        }
+      ]
+    },
+    {
+      "text": "Muster, \u00fcber das wir heute sprechen,",
+      "start_time": 69.04,
+      "end_time": 71.239,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "Muster,",
+          "start_time": 69.04,
+          "end_time": 69.459
+        },
+        {
+          "text": " ",
+          "start_time": 69.459,
+          "end_time": 69.5
+        },
+        {
+          "text": "\u00fcber",
+          "start_time": 69.5,
+          "end_time": 69.659
+        },
+        {
+          "text": " ",
+          "start_time": 69.659,
+          "end_time": 69.68
+        },
+        {
+          "text": "das",
+          "start_time": 69.68,
+          "end_time": 69.879
+        },
+        {
+          "text": " ",
+          "start_time": 69.879,
+          "end_time": 69.959
+        },
+        {
+          "text": "wir",
+          "start_time": 69.959,
+          "end_time": 70.36
+        },
+        {
+          "text": " ",
+          "start_time": 70.36,
+          "end_time": 70.5
+        },
+        {
+          "text": "heute",
+          "start_time": 70.5,
+          "end_time": 70.759
+        },
+        {
+          "text": " ",
+          "start_time": 70.759,
+          "end_time": 70.86
+        },
+        {
+          "text": "sprechen,",
+          "start_time": 70.86,
+          "end_time": 71.239
+        }
+      ]
+    },
+    {
+      "text": "l\u00e4sst sich auf die Gesundheit, \u00fcber",
+      "start_time": 71.339,
+      "end_time": 72.979,
+      "speaker": {
+        "id": "speaker_0",
+        "name": "Speaker 0"
+      },
+      "words": [
+        {
+          "text": "l\u00e4sst",
+          "start_time": 71.339,
+          "end_time": 71.58
+        },
+        {
+          "text": " ",
+          "start_time": 71.58,
+          "end_time": 71.639
+        },
+        {
+          "text": "sich",
+          "start_time": 71.639,
+          "end_time": 71.879
+        },
+        {
+          "text": " ",
+          "start_time": 71.879,
+          "end_time": 71.979
+        },
+        {
+          "text": "auf",
+          "start_time": 71.979,
+          "end_time": 72.179
+        },
+        {
+          "text": " ",
+          "start_time": 72.179,
+          "end_time": 72.299
+        },
+        {
+          "text": "die",
+          "start_time": 72.299,
+          "end_time": 72.359
+        },
+        {
+          "text": " ",
+          "start_time": 72.359,
+          "end_time": 72.4
+        },
+        {
+          "text": "Gesundheit,",
+          "start_time": 72.4,
+          "end_time": 72.879
+        },
+        {
+          "text": " ",
+          "start_time": 72.879,
+          "end_time": 72.919
+        },
+        {
+          "text": "\u00fcber",
+          "start_time": 72.919,
+          "end_time": 72.979
+        }
+      ]
+    }
+  ]
+}

@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Diarization: speaker IDs from providers are normalized so ElevenLabs'
+  `speaker_0`/`speaker_1` render as `[Speaker 0]`/`[Speaker 1]` instead of
+  `[Speaker speaker_0]`. AssemblyAI's `A`/`B` pass through unchanged.
+- Diarization: plain-text output now emits speaker labels (one paragraph per
+  speaker turn, prefixed `[Speaker X]:`) when `--speaker-labels`/`--diarize`
+  is set.
+- `merge` subcommand: transcribe two or more single-speaker tracks (e.g. one
+  mic per podcast participant) separately — each gets its own SRT/JSON/text —
+  then interleave them by timestamp into a combined SRT + text labeled with
+  each speaker's name. Tracks are assigned via repeatable
+  `--speaker LABEL=FILE`; `--offset LABEL=DURATION` aligns tracks that don't
+  share an exact zero point. Named labels render as `[Julia]:` rather than
+  `[Speaker X]:`.
+
 - GUI: top toolbar (Start / Cancel / Settings / About) pinned outside the
   scroll area so primary actions stay reachable when the Advanced accordion
   is expanded; bottom button row kept for muscle memory.

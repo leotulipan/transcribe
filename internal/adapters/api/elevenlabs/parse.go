@@ -2,6 +2,7 @@ package elevenlabs
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
@@ -42,16 +43,32 @@ func parse(data []byte, model string) (*domain.Result, error) {
 		if w.Type != "word" {
 			continue // skip spacing entries
 		}
+		spk := normalizeSpeakerID(w.SpeakerID)
 		res.Words = append(res.Words, domain.Word{
 			Text:    w.Text,
 			Start:   time.Duration(w.Start * float64(time.Second)),
 			End:     time.Duration(w.End * float64(time.Second)),
-			Speaker: w.SpeakerID,
+			Speaker: spk,
 		})
-		if w.SpeakerID != "" && !seen[w.SpeakerID] {
-			seen[w.SpeakerID] = true
-			res.Speakers = append(res.Speakers, domain.Speaker{ID: w.SpeakerID})
+		if spk != "" && !seen[spk] {
+			seen[spk] = true
+			res.Speakers = append(res.Speakers, domain.Speaker{ID: spk})
 		}
 	}
 	return res, nil
+}
+
+// normalizeSpeakerID converts provider speaker ids to a clean token. ElevenLabs
+// returns ids like "speaker_0"; we strip the "speaker_"/"speaker " prefix so the
+// formatters render "[Speaker 0]" rather than "[Speaker speaker_0]". Already-clean
+// ids (e.g. "A", "0") pass through unchanged.
+func normalizeSpeakerID(id string) string {
+	id = strings.TrimSpace(id)
+	low := strings.ToLower(id)
+	for _, p := range []string{"speaker_", "speaker "} {
+		if strings.HasPrefix(low, p) {
+			return strings.TrimSpace(id[len(p):])
+		}
+	}
+	return id
 }
