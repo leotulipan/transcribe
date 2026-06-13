@@ -69,6 +69,7 @@ func (f *FFmpeg) Transcode(ctx context.Context, in domain.AudioFile, t ports.Tar
 	args = append(args, partial)
 
 	cmd := exec.CommandContext(ctx, f.ffmpeg, args...)
+	hideConsole(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		_ = os.Remove(partial)
 		return domain.AudioFile{}, fmt.Errorf("ffmpeg transcode: %w: %s", err, string(out))

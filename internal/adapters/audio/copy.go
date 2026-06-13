@@ -57,6 +57,7 @@ func (f *FFmpeg) CopyAudio(ctx context.Context, in domain.AudioFile, workDir str
 	args := append([]string{"-y", "-i", in.Path, "-vn", "-c:a", "copy"}, fmtArgs...)
 	args = append(args, partial)
 	cmd := exec.CommandContext(ctx, f.ffmpeg, args...)
+	hideConsole(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		_ = os.Remove(partial)
 		return domain.AudioFile{}, fmt.Errorf("ffmpeg copy: %w: %s", err, string(out))

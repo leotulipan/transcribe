@@ -25,6 +25,7 @@ func (f *FFmpeg) ExtractAudio(ctx context.Context, videoPath, workDir string) (d
 		"-f", "wav",
 		partial,
 	)
+	hideConsole(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		_ = os.Remove(partial)
 		return domain.AudioFile{}, fmt.Errorf("ffmpeg extract: %w: %s", err, string(out))
