@@ -23,6 +23,58 @@ func TestPrepare_AsIsWhenAcceptedAndSmallEnough(t *testing.T) {
 	require.Equal(t, 0, audio.transcCalls)
 }
 
+func TestConversionDecisionMsg(t *testing.T) {
+	src := domain.AudioFile{Path: "in.wav", Codec: "pcm_s16le", Container: "wav"}
+
+	// As-is: prepared is the same file.
+	require.Contains(t, conversionDecisionMsg(src, src), "as-is")
+
+	// Stream-copy: same codec, different container/path.
+	copied := domain.AudioFile{Path: "out.m4a", Codec: "pcm_s16le", Container: "wav-copy"}
+	require.Contains(t, conversionDecisionMsg(src, copied), "stream-copied")
+
+	// Transcode: different codec.
+	transcoded := domain.AudioFile{Path: "out.flac", Codec: "flac", Container: "flac"}
+	msg := conversionDecisionMsg(src, transcoded)
+	require.Contains(t, msg, "transcoded")
+	require.Contains(t, msg, "flac")
+}
+
+func TestPrepare_WavAcceptedAsIs(t *testing.T) {
+	// ElevenLabs/OpenAI accept WAV directly. A probed WAV reports codec
+	// "pcm_s16le" with container "wav", while the accepted-input token is the
+	// format name "wav". It must be sent as-is — never transcoded.
+	audio := &fakeAudio{}
+	src := domain.AudioFile{Path: "in.wav", Codec: "pcm_s16le", Container: "wav", SizeBytes: 100}
+	caps := ports.ModelCapabilities{AcceptedInputs: []domain.AudioFormat{
+		{Codec: "mp3"}, {Codec: "wav"}, {Codec: "flac"},
+	}}
+
+	out, err := prepare(context.Background(), audio, src, caps, 1024, "/tmp", ports.TargetFormat{Codec: "flac"}, ports.PrepareOpts{})
+	require.NoError(t, err)
+	require.Equal(t, "in.wav", out.Path)
+	require.False(t, out.IsTemp)
+	require.Equal(t, 0, audio.copyCalls)
+	require.Equal(t, 0, audio.transcCalls)
+}
+
+func TestPrepare_M4aAcceptedAsIs(t *testing.T) {
+	// .m4a wraps AAC in an MP4/M4A box; ffprobe reports codec "aac",
+	// container "m4a". A provider listing the "m4a" format accepts it
+	// directly — no transcode, no rewrap.
+	audio := &fakeAudio{}
+	src := domain.AudioFile{Path: "in.m4a", Codec: "aac", Container: "m4a", SizeBytes: 100}
+	caps := ports.ModelCapabilities{AcceptedInputs: []domain.AudioFormat{
+		{Codec: "mp3"}, {Codec: "mp4"}, {Codec: "m4a"}, {Codec: "wav"},
+	}}
+
+	out, err := prepare(context.Background(), audio, src, caps, 1024, "/tmp", ports.TargetFormat{Codec: "flac"}, ports.PrepareOpts{})
+	require.NoError(t, err)
+	require.Equal(t, "in.m4a", out.Path)
+	require.Equal(t, 0, audio.copyCalls)
+	require.Equal(t, 0, audio.transcCalls)
+}
+
 func TestPrepare_CopyWhenAcceptedButContainerCantBeStreamed(t *testing.T) {
 	// mp4 container containing AAC — AAC is accepted but the mp4 box around
 	// it must be stream-copied into m4a.
