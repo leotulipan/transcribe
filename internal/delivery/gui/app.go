@@ -3,6 +3,7 @@ package gui
 import (
 	"context"
 	"errors"
+	"os"
 	"sync"
 
 	"fyne.io/fyne/v2/app"
@@ -28,6 +29,12 @@ type Deps struct {
 	// Version is the build version string injected by main via ldflags.
 	// Surfaced in the About dialog. Empty string falls back to "dev".
 	Version string
+
+	// InitialPath pre-fills the file/folder picker at launch. Set by main
+	// from the command line so a file handed to the GUI by Windows (dragged
+	// onto the desktop shortcut, or right-click "Transcribe with…") lands in
+	// the picker. Blank means "start empty".
+	InitialPath string
 
 	mu      sync.RWMutex
 	service ports.TranscribeService
@@ -98,12 +105,31 @@ func (d *Deps) Reload() error {
 	return nil
 }
 
+// FirstFileArg returns the first argument that names an existing file or
+// directory, or "" when none do. Used so a path handed to the GUI by Windows
+// (dragged onto the desktop shortcut, or right-click "Transcribe with…")
+// pre-fills the picker, while stray flags or junk arguments are ignored.
+func FirstFileArg(args []string) string {
+	for _, a := range args {
+		if a == "" {
+			continue
+		}
+		if _, err := os.Stat(a); err == nil {
+			return a
+		}
+	}
+	return ""
+}
+
 // Run blocks until the user closes the window. ctx cancellation closes any
 // in-flight job and ends the program loop.
 func Run(ctx context.Context, deps *Deps) error {
 	a := app.NewWithID(appID)
 	a.SetIcon(appIcon)
 	win := newMainWindow(a, ctx, deps)
+	if deps.InitialPath != "" {
+		win.pathEntry.SetText(deps.InitialPath)
+	}
 	win.Show()
 	// First-run: if no API keys are configured, open Settings so the user
 	// can paste them before clicking Start. Cheap check; safe to call on

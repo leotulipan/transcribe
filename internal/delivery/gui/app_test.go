@@ -3,6 +3,8 @@ package gui
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -26,6 +28,19 @@ func (f *fakeService) DiscoverModels(context.Context, domain.ProviderID) ([]stri
 }
 func (f *fakeService) Submit(context.Context, domain.Request) (ports.Job, error) {
 	return nil, errors.New("not implemented")
+}
+
+func TestFirstFileArg(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "episode.mp3")
+	require.NoError(t, os.WriteFile(file, []byte("x"), 0o644))
+
+	require.Equal(t, file, FirstFileArg([]string{file}), "a single existing file")
+	require.Equal(t, file, FirstFileArg([]string{"--debug", file}), "skips flags, finds the file")
+	require.Equal(t, dir, FirstFileArg([]string{dir}), "an existing directory counts")
+	require.Equal(t, "", FirstFileArg([]string{"--debug"}), "no path among args")
+	require.Equal(t, "", FirstFileArg([]string{filepath.Join(dir, "missing.mp3")}), "non-existent path")
+	require.Equal(t, "", FirstFileArg(nil), "no args")
 }
 
 func TestDeps_ReloadSwapsServiceAndConfig(t *testing.T) {

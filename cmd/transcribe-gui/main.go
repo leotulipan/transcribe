@@ -39,6 +39,9 @@ func main() {
 	defer cancel()
 
 	deps := gui.NewDeps(svc, cfg, log, saveCfg, loadCfg, buildSvc, version)
+	// A file handed to us by Windows (drag onto the shortcut, or right-click
+	// "Transcribe with…") arrives as argv; pre-fill the picker with it.
+	deps.InitialPath = gui.FirstFileArg(os.Args[1:])
 	err = gui.Run(ctx, deps)
 	if err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintln(os.Stderr, err)
