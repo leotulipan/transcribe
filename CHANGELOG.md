@@ -39,6 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   alongside the legacy `best` / `nano`. Default changed to
   `universal-3-pro`. The existing `--speech-models csv` flag still
   passes an ordered fallback array per AssemblyAI's docs.
+- Dev: `scripts/install-local.ps1` (and `scripts/build.ps1 -Install`) build,
+  copy the binaries into the local install locations, and verify the version
+  and `merge` subcommand in one command.
 
 ### Changed
 - ElevenLabs: dynamic model discovery (`GET /v1/models`) now filters to
@@ -50,6 +53,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (download → run installer → drop file → Start), all six providers are
   listed with key-page links, Python tooling references removed, and the
   developer section is now a short appendix at the end.
+
+### Fixed
+- GUI/CLI: ffmpeg and ffprobe no longer flash a console window on Windows
+  (child processes spawn with CREATE_NO_WINDOW). Combined with the GUI being
+  built `-H windowsgui`, double-clicking the app opens no stray console.
+- GUI: files sent from Windows now reach the app — dragging a file onto the
+  desktop shortcut, or right-click → "Transcribe with…", pre-fills the picker
+  (previously the path was ignored).
+- GUI: the activity log is readable again — it was drawn in Fyne's muted
+  "disabled" colour (grey-on-grey) and now uses full foreground contrast.
+- Audio: WAV, M4A and MP4 inputs are sent to the provider as-is instead of
+  being needlessly re-encoded. Provider "accepted formats" now match against
+  the file's container, not just its codec.
+- CLI/GUI: the "chunk 1/1" progress line is suppressed for single-chunk jobs
+  (it appears only when a file is actually split).
 
 ## [0.10.0] - 2026-05-27
 

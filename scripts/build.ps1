@@ -1,6 +1,7 @@
 param(
     [string]$Version = "dev",
-    [string]$OutDir = "bin"
+    [string]$OutDir = "bin",
+    [switch]$Install
 )
 $ErrorActionPreference = "Stop"
 
@@ -29,3 +30,9 @@ go build -ldflags "-X main.version=$Version" -o "$OutDir/transcribe.exe" ./cmd/t
 
 Write-Host "Building $OutDir/transcribe-gui.exe (version=$Version, no console)"
 go build -ldflags "-X main.version=$Version -H windowsgui" -o "$OutDir/transcribe-gui.exe" ./cmd/transcribe-gui
+
+# Optionally copy the freshly built binaries into the local install locations
+# and verify them, so `build.ps1 -Install` is a one-shot build+install+verify.
+if ($Install) {
+    & "$PSScriptRoot/install-local.ps1" -SourceDir $OutDir
+}
