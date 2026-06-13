@@ -211,12 +211,17 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 		// Stage 7 — transcribe each chunk
 		emit(domain.ProgressEvent{Stage: domain.StageTranscribing})
 		var parts []*domain.Result
+		multiChunk := len(chunks) > 1
 		for i, c := range chunks {
-			emit(domain.ProgressEvent{
+			ev := domain.ProgressEvent{
 				Stage:   domain.StageTranscribing,
 				Percent: float64(i) / float64(len(chunks)),
-				Message: fmt.Sprintf("chunk %d/%d", i+1, len(chunks)),
-			})
+			}
+			// "chunk N/M" is noise when the file was never split.
+			if multiChunk {
+				ev.Message = fmt.Sprintf("chunk %d/%d", i+1, len(chunks))
+			}
+			emit(ev)
 			chunkAudio := domain.AudioFile{
 				Path: c.Path, SizeBytes: c.SizeBytes, Codec: prepared.Codec, Container: prepared.Container,
 				IsTemp: prepared.IsTemp, Complete: c.Complete,
