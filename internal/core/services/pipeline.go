@@ -157,6 +157,14 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 				return nil, fmt.Errorf("prepare: %w", err)
 			}
 			prepared = p
+			// Surface the copy-first decision (#6) so users can confirm we
+			// only convert when necessary.
+			if msg := conversionDecisionMsg(src, prepared); msg != "" {
+				emit(domain.ProgressEvent{Stage: domain.StageCompressing, Message: msg})
+				if deps.Log != nil {
+					deps.Log.Info("prepare: " + msg)
+				}
+			}
 			// Write meta sidecar so future runs find it
 			if prepared.IsTemp {
 				_ = audio.WriteMeta(prepared.Path, audio.MetaInfo{
@@ -203,12 +211,17 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 		// Stage 7 — transcribe each chunk
 		emit(domain.ProgressEvent{Stage: domain.StageTranscribing})
 		var parts []*domain.Result
+		multiChunk := len(chunks) > 1
 		for i, c := range chunks {
-			emit(domain.ProgressEvent{
+			ev := domain.ProgressEvent{
 				Stage:   domain.StageTranscribing,
 				Percent: float64(i) / float64(len(chunks)),
-				Message: fmt.Sprintf("chunk %d/%d", i+1, len(chunks)),
-			})
+			}
+			// "chunk N/M" is noise when the file was never split.
+			if multiChunk {
+				ev.Message = fmt.Sprintf("chunk %d/%d", i+1, len(chunks))
+			}
+			emit(ev)
 			chunkAudio := domain.AudioFile{
 				Path: c.Path, SizeBytes: c.SizeBytes, Codec: prepared.Codec, Container: prepared.Container,
 				IsTemp: prepared.IsTemp, Complete: c.Complete,
@@ -278,6 +291,21 @@ func pipelineRun(ctx context.Context, req domain.Request, deps Deps, emit func(d
 
 	emit(domain.ProgressEvent{Stage: domain.StageDone})
 	return result, nil
+}
+
+// conversionDecisionMsg describes, in one human-readable line, what prepare()
+// did to the source: sent it untouched, stream-copied (rewrapped) it without
+// re-encoding, or transcoded it. Surfaced for #6 so users can confirm that
+// conversion only happens when it makes sense.
+func conversionDecisionMsg(src, prepared domain.AudioFile) string {
+	switch {
+	case prepared.Path == src.Path:
+		return fmt.Sprintf("input sent as-is, no conversion (%s/%s)", src.Codec, src.Container)
+	case prepared.Codec == src.Codec:
+		return fmt.Sprintf("stream-copied %s → %s (no re-encode)", src.Container, prepared.Container)
+	default:
+		return fmt.Sprintf("transcoded %s → %s", src.Codec, prepared.Codec)
+	}
 }
 
 func checkCapabilities(req domain.Request, model string, caps ports.ModelCapabilities) error {

@@ -76,7 +76,9 @@ type mainWindow struct {
 
 	bar         *widget.ProgressBarInfinite
 	determinate *widget.ProgressBar
-	logArea     *widget.Entry
+	logRich     *widget.RichText
+	logScroll   *container.Scroll
+	logBuf      string
 	startBtn    *widget.Button
 	cancelBtn   *widget.Button
 	// Mirror buttons pinned to the top toolbar so Start/Cancel stay
@@ -188,9 +190,13 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	m.bar.Hide()
 	m.determinate = widget.NewProgressBar()
 	m.determinate.Hide()
-	m.logArea = widget.NewMultiLineEntry()
-	m.logArea.SetMinRowsVisible(8)
-	m.logArea.Disable()
+	// Read-only activity log. A disabled Entry renders its text in Fyne's
+	// muted "disabled" color (grey-on-grey, hard to read); RichText renders at
+	// full foreground contrast and is read-only by nature.
+	m.logRich = widget.NewRichTextWithText("")
+	m.logRich.Wrapping = fyne.TextWrapWord
+	m.logScroll = container.NewVScroll(m.logRich)
+	m.logScroll.SetMinSize(fyne.NewSize(0, 160))
 
 	// Actions — bottom row (legacy position, kept so users with muscle
 	// memory still find it under the scroll area).
@@ -285,7 +291,7 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 		advanced,
 
 		widget.NewLabelWithStyle("Progress", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		m.bar, m.determinate, m.logArea,
+		m.bar, m.determinate, m.logScroll,
 
 		container.NewHBox(m.startBtn, m.cancelBtn, settingsBtn),
 	)
@@ -425,7 +431,7 @@ func (m *mainWindow) onStart() {
 	}
 
 	m.lockUI(true)
-	m.logArea.SetText("")
+	m.resetLog()
 	m.batchFiles = files
 	m.batchIndex = 0
 	m.batchCancel = false
@@ -804,5 +810,23 @@ func (m *mainWindow) lockUI(lock bool) {
 }
 
 func (m *mainWindow) logf(format string, args ...any) {
-	m.logArea.SetText(m.logArea.Text + fmt.Sprintf(format+"\n", args...))
+	if m.logBuf != "" {
+		m.logBuf += "\n"
+	}
+	m.logBuf += fmt.Sprintf(format, args...)
+	m.setLogText(m.logBuf)
+}
+
+// setLogText replaces the log contents with s, rendered at full foreground
+// contrast, and keeps the newest line in view.
+func (m *mainWindow) setLogText(s string) {
+	m.logRich.Segments = []widget.RichTextSegment{&widget.TextSegment{Text: s}}
+	m.logRich.Refresh()
+	m.logScroll.ScrollToBottom()
+}
+
+// resetLog clears the activity log between runs.
+func (m *mainWindow) resetLog() {
+	m.logBuf = ""
+	m.setLogText("")
 }

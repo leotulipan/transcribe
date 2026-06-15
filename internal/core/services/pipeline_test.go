@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -75,6 +76,58 @@ func TestPipeline_HappyPath_TextOnly(t *testing.T) {
 	require.Contains(t, events, domain.StageTranscribing)
 	require.Contains(t, events, domain.StageWriting)
 	require.Contains(t, events, domain.StageDone)
+}
+
+func TestPipeline_ChunkMessageOnlyWhenSplit(t *testing.T) {
+	makeDeps := func() (Deps, domain.Request, string) {
+		dir := t.TempDir()
+		inputPath := filepath.Join(dir, "talk.mp3")
+		require.NoError(t, os.WriteFile(inputPath, []byte("\xff\xfb"), 0o644))
+		audio := &fakeAudio{
+			probeOut: domain.AudioFile{Path: inputPath, Codec: "mp3", Container: "mp3", SizeBytes: 100, Duration: time.Second},
+		}
+		prov := &fakeProviderFull{
+			id: domain.ProviderGroq, models: []string{"whisper-large-v3"}, maxUpload: 1024,
+			caps:   map[string]ports.ModelCapabilities{"whisper-large-v3": {WordTimestamps: false, AcceptedInputs: []domain.AudioFormat{{Codec: "mp3"}}}},
+			result: &domain.Result{Text: "hi", RawJSON: json.RawMessage(`{}`)},
+		}
+		deps := Deps{
+			Providers: map[domain.ProviderID]ports.Provider{domain.ProviderGroq: prov},
+			Audio:     audio,
+			Cache:     newFakeCache(),
+			Writers:   map[domain.OutputFormat]ports.FormatWriter{domain.FormatText: &recordingWriter{format: domain.FormatText}},
+		}
+		req := domain.Request{InputPath: inputPath, Provider: domain.ProviderGroq, Model: "whisper-large-v3", Formats: []domain.OutputFormat{domain.FormatText}}
+		return deps, req, inputPath
+	}
+
+	collectMessages := func(deps Deps, req domain.Request) string {
+		job, err := New(deps).Submit(context.Background(), req)
+		require.NoError(t, err)
+		var msgs []string
+		for ev := range job.Progress() {
+			if ev.Message != "" {
+				msgs = append(msgs, ev.Message)
+			}
+		}
+		_, err = job.Wait()
+		require.NoError(t, err)
+		return strings.Join(msgs, "|")
+	}
+
+	// Single chunk → no "chunk N/M" noise.
+	deps, req, _ := makeDeps()
+	require.NotContains(t, collectMessages(deps, req), "chunk")
+
+	// Two chunks → counter present for orientation.
+	deps2, req2, input2 := makeDeps()
+	deps2.Audio.(*fakeAudio).chunkOut = []domain.Chunk{
+		{Path: input2, SizeBytes: 50, Complete: true},
+		{Path: input2, SizeBytes: 50, Complete: true},
+	}
+	joined := collectMessages(deps2, req2)
+	require.Contains(t, joined, "chunk 1/2")
+	require.Contains(t, joined, "chunk 2/2")
 }
 
 func TestPipeline_RejectsIncompatibleFormat(t *testing.T) {

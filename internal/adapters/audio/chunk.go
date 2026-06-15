@@ -93,6 +93,7 @@ func (f *FFmpeg) Chunk(ctx context.Context, in domain.AudioFile, maxBytes int64,
 		args = append(args, partial)
 
 		cmd := exec.CommandContext(ctx, f.ffmpeg, args...)
+		hideConsole(cmd)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			_ = os.Remove(partial)
 			return nil, fmt.Errorf("ffmpeg chunk: %w: %s", err, string(out))

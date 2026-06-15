@@ -28,9 +28,11 @@ type ffprobeOutput struct {
 }
 
 func (f *FFmpeg) Probe(path string) (domain.AudioFile, error) {
-	out, err := exec.CommandContext(context.Background(),
+	cmd := exec.CommandContext(context.Background(),
 		f.ffprobe, "-v", "error", "-show_streams", "-show_format", "-of", "json", path,
-	).Output()
+	)
+	hideConsole(cmd)
+	out, err := cmd.Output()
 	if err != nil {
 		return domain.AudioFile{}, fmt.Errorf("ffprobe: %w", err)
 	}
