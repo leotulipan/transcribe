@@ -4,9 +4,11 @@ How to cut a versioned release that builds and publishes Windows + macOS
 binaries automatically via GitHub Actions.
 
 - **Trigger:** pushing a `v*` git tag (e.g. `v0.11.0`).
-- **Build matrix:** `windows-latest` (amd64), `macos-14` (Apple Silicon /
-  arm64), `macos-13` (Intel / amd64). Fyne links CGO, so there is no
-  cross-compile — each OS builds on its own native runner.
+- **Build matrix:** `windows-latest` (amd64) and `macos-14` (Apple Silicon /
+  arm64). Fyne links CGO, so each OS builds on its own native runner. Intel
+  macOS is intentionally not built: GitHub's hosted `macos-13` runners queued
+  indefinitely in practice. To add Intel back later, cross-compile on the
+  `macos-14` runner with `CGO_ENABLED=1 GOARCH=amd64 CC="clang -arch x86_64"`.
 - **Output:** one GitHub Release with the Windows installer, a portable
   Windows zip, two macOS tarballs, `.sha256` sidecars for each, and
   auto-generated release notes.
@@ -84,9 +86,9 @@ Run these from a clean `main` that is pushed and green in CI.
    git push origin vX.Y.Z
    ```
 
-5. **Watch the run.** Actions tab → **Release**. The `windows`, `macos
-   (arm64)`, and `macos (amd64)` jobs run in parallel; `release` runs after
-   all three succeed and publishes the GitHub Release.
+5. **Watch the run.** Actions tab → **Release**. The `windows` and
+   `macos (arm64)` jobs run in parallel; `release` runs after both succeed and
+   publishes the GitHub Release.
    ```bash
    gh run watch              # or: gh run list --workflow=release.yml
    ```
@@ -126,7 +128,6 @@ gh release delete vX.Y.Z-rc1 --cleanup-tag --yes
 | `transcribe-setup-vX.Y.Z.exe` (+ `.sha256`) | Windows installer (per-user, Inno Setup) |
 | `transcribe-windows-amd64-vX.Y.Z.zip` (+ `.sha256`) | Windows portable (both exes + README/LICENSE) |
 | `transcribe-macos-arm64-vX.Y.Z.tar.gz` (+ `.sha256`) | macOS Apple Silicon |
-| `transcribe-macos-amd64-vX.Y.Z.tar.gz` (+ `.sha256`) | macOS Intel |
 
 ---
 

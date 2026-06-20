@@ -79,16 +79,12 @@ jobs:
           if-no-files-found: error
 
   macos:
-    name: macOS (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: arm64
-            runner: macos-14    # Apple Silicon
-          - arch: amd64
-            runner: macos-13    # Intel
+    name: macOS (arm64)
+    # Apple Silicon only. GitHub's hosted Intel (macos-13) runners were
+    # unavailable in practice (jobs queued indefinitely), so we don't depend on
+    # them. Intel support can return later via cross-compile on this runner
+    # (clang -arch x86_64) if needed.
+    runs-on: macos-14
     env:
       CGO_ENABLED: "1"
     steps:
@@ -109,7 +105,7 @@ jobs:
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "Building version $V"
 
-      - name: Build (transcribe, ${{ matrix.arch }})
+      - name: Build (transcribe, arm64)
         run: |
           mkdir -p pkg
           go build -ldflags "-X main.version=${{ steps.ver.outputs.version }} -s -w" -o pkg/transcribe ./cmd/transcribe
@@ -118,7 +114,7 @@ jobs:
       - name: Package tarball
         run: |
           V="${{ steps.ver.outputs.version }}"
-          TAR="transcribe-macos-${{ matrix.arch }}-v${V}.tar.gz"
+          TAR="transcribe-macos-arm64-v${V}.tar.gz"
           mkdir -p dist
           tar -C pkg -czf "dist/${TAR}" transcribe README.md LICENSE
           ( cd dist && shasum -a 256 "${TAR}" > "${TAR}.sha256" )
@@ -126,7 +122,7 @@ jobs:
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macos-${{ matrix.arch }}
+          name: macos-arm64
           path: |
             dist/transcribe-macos-*.tar.gz
             dist/transcribe-macos-*.tar.gz.sha256

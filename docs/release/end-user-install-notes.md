@@ -24,9 +24,8 @@ and run `transcribe.exe` (CLI/TUI) or `transcribe-gui.exe` (GUI) directly.
 
 The macOS download is a single `transcribe` binary (CLI + TUI + GUI in one).
 
-1. Download the tarball for your Mac:
-   - Apple Silicon (M-series): `transcribe-macos-arm64-vX.Y.Z.tar.gz`
-   - Intel: `transcribe-macos-amd64-vX.Y.Z.tar.gz`
+1. Download `transcribe-macos-arm64-vX.Y.Z.tar.gz` (Apple Silicon / M-series).
+   Intel Macs aren't published as a binary yet — build from source.
 2. Extract and move it onto your PATH:
    ```bash
    tar -xzf transcribe-macos-arm64-vX.Y.Z.tar.gz

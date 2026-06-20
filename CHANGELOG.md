@@ -7,28 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- AssemblyAI: requests now send the official `speech_models` array instead of
-  the deprecated singular `speech_model`, which AssemblyAI was rejecting. The
-  selected model is always followed by `universal-2` as a resilience fallback
-  (deduped), so a job still succeeds if the chosen model is unavailable.
-- OpenAI: the model picker now lists only speech-to-text models
-  (`whisper*` / `*-transcribe*`) instead of every model the key can access
-  (chat, embeddings, TTS…). Falls back to the hardcoded STT list if none match.
-
-### Changed
-- GUI/TUI: option lists are now capability-aware. Output formats that need
-  word-level timestamps (`srt`, `word_srt`, `davinci_srt`) are greyed out / hidden
-  for text-only models (Gemini, Mistral); the Diarization section is hidden for
-  providers that don't diarize; and the "Provider hints" section shows only for
-  AssemblyAI. A new `Capabilities` service method backs both UIs.
-- GUI: clicking Start now scrolls the form to the Progress section so progress
-  is visible without manual scrolling.
+## [0.11.0] - 2026-06-20
 
 ### Added
-- macOS builds: official Apple Silicon (`arm64`) and Intel (`amd64`)
-  binaries are now published on the Releases page alongside the Windows
-  installer and portable zip.
+- macOS builds: official Apple Silicon (`arm64`) binaries are now published on
+  the Releases page alongside the Windows installer and portable zip. (Intel
+  Macs: build from source for now.)
 - CI/release: GitHub Actions now build and test on Windows + macOS for every
   push, and a `v*` tag triggers a full multi-platform release (installer,
   zip, macOS tarballs, SHA256 sidecars, auto-generated notes). See
@@ -69,6 +53,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `merge` subcommand in one command.
 
 ### Changed
+- GUI/TUI: option lists are now capability-aware. Output formats that need
+  word-level timestamps (`srt`, `word_srt`, `davinci_srt`) are greyed out /
+  hidden for text-only models (Gemini, Mistral); the Diarization section is
+  hidden for providers that don't diarize; and the "Provider hints" section
+  shows only for AssemblyAI. A new `Capabilities` service method backs both UIs.
+- GUI: clicking Start now scrolls the form to the Progress section so progress
+  is visible without manual scrolling.
 - ElevenLabs: dynamic model discovery (`GET /v1/models`) now filters to
   the `scribe_*` STT family. Previously the unfiltered list pulled in
   TTS models (`eleven_v3`, `eleven_multilingual_v2`, …) and any pick
@@ -80,6 +71,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   developer section is now a short appendix at the end.
 
 ### Fixed
+- AssemblyAI: requests now send the official `speech_models` array instead of
+  the deprecated singular `speech_model`, which AssemblyAI was rejecting. The
+  selected model is always followed by `universal-2` as a resilience fallback
+  (deduped), so a job still succeeds if the chosen model is unavailable.
+- OpenAI: the model picker now lists only speech-to-text models
+  (`whisper*` / `*-transcribe*`) instead of every model the key can access
+  (chat, embeddings, TTS…). Falls back to the hardcoded STT list if none match.
 - GUI/CLI: ffmpeg and ffprobe no longer flash a console window on Windows
   (child processes spawn with CREATE_NO_WINDOW). Combined with the GUI being
   built `-H windowsgui`, double-clicking the app opens no stray console.

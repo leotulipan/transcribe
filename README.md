@@ -39,9 +39,9 @@ The macOS download is a single `transcribe` binary that bundles the command
 line, the terminal UI, and the GUI.
 
 1. From the [Releases page](https://github.com/leotulipan/transcribe/releases),
-   download the build for your Mac:
-   - Apple Silicon (M-series): **`transcribe-macos-arm64-vX.Y.Z.tar.gz`**
-   - Intel: **`transcribe-macos-amd64-vX.Y.Z.tar.gz`**
+   download **`transcribe-macos-arm64-vX.Y.Z.tar.gz`** (Apple Silicon / M-series).
+   Intel Macs aren't published as a binary yet — build from source (see the
+   developer section below).
 2. Extract it and move it onto your PATH, then clear the Gatekeeper
    quarantine flag (the binary is unsigned):
    ```bash
