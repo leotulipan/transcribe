@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
+	"github.com/leotulipan/transcribe/internal/ports"
 )
 
 type optionsStep int
@@ -55,6 +56,7 @@ type optionsScreen struct {
 	step      optionsStep
 	list      list.Model
 	fmts      map[domain.OutputFormat]bool
+	caps      ports.ModelCapabilities // capabilities of the selected provider/model
 	adv       advancedOpts
 	advField  advancedField   // selected row in the advanced screen
 	padInputs [2]textinput.Model // [0]=paddingStart, [1]=paddingEnd
@@ -85,9 +87,50 @@ func newOptions(d Deps, p Prefill) *optionsScreen {
 		o.list = buildLanguageList()
 	} else {
 		o.step = stepFormats
-		o.list = buildFormatList(o.fmts)
+		o.refreshCaps()
+		o.applyFormatCaps()
+		o.list = buildFormatList(o.fmts, o.caps)
 	}
 	return o
+}
+
+// refreshCaps loads the capabilities of the currently selected provider/model.
+// Defaults to permissive (everything shown) when they can't be determined, so
+// the server-side check — not the UI — is the final gate.
+func (o *optionsScreen) refreshCaps() {
+	o.caps = ports.ModelCapabilities{WordTimestamps: true, Diarization: true}
+	if o.deps.Service != nil && o.pre.Provider != "" && o.pre.Model != "" {
+		if c, ok := o.deps.Service.Capabilities(o.pre.Provider, o.pre.Model); ok {
+			o.caps = c
+		}
+	}
+}
+
+// applyFormatCaps unchecks SRT-family formats the model can't produce, and notes
+// it so the user understands why the list shrank.
+func (o *optionsScreen) applyFormatCaps() {
+	if o.caps.WordTimestamps {
+		return
+	}
+	dropped := false
+	for _, f := range []domain.OutputFormat{domain.FormatSRT, domain.FormatWordSRT, domain.FormatDavinciSRT} {
+		if o.fmts[f] {
+			o.fmts[f] = false
+			dropped = true
+		}
+	}
+	if dropped {
+		o.err = fmt.Errorf("%s outputs plain text only — SRT formats are unavailable", o.pre.Model)
+	}
+}
+
+// firstAdvField is the topmost selectable row on the advanced screen. The
+// diarization row is hidden for providers that don't support it.
+func (o *optionsScreen) firstAdvField() advancedField {
+	if !o.caps.Diarization {
+		return advFieldRemoveFillers
+	}
+	return advFieldDiarize
 }
 
 func (o *optionsScreen) Init() tea.Cmd {
@@ -130,6 +173,7 @@ func (o *optionsScreen) updateOptions(msg tea.Msg) (screen, tea.Cmd) {
 		case stepModel:
 			if item := o.list.SelectedItem(); item != nil {
 				o.pre.Model = item.(simpleItem).id
+				o.refreshCaps()
 				o.step = stepLanguage
 				o.list = buildLanguageList()
 			}
@@ -137,7 +181,8 @@ func (o *optionsScreen) updateOptions(msg tea.Msg) (screen, tea.Cmd) {
 			if item := o.list.SelectedItem(); item != nil {
 				o.pre.Language = item.(simpleItem).id // empty string = auto
 				o.step = stepFormats
-				o.list = buildFormatList(o.fmts)
+				o.applyFormatCaps()
+				o.list = buildFormatList(o.fmts, o.caps)
 			}
 		case stepFormats:
 			// Enter doesn't advance — use space to toggle, g to submit, a for advanced.
@@ -149,14 +194,14 @@ func (o *optionsScreen) updateOptions(msg tea.Msg) (screen, tea.Cmd) {
 			if item := o.list.SelectedItem(); item != nil {
 				id := domain.OutputFormat(item.(simpleItem).id)
 				o.fmts[id] = !o.fmts[id]
-				o.list = buildFormatList(o.fmts)
+				o.list = buildFormatList(o.fmts, o.caps)
 			}
 		case "a":
 			// Enter the advanced options screen before submitting.
 			o.adv.PaddingStartMs = o.pre.PaddingStartMs
 			o.adv.PaddingEndMs = o.pre.PaddingEndMs
 			o.step = stepAdvanced
-			o.advField = advFieldDiarize
+			o.advField = o.firstAdvField()
 			o.padInputs = buildPadInputs(o.adv)
 			o.list = buildAdvancedList(o.adv)
 			return o, nil
@@ -204,7 +249,7 @@ func (o *optionsScreen) updateAdvanced(msg tea.Msg) (screen, tea.Cmd) {
 	case "esc":
 		// Go back to format selection.
 		o.step = stepFormats
-		o.list = buildFormatList(o.fmts)
+		o.list = buildFormatList(o.fmts, o.caps)
 		return o, nil
 	case "g":
 		// Commit padding text inputs before submitting.
@@ -227,7 +272,7 @@ func (o *optionsScreen) updateAdvanced(msg tea.Msg) (screen, tea.Cmd) {
 		}
 		o.list = buildAdvancedList(o.adv)
 	case "up", "k":
-		if o.advField > 0 {
+		if o.advField > o.firstAdvField() {
 			o.advField--
 			o.padInputs = buildPadInputs(o.adv)
 			o.list = buildAdvancedList(o.adv)
@@ -293,17 +338,22 @@ func (o *optionsScreen) View() string {
 // viewAdvanced renders the advanced options screen manually so we can mix
 // list rows (booleans) with text inputs (padding) in a single view.
 func (o *optionsScreen) viewAdvanced() string {
-	rows := []struct {
+	type advRow struct {
 		field advancedField
 		label string
 		value string
-	}{
-		{advFieldDiarize, "Speaker diarization", boolMark(o.adv.Diarize)},
-		{advFieldRemoveFillers, "Remove filler words", boolMark(o.adv.RemoveFillers)},
-		{advFieldFillerLines, "Filler word lines (DaVinci)", boolMark(o.adv.FillerLines)},
-		{advFieldPaddingStart, "Padding start (ms)", o.padInputs[0].View()},
-		{advFieldPaddingEnd, "Padding end (ms)", o.padInputs[1].View()},
 	}
+	var rows []advRow
+	// Diarization is only offered by providers that support it.
+	if o.caps.Diarization {
+		rows = append(rows, advRow{advFieldDiarize, "Speaker diarization", boolMark(o.adv.Diarize)})
+	}
+	rows = append(rows,
+		advRow{advFieldRemoveFillers, "Remove filler words", boolMark(o.adv.RemoveFillers)},
+		advRow{advFieldFillerLines, "Filler word lines (DaVinci)", boolMark(o.adv.FillerLines)},
+		advRow{advFieldPaddingStart, "Padding start (ms)", o.padInputs[0].View()},
+		advRow{advFieldPaddingEnd, "Padding end (ms)", o.padInputs[1].View()},
+	)
 	var sb strings.Builder
 	for _, r := range rows {
 		cursor := "  "
@@ -386,12 +436,19 @@ func buildLanguageList() list.Model {
 	return l
 }
 
-func buildFormatList(selected map[domain.OutputFormat]bool) list.Model {
+// buildFormatList builds the output-format picker. Timestamp-based formats
+// (srt, word_srt, davinci_srt) are omitted when the model can't produce
+// word-level timestamps — only plain text is offered then.
+func buildFormatList(selected map[domain.OutputFormat]bool, caps ports.ModelCapabilities) list.Model {
 	items := []list.Item{
 		simpleItem{id: string(domain.FormatText), label: formatLabel(domain.FormatText, selected[domain.FormatText])},
-		simpleItem{id: string(domain.FormatSRT), label: formatLabel(domain.FormatSRT, selected[domain.FormatSRT])},
-		simpleItem{id: string(domain.FormatWordSRT), label: formatLabel(domain.FormatWordSRT, selected[domain.FormatWordSRT])},
-		simpleItem{id: string(domain.FormatDavinciSRT), label: formatLabel(domain.FormatDavinciSRT, selected[domain.FormatDavinciSRT])},
+	}
+	if caps.WordTimestamps {
+		items = append(items,
+			simpleItem{id: string(domain.FormatSRT), label: formatLabel(domain.FormatSRT, selected[domain.FormatSRT])},
+			simpleItem{id: string(domain.FormatWordSRT), label: formatLabel(domain.FormatWordSRT, selected[domain.FormatWordSRT])},
+			simpleItem{id: string(domain.FormatDavinciSRT), label: formatLabel(domain.FormatDavinciSRT, selected[domain.FormatDavinciSRT])},
+		)
 	}
 	l := list.New(items, list.NewDefaultDelegate(), 40, 10)
 	l.Title = "Outputs"

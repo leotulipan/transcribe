@@ -23,6 +23,11 @@ type TranscribeService interface {
     // one UIs should pre-select. Returns "" if the provider is unknown.
     DefaultModel(p domain.ProviderID) string
 
+    // Capabilities reports what a provider/model supports (word timestamps,
+    // diarization, …) so UIs can hide or disable options that won't work.
+    // ok is false when the provider isn't configured.
+    Capabilities(p domain.ProviderID, model string) (ModelCapabilities, bool)
+
     // DiscoverModels invokes the provider's live "list models" endpoint.
     // Returns an error if the provider doesn't support live discovery.
     DiscoverModels(ctx context.Context, p domain.ProviderID) ([]string, error)

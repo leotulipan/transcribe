@@ -29,6 +29,9 @@ func (f *fakeService) DiscoverModels(context.Context, domain.ProviderID) ([]stri
 func (f *fakeService) Submit(context.Context, domain.Request) (ports.Job, error) {
 	return nil, errors.New("not implemented")
 }
+func (f *fakeService) Capabilities(domain.ProviderID, string) (ports.ModelCapabilities, bool) {
+	return ports.ModelCapabilities{WordTimestamps: true, Diarization: true}, true
+}
 
 func TestFirstFileArg(t *testing.T) {
 	dir := t.TempDir()

@@ -8,7 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/leotulipan/transcribe/internal/core/domain"
+	"github.com/leotulipan/transcribe/internal/ports"
 )
+
+// allCaps is a permissive capability set for format-list tests that don't care
+// about gating.
+var allCaps = ports.ModelCapabilities{WordTimestamps: true, Diarization: true}
 
 // sendOptionsKey sends a key to an optionsScreen and returns the updated screen.
 func sendOptionsKey(o *optionsScreen, k tea.KeyType) (*optionsScreen, tea.Cmd) {
@@ -27,7 +32,7 @@ func TestOptions_FormatsIncludeWordSRT(t *testing.T) {
 		step: stepFormats,
 		fmts: map[domain.OutputFormat]bool{},
 	}
-	o.list = buildFormatList(o.fmts)
+	o.list = buildFormatList(o.fmts, allCaps)
 
 	// Collect all item IDs from the list.
 	var ids []string
@@ -46,13 +51,28 @@ func TestOptions_FormatsOrder(t *testing.T) {
 		step: stepFormats,
 		fmts: map[domain.OutputFormat]bool{},
 	}
-	o.list = buildFormatList(o.fmts)
+	o.list = buildFormatList(o.fmts, allCaps)
 	items := o.list.Items()
 	require.Len(t, items, 4)
 	assert.Equal(t, string(domain.FormatText), items[0].(simpleItem).id)
 	assert.Equal(t, string(domain.FormatSRT), items[1].(simpleItem).id)
 	assert.Equal(t, string(domain.FormatWordSRT), items[2].(simpleItem).id)
 	assert.Equal(t, string(domain.FormatDavinciSRT), items[3].(simpleItem).id)
+}
+
+func TestOptions_FormatsFilteredWhenTextOnly(t *testing.T) {
+	// A model without word timestamps (e.g. Gemini/Mistral) must offer text only.
+	o := &optionsScreen{
+		step: stepFormats,
+		fmts: map[domain.OutputFormat]bool{},
+	}
+	o.list = buildFormatList(o.fmts, ports.ModelCapabilities{WordTimestamps: false})
+
+	var ids []string
+	for _, item := range o.list.Items() {
+		ids = append(ids, item.(simpleItem).id)
+	}
+	require.Equal(t, []string{string(domain.FormatText)}, ids, "only text when no word timestamps")
 }
 
 func TestOptions_LanguagePickerEnumeratesCommonCodes(t *testing.T) {
@@ -83,7 +103,7 @@ func TestOptions_AdvancedScreenOpens(t *testing.T) {
 		step: stepFormats,
 		fmts: map[domain.OutputFormat]bool{domain.FormatText: true},
 	}
-	o.list = buildFormatList(o.fmts)
+	o.list = buildFormatList(o.fmts, allCaps)
 
 	// Press 'a' to enter the advanced flow.
 	next, _ := sendOptionsRune(o, 'a')

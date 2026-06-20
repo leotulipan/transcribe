@@ -20,6 +20,11 @@ func (s *fakeSvc) ListProviders() []domain.ProviderID {
 
 func (s *fakeSvc) DefaultModel(_ domain.ProviderID) string { return "whisper-large-v3" }
 
+func (s *fakeSvc) Capabilities(_ domain.ProviderID, _ string) (ports.ModelCapabilities, bool) {
+	// Mirrors Groq/OpenAI: word timestamps yes, diarization no.
+	return ports.ModelCapabilities{WordTimestamps: true}, true
+}
+
 func (s *fakeSvc) ListModels(p domain.ProviderID) ([]string, error) {
 	return []string{"whisper-large-v3", "whisper-large-v3-turbo"}, nil
 }

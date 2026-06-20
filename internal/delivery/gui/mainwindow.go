@@ -74,6 +74,16 @@ type mainWindow struct {
 	keyTermsPrompt *widget.Entry
 	speechModels   *widget.Entry
 
+	// Advanced accordion + the provider-conditional items, toggled by applyCaps.
+	advanced   *widget.Accordion
+	advOrdered []*widget.AccordionItem // full item set in display order
+	diarItem   *widget.AccordionItem   // shown only when the provider diarizes
+	hintsItem  *widget.AccordionItem   // shown only for assemblyai
+
+	// formScroll wraps the whole form so onStart can scroll the Progress
+	// section into view.
+	formScroll *container.Scroll
+
 	bar         *widget.ProgressBarInfinite
 	determinate *widget.ProgressBar
 	logRich     *widget.RichText
@@ -272,6 +282,13 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 		),
 	)
 
+	// Capture references so applyCaps can show/hide provider-specific sections.
+	// Indices match the construction order above.
+	m.advanced = advanced
+	m.advOrdered = advanced.Items
+	m.diarItem = m.advOrdered[1]  // "Diarization"
+	m.hintsItem = m.advOrdered[6] // "Provider hints (assemblyai)"
+
 	form := container.NewVBox(
 		widget.NewLabelWithStyle("File or folder", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		container.NewBorder(nil, nil, nil, container.NewHBox(browseFile, browseDir), m.pathEntry),
@@ -303,6 +320,7 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 		m.topStartBtn, m.topCancelBtn, topSettingsBtn, readmeBtn, aboutBtn,
 	)
 	scrolled := container.NewScroll(container.NewPadded(form))
+	m.formScroll = scrolled
 	w.SetContent(container.NewBorder(
 		container.NewPadded(topBar), // top
 		nil, nil, nil,
@@ -310,7 +328,13 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	))
 	w.SetCloseIntercept(m.onWindowClose)
 
-	// Trigger initial model list
+	// Re-gate options whenever the model changes (capabilities can differ per
+	// model, e.g. Groq). Set here — after the accordion exists — so the early
+	// provider.SetSelected during construction doesn't fire it against a nil
+	// accordion.
+	m.model.OnChanged = func(string) { m.applyCaps() }
+
+	// Trigger initial model list (and initial gating via applyCaps).
 	if initial := preferredProvider(providerIDs); initial != "" {
 		m.onProviderChanged(initial)
 	}
@@ -378,9 +402,77 @@ func (m *mainWindow) onProviderChanged(id string) {
 	}
 	m.model.Options = models
 	if sel := pickDefaultModel(svc.DefaultModel(domain.ProviderID(id)), models); sel != "" {
-		m.model.SetSelected(sel)
+		m.model.SetSelected(sel) // fires model.OnChanged -> applyCaps
 	}
 	m.model.Refresh()
+	m.applyCaps() // also gate when there is no model to select
+}
+
+// applyCaps reflects the selected provider/model's capabilities in the form:
+// it greys out output formats the model can't produce and hides the
+// diarization / provider-hints sections that don't apply. No-op until the
+// accordion is built. Capabilities default to permissive when unknown, leaving
+// the server-side check as the final gate.
+func (m *mainWindow) applyCaps() {
+	if m.advanced == nil {
+		return
+	}
+	provider := m.provider.Selected
+	caps := ports.ModelCapabilities{WordTimestamps: true, Diarization: true}
+	if c, ok := m.deps.Service().Capabilities(domain.ProviderID(provider), m.model.Selected); ok {
+		caps = c
+	}
+	m.applyFormatCaps(caps)
+	m.rebuildAdvanced(provider, caps)
+}
+
+// applyFormatCaps enables or greys out the SRT-family checkboxes based on
+// whether the model returns word-level timestamps. Plain text is always
+// available; if nothing else is selectable it stays checked.
+func (m *mainWindow) applyFormatCaps(caps ports.ModelCapabilities) {
+	gate := func(c *widget.Check, allowed bool) {
+		if allowed {
+			c.Enable()
+			return
+		}
+		if c.Checked {
+			c.SetChecked(false)
+		}
+		c.Disable()
+	}
+	gate(m.fmtSRT, caps.WordTimestamps)
+	gate(m.fmtWordSRT, caps.WordTimestamps)
+	gate(m.fmtDavinci, caps.WordTimestamps)
+	if !caps.WordTimestamps && !m.fmtText.Checked {
+		m.fmtText.SetChecked(true)
+	}
+}
+
+// rebuildAdvanced rewrites the accordion's visible items: the Diarization
+// section appears only for providers that diarize, and the Provider hints
+// section only for assemblyai.
+func (m *mainWindow) rebuildAdvanced(provider string, caps ports.ModelCapabilities) {
+	if !caps.Diarization {
+		// Clear stale diarization selections so a hidden section can't submit.
+		if m.diarize.Checked {
+			m.diarize.SetChecked(false)
+		}
+		if m.speakerLabels.Checked {
+			m.speakerLabels.SetChecked(false)
+		}
+	}
+	items := make([]*widget.AccordionItem, 0, len(m.advOrdered))
+	for _, it := range m.advOrdered {
+		if it == m.diarItem && !caps.Diarization {
+			continue
+		}
+		if it == m.hintsItem && provider != string(domain.ProviderAssemblyAI) {
+			continue
+		}
+		items = append(items, it)
+	}
+	m.advanced.Items = items
+	m.advanced.Refresh()
 }
 
 // pickDefaultModel returns the provider's DefaultModel() when it appears in
@@ -440,6 +532,12 @@ func (m *mainWindow) onStart() {
 		m.logf("batch: %d files to process", len(files))
 	}
 	m.startNextJob(formats)
+
+	// Bring the Progress section (and the activity log) into view so the user
+	// sees progress without scrolling the form themselves.
+	if m.formScroll != nil {
+		m.formScroll.ScrollToBottom()
+	}
 }
 
 // startNextJob submits the file at m.batchIndex and arranges for the next
@@ -806,6 +904,11 @@ func (m *mainWindow) lockUI(lock bool) {
 		} else {
 			e.Enable()
 		}
+	}
+	// Unlocking re-enables every format checkbox above; re-apply capability
+	// gating so unsupported formats stay greyed for the current provider/model.
+	if !lock {
+		m.applyCaps()
 	}
 }
 

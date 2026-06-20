@@ -37,6 +37,9 @@ func (s *stubService) DiscoverModels(_ context.Context, _ domain.ProviderID) ([]
 func (s *stubService) Submit(_ context.Context, _ domain.Request) (ports.Job, error) {
 	return nil, nil
 }
+func (s *stubService) Capabilities(_ domain.ProviderID, _ string) (ports.ModelCapabilities, bool) {
+	return ports.ModelCapabilities{}, true
+}
 
 func newStubDeps() Deps {
 	svc := &stubService{

@@ -74,6 +74,17 @@ func (s *Service) DefaultModel(id domain.ProviderID) string {
 	return p.DefaultModel()
 }
 
+// Capabilities returns the model-level capabilities for a provider/model so the
+// delivery layer can gate UI options. ok is false when the provider isn't wired
+// up (no API key at startup).
+func (s *Service) Capabilities(id domain.ProviderID, model string) (ports.ModelCapabilities, bool) {
+	p, ok := s.deps.Providers[id]
+	if !ok {
+		return ports.ModelCapabilities{}, false
+	}
+	return p.Capabilities(model), true
+}
+
 func (s *Service) ListModels(id domain.ProviderID) ([]string, error) {
 	p, err := providerFor(s.deps, id)
 	if err != nil {

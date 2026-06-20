@@ -23,6 +23,9 @@ func (rootStubService) DiscoverModels(_ context.Context, _ domain.ProviderID) ([
 	return nil, nil
 }
 func (rootStubService) Submit(_ context.Context, _ domain.Request) (ports.Job, error) { return nil, nil }
+func (rootStubService) Capabilities(_ domain.ProviderID, _ string) (ports.ModelCapabilities, bool) {
+	return ports.ModelCapabilities{}, true
+}
 
 // executeRootWithProbe builds a root command, attaches a no-op probe subcommand that
 // fires PersistentPreRunE, then executes with the given args. Using a dedicated
