@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-06-20
+
 ### Added
+- macOS builds: official Apple Silicon (`arm64`) and Intel (`amd64`)
+  binaries are now published on the Releases page alongside the Windows
+  installer and portable zip.
+- CI/release: GitHub Actions now build and test on Windows + macOS for every
+  push, and a `v*` tag triggers a full multi-platform release (installer,
+  zip, macOS tarballs, SHA256 sidecars, auto-generated notes). See
+  `docs/release/`.
 - Diarization: speaker IDs from providers are normalized so ElevenLabs'
   `speaker_0`/`speaker_1` render as `[Speaker 0]`/`[Speaker 1]` instead of
   `[Speaker speaker_0]`. AssemblyAI's `A`/`B` pass through unchanged.
@@ -201,7 +210,8 @@ only the Go binary at `bin/transcribe.exe` + `bin/transcribe-gui.exe`.
 ### Changed
 - Moved from individual API scripts to unified CLI tool
 
-[Unreleased]: https://github.com/leotulipan/transcribe/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/leotulipan/transcribe/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/leotulipan/transcribe/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/leotulipan/transcribe/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/leotulipan/transcribe/compare/v0.2.0...v0.9.0
 [0.2.0]: https://github.com/leotulipan/transcribe/compare/v0.1.4...v0.2.0
