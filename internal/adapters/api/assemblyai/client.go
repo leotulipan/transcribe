@@ -173,11 +173,34 @@ func (c *Client) uploadFile(ctx context.Context, path string) (string, error) {
 	return uploadURL, err
 }
 
+// buildSpeechModels assembles AssemblyAI's ordered `speech_models` fallback
+// array. It starts from the explicit fallback list (if any) or the single
+// selected model, always ensures fallbackModel is the final entry, and dedupes
+// while preserving order. AssemblyAI's official param is the plural array; the
+// singular `speech_model` is no longer sent.
+func buildSpeechModels(primary string, fallbacks []string) []string {
+	src := fallbacks
+	if len(src) == 0 {
+		src = []string{primary}
+	}
+	src = append(append([]string{}, src...), fallbackModel)
+	seen := make(map[string]bool, len(src))
+	out := make([]string, 0, len(src))
+	for _, m := range src {
+		if m == "" || seen[m] {
+			continue
+		}
+		seen[m] = true
+		out = append(out, m)
+	}
+	return out
+}
+
 // submitTranscript posts a transcript request and returns the transcript ID.
 func (c *Client) submitTranscript(ctx context.Context, audioURL, model string, opts ports.ProviderOpts) (string, error) {
 	body := map[string]interface{}{
 		"audio_url":     audioURL,
-		"speech_model":  model,
+		"speech_models": buildSpeechModels(model, opts.SpeechModels),
 		"language_code": opts.Language,
 	}
 	if opts.Language == "" {
@@ -192,9 +215,6 @@ func (c *Client) submitTranscript(ctx context.Context, audioURL, model string, o
 	}
 	if len(opts.KeyTerms) > 0 {
 		body["keyterms_prompt"] = opts.KeyTerms
-	}
-	if len(opts.SpeechModels) > 0 {
-		body["speech_models"] = opts.SpeechModels
 	}
 	payload, err := json.Marshal(body)
 	if err != nil {

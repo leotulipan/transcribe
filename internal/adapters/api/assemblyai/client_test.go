@@ -215,6 +215,51 @@ func TestAssemblyAI_RequestIncludesSpeechModels(t *testing.T) {
 	require.Equal(t, "universal-2", raw[1])
 }
 
+func TestAssemblyAI_SpeechModelsDefaultsToFallback(t *testing.T) {
+	// With no explicit fallback list, the selected model is sent followed by the
+	// universal-2 fallback, and the deprecated singular `speech_model` is absent.
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "universal-3-pro"},
+	)
+	require.NoError(t, err)
+
+	_, hasSingular := got["speech_model"]
+	require.False(t, hasSingular, "deprecated singular speech_model must not be sent")
+
+	raw, ok := got["speech_models"].([]interface{})
+	require.True(t, ok, "speech_models must be an array")
+	require.Equal(t, []interface{}{"universal-3-pro", "universal-2"}, raw)
+}
+
+func TestAssemblyAI_SpeechModelsNoDuplicateFallback(t *testing.T) {
+	// When the selected model already is the fallback, it must not be duplicated.
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "universal-2"},
+	)
+	require.NoError(t, err)
+	raw, ok := got["speech_models"].([]interface{})
+	require.True(t, ok)
+	require.Equal(t, []interface{}{"universal-2"}, raw)
+}
+
 func TestAssemblyAI_NoSpeakersExpectedWhenSpeakerLabelsFalse(t *testing.T) {
 	var got map[string]interface{}
 	srv := captureTranscriptPayload(t, &got)

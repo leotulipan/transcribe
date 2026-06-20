@@ -55,6 +55,11 @@ func Models() []string {
 
 func DefaultModel() string { return "universal-3-pro" }
 
+// fallbackModel is appended to every request's speech_models array so a job
+// still succeeds if the chosen model is unavailable. The GUI/TUI have no
+// fallback picker, so this guarantees a resilient default for every provider.
+const fallbackModel = "universal-2"
+
 func Capabilities(model string) ports.ModelCapabilities {
 	return modelCaps[model] // zero value if unknown — fail-safe
 }
