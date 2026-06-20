@@ -1,4 +1,15 @@
-name: Build and Release
+name: Release
+
+# Triggered by pushing a version tag (e.g. v0.11.0). Builds native artifacts
+# on per-OS runners (Fyne needs CGO, no cross-compile), then publishes one
+# GitHub Release with everything attached + auto-generated notes.
+#
+#   Windows (amd64)  -> Inno Setup installer + portable zip + .sha256
+#   macOS (arm64)    -> tar.gz + .sha256   (Apple Silicon)
+#   macOS (amd64)    -> tar.gz + .sha256   (Intel)
+#
+# Manual test runs: Actions tab -> Release -> Run workflow -> enter a version.
+# Artifacts are UNSIGNED — see docs/release/end-user-install-notes.md.
 
 on:
   push:
@@ -6,57 +17,145 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
-      create_release:
-        description: 'Create a GitHub release'
-        required: false
-        default: 'false'
-        type: boolean
+      version:
+        description: 'Version to build, e.g. v0.11.0 (used for manual runs without a tag)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  windows:
+    name: Windows installer (amd64)
     runs-on: windows-latest
-    
+    env:
+      CGO_ENABLED: "1"
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    
-    - name: Install UV
-      uses: astral-sh/setup-uv@v4
-      with:
-        version: "latest"
-    
-    - name: Cache UV dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/uv
-        key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-uv-
-    
-    - name: Build executable
-      run: |
-        uv run build.py
-    
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: transcribe-windows-amd64
-        path: dist/*.zip
-        retention-days: 30
-    
-    - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
-      uses: softprops/action-gh-release@v1
-      with:
-        files: dist/*.zip
-        tag_name: ${{ github.ref_name || format('manual-{0}', github.run_number) }}
-        draft: false
-        prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = if ($env:GITHUB_REF -like 'refs/tags/*') { $env:GITHUB_REF_NAME } else { '${{ inputs.version }}' }
+          $v = $v.TrimStart('v')
+          "version=$v" >> $env:GITHUB_OUTPUT
+          Write-Host "Building version $v"
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer + binaries
+        shell: pwsh
+        run: ./scripts/build-installer.ps1 -Version ${{ steps.ver.outputs.version }}
+
+      - name: Package portable zip
+        shell: pwsh
+        run: |
+          $v = '${{ steps.ver.outputs.version }}'
+          $zip = "dist/transcribe-windows-amd64-v$v.zip"
+          Compress-Archive -Path dist/transcribe.exe, dist/transcribe-gui.exe, README.md, LICENSE -DestinationPath $zip -Force
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          Set-Content -Path "$zip.sha256" -Value "$hash  transcribe-windows-amd64-v$v.zip" -Encoding ASCII -NoNewline
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            dist/transcribe-setup-v*.exe
+            dist/transcribe-setup-v*.exe.sha256
+            dist/transcribe-windows-amd64-v*.zip
+            dist/transcribe-windows-amd64-v*.zip.sha256
+          retention-days: 14
+          if-no-files-found: error
+
+  macos:
+    name: macOS (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14    # Apple Silicon
+          - arch: amd64
+            runner: macos-13    # Intel
+    env:
+      CGO_ENABLED: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then V="$GITHUB_REF_NAME"; else V="${{ inputs.version }}"; fi
+          V="${V#v}"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Building version $V"
+
+      - name: Build (transcribe, ${{ matrix.arch }})
+        run: |
+          mkdir -p pkg
+          go build -ldflags "-X main.version=${{ steps.ver.outputs.version }} -s -w" -o pkg/transcribe ./cmd/transcribe
+          cp README.md LICENSE pkg/
+
+      - name: Package tarball
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          TAR="transcribe-macos-${{ matrix.arch }}-v${V}.tar.gz"
+          mkdir -p dist
+          tar -C pkg -czf "dist/${TAR}" transcribe README.md LICENSE
+          ( cd dist && shasum -a 256 "${TAR}" > "${TAR}.sha256" )
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: |
+            dist/transcribe-macos-*.tar.gz
+            dist/transcribe-macos-*.tar.gz.sha256
+          retention-days: 14
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [ windows, macos ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f | sort
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          name: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
