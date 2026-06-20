@@ -33,6 +33,31 @@ output directory you specify.
 You can also right-click any supported audio/video file in Explorer and
 choose **"Transcribe with…"** to open it directly in the GUI.
 
+## Quick start (macOS)
+
+The macOS download is a single `transcribe` binary that bundles the command
+line, the terminal UI, and the GUI.
+
+1. From the [Releases page](https://github.com/leotulipan/transcribe/releases),
+   download the build for your Mac:
+   - Apple Silicon (M-series): **`transcribe-macos-arm64-vX.Y.Z.tar.gz`**
+   - Intel: **`transcribe-macos-amd64-vX.Y.Z.tar.gz`**
+2. Extract it and move it onto your PATH, then clear the Gatekeeper
+   quarantine flag (the binary is unsigned):
+   ```bash
+   tar -xzf transcribe-macos-arm64-vX.Y.Z.tar.gz
+   sudo mv transcribe /usr/local/bin/
+   xattr -dr com.apple.quarantine /usr/local/bin/transcribe
+   ```
+3. Run it:
+   - `transcribe "audio.mp3"` — command line
+   - `transcribe` — terminal UI
+   - `transcribe --ui=gui` — graphical window
+4. Install ffmpeg for video and large files: `brew install ffmpeg`.
+
+Set your API keys with `transcribe --ui=gui` (Settings dialog) or via the
+config file in `~/Library/Application Support/transcribe/`.
+
 ## Getting API keys
 
 You need at least one API key. Click any of these links from the in-app
@@ -224,6 +249,10 @@ If you hit a limit anyway, switch providers or pass `--size-threshold`
 - **Windows Defender blocks the exe** — the installer is unsigned; allow
   it once via the SmartScreen "More info" → "Run anyway" link, or run
   from a Command Prompt to confirm it's the real tool.
+- **macOS "cannot be opened" / "unidentified developer"** — the binary is
+  unsigned; clear the quarantine flag with
+  `xattr -dr com.apple.quarantine /usr/local/bin/transcribe`, or right-click
+  it in Finder → **Open** → **Open** once.
 
 ## Privacy
 
@@ -270,6 +299,14 @@ go test ./...
 pwsh scripts/build-installer.ps1 -Version 0.10.0
 # Output: dist/transcribe-setup-v0.10.0.exe
 ```
+
+### Releasing
+
+Releases are built and published by GitHub Actions when a `v*` tag is
+pushed — Windows (installer + portable zip) and macOS (Apple Silicon +
+Intel) binaries are attached automatically. See
+[`docs/release/release-sop.md`](docs/release/release-sop.md) for the
+step-by-step procedure and the one-time repo settings.
 
 ### Project layout
 
