@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.11.0] - 2026-06-20
+### Fixed
+- AssemblyAI: requests now send the official `speech_models` array instead of
+  the deprecated singular `speech_model`, which AssemblyAI was rejecting. The
+  selected model is always followed by `universal-2` as a resilience fallback
+  (deduped), so a job still succeeds if the chosen model is unavailable.
+- OpenAI: the model picker now lists only speech-to-text models
+  (`whisper*` / `*-transcribe*`) instead of every model the key can access
+  (chat, embeddings, TTS…). Falls back to the hardcoded STT list if none match.
+
+### Changed
+- GUI/TUI: option lists are now capability-aware. Output formats that need
+  word-level timestamps (`srt`, `word_srt`, `davinci_srt`) are greyed out / hidden
+  for text-only models (Gemini, Mistral); the Diarization section is hidden for
+  providers that don't diarize; and the "Provider hints" section shows only for
+  AssemblyAI. A new `Capabilities` service method backs both UIs.
+- GUI: clicking Start now scrolls the form to the Progress section so progress
+  is visible without manual scrolling.
 
 ### Added
 - macOS builds: official Apple Silicon (`arm64`) and Intel (`amd64`)
