@@ -6,14 +6,23 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/leotulipan/transcribe/internal/adapters/api/internal/discover"
 	"github.com/leotulipan/transcribe/internal/core/domain"
 )
 
+// isSTTModel reports whether an OpenAI model id is speech-to-text capable.
+// OpenAI's /v1/models returns chat, embedding, image and TTS models too; only
+// the whisper / *-transcribe families do transcription.
+func isSTTModel(id string) bool {
+	return strings.Contains(id, "whisper") || strings.Contains(id, "transcribe")
+}
+
 // DiscoverModels lists models via GET /v1/models. OpenAI returns every model
-// the key has access to, including chat/embedding/whisper. We don't filter
-// here — the user picks the right one for transcription.
+// the key has access to (chat, embeddings, TTS, images…), so we filter to the
+// STT models. If none match, fall back to the hardcoded list so the picker is
+// never empty.
 func (c *Client) DiscoverModels(ctx context.Context) ([]string, error) {
 	ctx, cancel := context.WithTimeout(ctx, checkKeyTimeout)
 	defer cancel()
@@ -45,7 +54,12 @@ func (c *Client) DiscoverModels(ctx context.Context) ([]string, error) {
 	}
 	ids := make([]string, 0, len(payload.Data))
 	for _, m := range payload.Data {
-		ids = append(ids, m.ID)
+		if isSTTModel(m.ID) {
+			ids = append(ids, m.ID)
+		}
+	}
+	if len(ids) == 0 {
+		return Models(), nil
 	}
 	return discover.SortUnique(ids), nil
 }
