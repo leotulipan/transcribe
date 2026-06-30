@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -38,6 +39,33 @@ func IsRetryable(err error) bool {
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
 		return true
+	}
+	return isTransientConnError(err)
+}
+
+// transientConnMarkers are substrings of connection-level failures where the
+// server dropped the connection before sending a response, so retrying on a
+// fresh connection is safe. The HTTP/2 GOAWAY error returned by net/http's
+// bundled http2 transport (`http2GoAwayError`) is unexported and is not a
+// net.Error, so we have to match it by message. "server_shutting_down" is the
+// debug payload providers such as ElevenLabs send while a node is recycled.
+var transientConnMarkers = []string{
+	"GOAWAY",
+	"server_shutting_down",
+	"connection reset by peer",
+	"broken pipe",
+	"unexpected EOF",
+}
+
+// isTransientConnError reports whether err is a recoverable connection-level
+// failure that warrants a retry. It matches on the error message because the
+// underlying types (e.g. the bundled http2 GoAwayError) are unexported.
+func isTransientConnError(err error) bool {
+	msg := err.Error()
+	for _, marker := range transientConnMarkers {
+		if strings.Contains(msg, marker) {
+			return true
+		}
 	}
 	return false
 }

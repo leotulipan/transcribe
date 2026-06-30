@@ -9,11 +9,13 @@ import (
 // AssemblyAI uses a two-step flow: upload then poll.
 // Word timestamps are milliseconds in the response.
 //
-// Model selection: AssemblyAI accepts either a single `speech_model` or an
-// ordered `speech_models` array with automatic fallback. The Universal /
-// SLAM family is the current recommendation; "best" and "nano" are kept so
-// existing configs and broad language coverage still work.
-// See https://www.assemblyai.com/docs/pre-recorded-audio/select-the-speech-model
+// Model selection: AssemblyAI's `speech_models` array accepts only the current
+// Universal family — `universal-3-pro` and `universal-2`. Anything else (the
+// non-pro `universal-3`, the deprecated `slam-1`, and the legacy singular
+// `speech_model` values `best`/`nano`) is rejected with HTTP 400: "speech_models
+// must be a non-empty list ... of: universal-3-pro, universal-2". We therefore
+// advertise only those two so the dropdown can never submit an invalid model.
+// See https://www.assemblyai.com/docs/pre-recorded-audio/universal-3-pro
 
 var sharedInputs = []domain.AudioFormat{
 	{Codec: "mp3"}, {Codec: "wav"}, {Codec: "mp4"}, {Codec: "m4a"},
@@ -31,25 +33,18 @@ var sttCaps = ports.ModelCapabilities{
 
 var modelCaps = map[string]ports.ModelCapabilities{
 	"universal-3-pro": sttCaps,
-	"universal-3":     sttCaps,
 	"universal-2":     sttCaps,
-	"slam-1":          sttCaps,
-	"best":            sttCaps,
-	"nano":            sttCaps,
 }
 
 // Models returns the supported model IDs in best→worst order so UIs can
-// surface the strongest option first. Universal-3 family covers EN/ES/PT/
-// FR/DE/IT; Universal-2 and the legacy "best" / "nano" provide fallback
-// language coverage. Map iteration would be random.
+// surface the strongest option first. `universal-3-pro` covers EN/ES/PT/FR/DE/
+// IT; `universal-2` provides the remaining language coverage and is also the
+// automatic fallback. These are the only values AssemblyAI's speech_models
+// array accepts. Map iteration would be random.
 func Models() []string {
 	return []string{
 		"universal-3-pro",
-		"universal-3",
 		"universal-2",
-		"slam-1",
-		"best",
-		"nano",
 	}
 }
 

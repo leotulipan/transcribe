@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-06-30
+
+### Fixed
+- AssemblyAI: the model dropdown no longer offers `universal-3` (non-pro),
+  `slam-1`, `best`, or `nano`. AssemblyAI's `speech_models` array rejects all of
+  these with HTTP 400 ("must be a non-empty list ... of: universal-3-pro,
+  universal-2"), so selecting `universal-3` from the picker failed every encode.
+  Only the two accepted models — `universal-3-pro` and `universal-2` — are now
+  advertised.
+- Retry: transient connection-level failures where the server closed the
+  connection before responding (HTTP/2 `GOAWAY` during a graceful node shutdown,
+  e.g. ElevenLabs' `server_shutting_down`, plus connection-reset / broken-pipe /
+  unexpected-EOF) are now classified as retryable, so a request is retried on a
+  fresh connection instead of failing outright.
+
 ## [0.11.0] - 2026-06-20
 
 ### Added
