@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **AssemblyAI defaults to automatic model selection.** The default model is now
+  `auto`, which omits `speech_models` from the request so AssemblyAI applies its
+  current best model — `universal-3-5-pro`, falling back to `universal-2` for
+  languages outside its 18. Pinning a specific model still works and still gets
+  `universal-2` appended as a safety net.
+- **`universal-3-pro` is retired.** AssemblyAI stops accepting it on 2026-09-02.
+  It is no longer offered in the model list; existing configs, batch templates,
+  and `--speech-models` values naming it are automatically upgraded to
+  `universal-3-5-pro` with a warning.
+- AssemblyAI results now record the model the API actually used, rather than
+  `auto`, in the sidecar JSON.
+
 ## [0.11.1] - 2026-06-30
 
 ### Fixed

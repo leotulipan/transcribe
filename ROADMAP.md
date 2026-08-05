@@ -157,7 +157,7 @@ Surfaced after sweeping the Python `cli.py` (preserved at `G:\Meine Ablage\_2_Ar
 ### 5c. Provider tuning
 - `--num-speakers` (1..32). AssemblyAI + ElevenLabs `speakers_expected` payload field. Gate on `--diarize`.
 - `--keyterms-prompt` (string, AssemblyAI). Comma list. Pass through to AssemblyAI request.
-- `--speech-models` (string, AssemblyAI). Fallback model list, e.g. `universal-3-pro,universal-2`. Pass through.
+- `--speech-models` (string, AssemblyAI). Fallback model list, e.g. `universal-3-5-pro,universal-2`. Pass through. Empty means auto (the key is omitted).
 
 ### 5d. Audio pipeline
 - `--size-threshold` (float MB, default 100). Files under threshold skip conversion if format compatible. Wire in `internal/core/services/audio.go` (or equivalent).

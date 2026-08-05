@@ -153,12 +153,19 @@ The installer puts `transcribe.exe` on your PATH. Open any terminal:
 ```
 transcribe "C:\path\to\audio.mp3"                       # default: text + srt
 transcribe "C:\path\to\folder" --api elevenlabs         # batch a folder
-transcribe sample.mp3 --api assemblyai --model universal-3-pro
+transcribe sample.mp3 --api assemblyai --model universal-3-5-pro
 transcribe sample.mp4 --api elevenlabs --davinci-srt --silent-portion-ms 1500
 transcribe sample.mp3 --api groq --language de
 transcribe --help                                       # full flag list
 transcribe -V                                           # version
 ```
+
+AssemblyAI defaults to `auto`, which omits the model from the request so
+AssemblyAI always applies its current best model (`universal-3-5-pro`, falling
+back to `universal-2` for languages it does not cover). Pin a model only when
+you need a specific one. The retired `universal-3-pro` is accepted and
+silently upgraded to `universal-3-5-pro`, with a warning — AssemblyAI stops
+accepting it on 2026-09-02.
 
 Notable flags: `-a/--api`, `-l/--language`, `-o/--output text,srt,word_srt,davinci_srt`,
 `-D/--davinci-srt`, `-m/--model`, `--diarize`, `--speaker-labels`,

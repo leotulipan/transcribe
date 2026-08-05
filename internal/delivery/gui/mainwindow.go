@@ -193,7 +193,7 @@ func newMainWindow(a fyne.App, ctx context.Context, d *Deps) *mainWindow {
 	m.keyTermsPrompt = widget.NewEntry()
 	m.keyTermsPrompt.SetPlaceHolder("term1,term2 (assemblyai)")
 	m.speechModels = widget.NewEntry()
-	m.speechModels.SetPlaceHolder("e.g. universal-3-pro,universal-2 — tried in order, falls back on language mismatch (assemblyai)")
+	m.speechModels.SetPlaceHolder("leave empty for auto — or e.g. universal-3-5-pro,universal-2, tried in order (assemblyai)")
 
 	// Progress + log
 	m.bar = widget.NewProgressBarInfinite()
