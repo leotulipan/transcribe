@@ -369,3 +369,73 @@ func TestAssemblyAI_NoSpeakersExpectedWhenSpeakerLabelsFalse(t *testing.T) {
 	_, hasSpeakerLabels := got["speaker_labels"]
 	require.False(t, hasSpeakerLabels, "speaker_labels must not appear when SpeakerLabels=false")
 }
+
+// recordingLogger captures Warn calls so tests can assert on user-facing
+// deprecation notices.
+type recordingLogger struct{ warns []string }
+
+func (l *recordingLogger) Debug(msg string, kv ...any) {}
+func (l *recordingLogger) Info(msg string, kv ...any)  {}
+func (l *recordingLogger) Warn(msg string, kv ...any)  { l.warns = append(l.warns, msg) }
+func (l *recordingLogger) Error(msg string, kv ...any) {}
+
+func TestAssemblyAI_WarnsOnDeprecatedModel(t *testing.T) {
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	log := &recordingLogger{}
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient).WithLogger(log)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "universal-3-pro"},
+	)
+	require.NoError(t, err)
+
+	require.Len(t, log.warns, 1, "exactly one deprecation warning per request")
+	require.Contains(t, log.warns[0], "universal-3-pro")
+	require.Contains(t, log.warns[0], "universal-3-5-pro")
+	require.Contains(t, log.warns[0], "2026-09-02")
+}
+
+func TestAssemblyAI_NoWarnForCurrentModel(t *testing.T) {
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	log := &recordingLogger{}
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient).WithLogger(log)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: AutoModel},
+	)
+	require.NoError(t, err)
+	require.Empty(t, log.warns)
+}
+
+func TestAssemblyAI_NilLoggerIsSafe(t *testing.T) {
+	// tui/wizard.go constructs a client without a logger; a deprecated model
+	// must remap silently rather than panic.
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "universal-3-pro"},
+	)
+	require.NoError(t, err)
+	raw, ok := got["speech_models"].([]interface{})
+	require.True(t, ok)
+	require.Equal(t, []interface{}{"universal-3-5-pro", "universal-2"}, raw)
+}

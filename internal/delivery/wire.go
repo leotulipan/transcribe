@@ -28,7 +28,7 @@ func BuildService(cfg ports.Config, log ports.Logger) (ports.TranscribeService, 
 	providers := map[domain.ProviderID]ports.Provider{}
 	if k := cfg.APIKeys[domain.ProviderGroq];       k != "" { providers[domain.ProviderGroq]       = groq.New(k, httpClient) }
 	if k := cfg.APIKeys[domain.ProviderOpenAI];     k != "" { providers[domain.ProviderOpenAI]     = openai.New(k, httpClient) }
-	if k := cfg.APIKeys[domain.ProviderAssemblyAI]; k != "" { providers[domain.ProviderAssemblyAI] = assemblyai.New(k, httpClient) }
+	if k := cfg.APIKeys[domain.ProviderAssemblyAI]; k != "" { providers[domain.ProviderAssemblyAI] = assemblyai.New(k, httpClient).WithLogger(log) }
 	if k := cfg.APIKeys[domain.ProviderElevenLabs]; k != "" { providers[domain.ProviderElevenLabs] = elevenlabs.New(k, httpClient) }
 	if k := cfg.APIKeys[domain.ProviderGemini];     k != "" { providers[domain.ProviderGemini]     = gemini.New(k, httpClient) }
 	if k := cfg.APIKeys[domain.ProviderMistral];    k != "" { providers[domain.ProviderMistral]    = mistral.New(k, httpClient) }

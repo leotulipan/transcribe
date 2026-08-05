@@ -35,6 +35,7 @@ type Client struct {
 	apiKey   string
 	endpoint string
 	http     *http.Client
+	log      ports.Logger // optional; nil disables warnings
 }
 
 func New(apiKey string, h *http.Client) *Client {
@@ -46,6 +47,14 @@ func NewWithEndpoint(apiKey, endpoint string, h *http.Client) *Client {
 		h = &http.Client{Timeout: requestTimeout}
 	}
 	return &Client{apiKey: apiKey, endpoint: endpoint, http: h}
+}
+
+// WithLogger attaches a logger for non-fatal notices such as model
+// deprecation warnings. Optional: a nil logger simply silences them, which is
+// why callers like the TUI wizard can skip it.
+func (c *Client) WithLogger(l ports.Logger) *Client {
+	c.log = l
+	return c
 }
 
 var _ ports.Provider = (*Client)(nil)
@@ -213,12 +222,37 @@ func buildSpeechModels(primary string, fallbacks []string) []string {
 	return out
 }
 
+// warnDeprecated logs one notice per request when the caller named a retired
+// model. The request itself still succeeds — buildSpeechModels remaps the ID —
+// but the user needs to know their config is stale.
+func (c *Client) warnDeprecated(primary string, fallbacks []string) {
+	if c.log == nil {
+		return
+	}
+	_, remapped := NormalizeModels(append([]string{primary}, fallbacks...))
+	if len(remapped) == 0 {
+		return
+	}
+	seen := make(map[string]bool, len(remapped))
+	for _, old := range remapped {
+		if seen[old] {
+			continue
+		}
+		seen[old] = true
+		c.log.Warn(fmt.Sprintf(
+			"%s is deprecated (AssemblyAI retires it 2026-09-02); using %s. Update your config or --speech-models.",
+			old, deprecatedModels[old],
+		))
+	}
+}
+
 // submitTranscript posts a transcript request and returns the transcript ID.
 func (c *Client) submitTranscript(ctx context.Context, audioURL, model string, opts ports.ProviderOpts) (string, error) {
 	body := map[string]interface{}{
 		"audio_url":     audioURL,
 		"language_code": opts.Language,
 	}
+	c.warnDeprecated(model, opts.SpeechModels)
 	if models := buildSpeechModels(model, opts.SpeechModels); len(models) > 0 {
 		body["speech_models"] = models
 	}
