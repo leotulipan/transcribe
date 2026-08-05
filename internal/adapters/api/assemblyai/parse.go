@@ -16,6 +16,7 @@ type transcriptResponse struct {
 	Error         string  `json:"error"`
 	Text          string  `json:"text"`
 	LanguageCode  string  `json:"language_code"`
+	SpeechModel   string  `json:"speech_model"`   // model actually used; echoed by the API
 	AudioDuration float64 `json:"audio_duration"` // seconds
 	Words         []aWord `json:"words"`
 }
@@ -34,6 +35,12 @@ func parse(data []byte, model string) (*domain.Result, error) {
 	}
 	if resp.Status == "error" {
 		return nil, fmt.Errorf("assemblyai transcription error: %s", resp.Error)
+	}
+	// In auto mode we never named a model, so report the one AssemblyAI ran.
+	// The echo can carry legacy labels (older responses say "best"); we record
+	// it verbatim as information and never feed it back into a request.
+	if model == AutoModel && resp.SpeechModel != "" {
+		model = resp.SpeechModel
 	}
 	res := &domain.Result{
 		Provider: domain.ProviderAssemblyAI,

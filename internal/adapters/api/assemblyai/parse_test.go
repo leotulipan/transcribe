@@ -40,3 +40,29 @@ func TestParse_BadJSON(t *testing.T) {
 	_, err := parse([]byte("{bad json}"), "best")
 	require.Error(t, err)
 }
+
+func TestParse_AutoRecordsActualModel(t *testing.T) {
+	// In auto mode we never told the API which model to use, so the result
+	// must name whatever it actually ran rather than the "auto" sentinel.
+	data := []byte(`{"id":"x","status":"completed","text":"hi","language_code":"en","speech_model":"universal-3-5-pro","audio_duration":1}`)
+	r, err := parse(data, AutoModel)
+	require.NoError(t, err)
+	require.Equal(t, "universal-3-5-pro", r.Model)
+}
+
+func TestParse_AutoWithoutEchoKeepsSentinel(t *testing.T) {
+	// Older responses omit speech_model; the sentinel is the honest fallback.
+	data := []byte(`{"id":"x","status":"completed","text":"hi","language_code":"en","audio_duration":1}`)
+	r, err := parse(data, AutoModel)
+	require.NoError(t, err)
+	require.Equal(t, AutoModel, r.Model)
+}
+
+func TestParse_PinnedModelIgnoresEcho(t *testing.T) {
+	// When the user pinned a model, the requested value is what we report —
+	// the echo can carry legacy labels like "best".
+	data := []byte(`{"id":"x","status":"completed","text":"hi","language_code":"en","speech_model":"best","audio_duration":1}`)
+	r, err := parse(data, "universal-2")
+	require.NoError(t, err)
+	require.Equal(t, "universal-2", r.Model)
+}
