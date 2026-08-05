@@ -173,12 +173,29 @@ func (c *Client) uploadFile(ctx context.Context, path string) (string, error) {
 	return uploadURL, err
 }
 
-// buildSpeechModels assembles AssemblyAI's ordered `speech_models` fallback
-// array. It starts from the explicit fallback list (if any) or the single
-// selected model, always ensures fallbackModel is the final entry, and dedupes
-// while preserving order. AssemblyAI's official param is the plural array; the
+// buildSpeechModels assembles AssemblyAI's ordered `speech_models` array, or
+// returns nil to signal that the key must be omitted entirely.
+//
+// Omission is the default path: with the AutoModel sentinel and no explicit
+// fallback list, AssemblyAI applies its own current default chain
+// (universal-3-5-pro then universal-2) so we never ship a code change when
+// they promote a new flagship.
+//
+// When the caller does pin models, we keep the historical behavior: start
+// from the explicit fallback list (else the single selected model), always
+// append fallbackModel last as a language-coverage safety net, and dedupe
+// while preserving order. Deprecated IDs are remapped first so a stale config
+// never reaches the API. AssemblyAI's official param is the plural array; the
 // singular `speech_model` is no longer sent.
 func buildSpeechModels(primary string, fallbacks []string) []string {
+	normalizedPrimary, _ := NormalizeModels([]string{primary})
+	primary = normalizedPrimary[0]
+	fallbacks, _ = NormalizeModels(fallbacks)
+
+	if len(fallbacks) == 0 && (primary == AutoModel || primary == "") {
+		return nil // omit speech_models — let AssemblyAI choose
+	}
+
 	src := fallbacks
 	if len(src) == 0 {
 		src = []string{primary}
@@ -187,7 +204,7 @@ func buildSpeechModels(primary string, fallbacks []string) []string {
 	seen := make(map[string]bool, len(src))
 	out := make([]string, 0, len(src))
 	for _, m := range src {
-		if m == "" || seen[m] {
+		if m == "" || m == AutoModel || seen[m] {
 			continue
 		}
 		seen[m] = true
@@ -200,8 +217,10 @@ func buildSpeechModels(primary string, fallbacks []string) []string {
 func (c *Client) submitTranscript(ctx context.Context, audioURL, model string, opts ports.ProviderOpts) (string, error) {
 	body := map[string]interface{}{
 		"audio_url":     audioURL,
-		"speech_models": buildSpeechModels(model, opts.SpeechModels),
 		"language_code": opts.Language,
+	}
+	if models := buildSpeechModels(model, opts.SpeechModels); len(models) > 0 {
+		body["speech_models"] = models
 	}
 	if opts.Language == "" {
 		delete(body, "language_code")

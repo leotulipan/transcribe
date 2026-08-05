@@ -195,6 +195,8 @@ func TestAssemblyAI_RequestIncludesKeyTerms(t *testing.T) {
 }
 
 func TestAssemblyAI_RequestIncludesSpeechModels(t *testing.T) {
+	// An explicit fallback list is sent verbatim, with universal-2 as the
+	// safety net (already last here, so no duplicate is added).
 	var got map[string]interface{}
 	srv := captureTranscriptPayload(t, &got)
 	defer srv.Close()
@@ -205,19 +207,86 @@ func TestAssemblyAI_RequestIncludesSpeechModels(t *testing.T) {
 	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
 	_, err := c.Transcribe(context.Background(),
 		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
-		ports.ProviderOpts{Model: "best", SpeechModels: []string{"universal-3-pro", "universal-2"}},
+		ports.ProviderOpts{Model: AutoModel, SpeechModels: []string{"universal-3-5-pro", "universal-2"}},
 	)
 	require.NoError(t, err)
 	raw, ok := got["speech_models"].([]interface{})
 	require.True(t, ok, "speech_models must be an array")
-	require.Len(t, raw, 2)
-	require.Equal(t, "universal-3-pro", raw[0])
-	require.Equal(t, "universal-2", raw[1])
+	require.Equal(t, []interface{}{"universal-3-5-pro", "universal-2"}, raw)
 }
 
-func TestAssemblyAI_SpeechModelsDefaultsToFallback(t *testing.T) {
-	// With no explicit fallback list, the selected model is sent followed by the
-	// universal-2 fallback, and the deprecated singular `speech_model` is absent.
+func TestAssemblyAI_AutoModelOmitsSpeechModels(t *testing.T) {
+	// The whole point of the auto sentinel: no speech_models key at all, so
+	// AssemblyAI applies its own current default and fallback chain.
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: AutoModel},
+	)
+	require.NoError(t, err)
+
+	_, hasPlural := got["speech_models"]
+	require.False(t, hasPlural, "auto mode must omit speech_models entirely")
+	_, hasSingular := got["speech_model"]
+	require.False(t, hasSingular, "deprecated singular speech_model must not be sent")
+	// The rest of the body is unaffected.
+	require.NotEmpty(t, got["audio_url"])
+}
+
+func TestAssemblyAI_EmptyModelOmitsSpeechModels(t *testing.T) {
+	// Defensive: the pipeline substitutes DefaultModel() for an empty model,
+	// but a direct caller may still pass "". That must behave like auto, not
+	// send an empty-string model.
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: ""},
+	)
+	require.NoError(t, err)
+	_, hasPlural := got["speech_models"]
+	require.False(t, hasPlural, "empty model must behave like auto")
+}
+
+func TestAssemblyAI_PinnedModelGetsFallbackAppended(t *testing.T) {
+	// An explicitly pinned model keeps the universal-2 safety net.
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	_, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "universal-3-5-pro"},
+	)
+	require.NoError(t, err)
+
+	_, hasSingular := got["speech_model"]
+	require.False(t, hasSingular, "deprecated singular speech_model must not be sent")
+
+	raw, ok := got["speech_models"].([]interface{})
+	require.True(t, ok, "speech_models must be an array")
+	require.Equal(t, []interface{}{"universal-3-5-pro", "universal-2"}, raw)
+}
+
+func TestAssemblyAI_DeprecatedModelIsRemapped(t *testing.T) {
+	// A stale config saying universal-3-pro must still work after 2026-09-02.
 	var got map[string]interface{}
 	srv := captureTranscriptPayload(t, &got)
 	defer srv.Close()
@@ -231,13 +300,10 @@ func TestAssemblyAI_SpeechModelsDefaultsToFallback(t *testing.T) {
 		ports.ProviderOpts{Model: "universal-3-pro"},
 	)
 	require.NoError(t, err)
-
-	_, hasSingular := got["speech_model"]
-	require.False(t, hasSingular, "deprecated singular speech_model must not be sent")
-
 	raw, ok := got["speech_models"].([]interface{})
-	require.True(t, ok, "speech_models must be an array")
-	require.Equal(t, []interface{}{"universal-3-pro", "universal-2"}, raw)
+	require.True(t, ok)
+	require.Equal(t, []interface{}{"universal-3-5-pro", "universal-2"}, raw)
+	require.NotContains(t, raw, "universal-3-pro", "retired ID must never be sent")
 }
 
 func TestAssemblyAI_SpeechModelsNoDuplicateFallback(t *testing.T) {
@@ -258,6 +324,30 @@ func TestAssemblyAI_SpeechModelsNoDuplicateFallback(t *testing.T) {
 	raw, ok := got["speech_models"].([]interface{})
 	require.True(t, ok)
 	require.Equal(t, []interface{}{"universal-2"}, raw)
+}
+
+func TestBuildSpeechModels(t *testing.T) {
+	tests := []struct {
+		name      string
+		primary   string
+		fallbacks []string
+		want      []string
+	}{
+		{"auto alone omits", AutoModel, nil, nil},
+		{"empty alone omits", "", nil, nil},
+		{"auto with explicit pins uses the pins", AutoModel, []string{"universal-3-5-pro"}, []string{"universal-3-5-pro", "universal-2"}},
+		{"deprecated primary is remapped", "universal-3-pro", nil, []string{"universal-3-5-pro", "universal-2"}},
+		{"deprecated in fallbacks is remapped", "", []string{"universal-3-pro", "universal-2"}, []string{"universal-3-5-pro", "universal-2"}},
+		{"fallback model alone is not duplicated", "universal-2", nil, []string{"universal-2"}},
+		{"pinned model gets the safety net", "universal-3-5-pro", nil, []string{"universal-3-5-pro", "universal-2"}},
+		{"empty entries are dropped", "", []string{"", "universal-3-5-pro"}, []string{"universal-3-5-pro", "universal-2"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildSpeechModels(tt.primary, tt.fallbacks)
+			require.Equal(t, tt.want, got)
+		})
+	}
 }
 
 func TestAssemblyAI_NoSpeakersExpectedWhenSpeakerLabelsFalse(t *testing.T) {
