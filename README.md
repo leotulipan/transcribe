@@ -164,7 +164,7 @@ AssemblyAI defaults to `auto`, which omits the model from the request so
 AssemblyAI always applies its current best model (`universal-3-5-pro`, falling
 back to `universal-2` for languages it does not cover). Pin a model only when
 you need a specific one. The retired `universal-3-pro` is accepted and
-silently upgraded to `universal-3-5-pro`, with a warning — AssemblyAI stops
+upgraded to `universal-3-5-pro`, with a warning — AssemblyAI stops
 accepting it on 2026-09-02.
 
 Notable flags: `-a/--api`, `-l/--language`, `-o/--output text,srt,word_srt,davinci_srt`,

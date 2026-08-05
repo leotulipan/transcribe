@@ -134,7 +134,15 @@ func (c *Client) Transcribe(ctx context.Context, audio domain.AudioFile, opts po
 			Cause:     fmt.Errorf("poll: %w", err),
 		}
 	}
-	return parse(raw, model)
+	// Record what actually ran, not the raw request model: submitTranscript
+	// remaps deprecated IDs before sending, so a universal-3-pro request
+	// really runs as universal-3-5-pro. Result.Model feeds the cached
+	// sidecar JSON, and recording the retired ID there would re-seed it into
+	// stored artifacts. AutoModel is unaffected — normalizing it is a no-op,
+	// so parse still sees AutoModel and keeps its existing echo logic (it
+	// records whatever model the API reports it actually used).
+	normalizedModel, _ := NormalizeModels([]string{model})
+	return parse(raw, normalizedModel[0])
 }
 
 // uploadFile sends the audio file as raw bytes to /v2/upload and returns the upload URL.

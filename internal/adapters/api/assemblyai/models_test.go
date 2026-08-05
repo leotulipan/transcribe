@@ -59,15 +59,23 @@ func TestCapabilities_Universal2Works(t *testing.T) {
 	require.True(t, c.LanguageHint)
 }
 
-func TestCapabilities_RetiredModelReturnsZero(t *testing.T) {
-	// universal-3-pro is retired, and "best"/"nano" were never accepted by the
-	// plural array. All are treated as unknown here; the request path remaps
-	// universal-3-pro before it ever reaches Capabilities.
-	for _, m := range []string{"universal-3-pro", "best", "nano"} {
+func TestCapabilities_NeverValidModelReturnsZero(t *testing.T) {
+	// "best" and "nano" were never accepted by the plural speech_models
+	// array, and are not in deprecatedModels, so they stay unknown.
+	for _, m := range []string{"best", "nano"} {
 		c := Capabilities(m)
 		require.False(t, c.WordTimestamps, "model %q must be unknown", m)
 		require.Empty(t, c.AcceptedInputs, "model %q must be unknown", m)
 	}
+}
+
+func TestCapabilities_RetiredModelReportsReplacementCapabilities(t *testing.T) {
+	// universal-3-pro is retired but still normalized to universal-3-5-pro
+	// before lookup, so the capability gate sees the replacement's real
+	// capabilities instead of the zero value.
+	c := Capabilities("universal-3-pro")
+	require.True(t, c.WordTimestamps, "retired model must report its replacement's capabilities")
+	require.NotEmpty(t, c.AcceptedInputs, "retired model must report its replacement's capabilities")
 }
 
 func TestCapabilities_UnknownModelReturnsZero(t *testing.T) {

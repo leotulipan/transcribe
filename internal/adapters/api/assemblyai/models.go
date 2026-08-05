@@ -99,6 +99,13 @@ func NormalizeModels(in []string) (out, remapped []string) {
 	return out, remapped
 }
 
+// Capabilities normalizes deprecated model IDs before lookup, so a retired
+// ID (e.g. universal-3-pro) reports its replacement's capabilities instead
+// of the zero value. Without this, the capability gate in the pipeline
+// would reject requests for a deprecated model before the client ever gets
+// a chance to remap it and warn. Genuinely unknown IDs pass through
+// NormalizeModels untouched and still return the zero value — fail-safe.
 func Capabilities(model string) ports.ModelCapabilities {
-	return modelCaps[model] // zero value if unknown — fail-safe
+	normalized, _ := NormalizeModels([]string{model})
+	return modelCaps[normalized[0]] // zero value if unknown — fail-safe
 }

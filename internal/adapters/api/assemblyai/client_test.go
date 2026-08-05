@@ -240,6 +240,28 @@ func TestAssemblyAI_AutoModelOmitsSpeechModels(t *testing.T) {
 	require.NotEmpty(t, got["audio_url"])
 }
 
+func TestAssemblyAI_ResultRecordsNormalizedModel(t *testing.T) {
+	// The request must still name the retired model (so warnDeprecated warns
+	// about the right ID), but the returned Result.Model must record what
+	// actually ran, so the cached sidecar JSON doesn't re-seed the retired
+	// ID into stored artifacts.
+	var got map[string]interface{}
+	srv := captureTranscriptPayload(t, &got)
+	defer srv.Close()
+
+	audioPath := filepath.Join(t.TempDir(), "tiny.mp3")
+	require.NoError(t, os.WriteFile(audioPath, []byte("\xff\xfb\x90\x00"), 0o644))
+
+	c := NewWithEndpoint("test-key", srv.URL, http.DefaultClient)
+	result, err := c.Transcribe(context.Background(),
+		domain.AudioFile{Path: audioPath, Container: "mp3", Codec: "mp3", SizeBytes: 4},
+		ports.ProviderOpts{Model: "universal-3-pro"},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "universal-3-5-pro", got["speech_models"].([]interface{})[0], "the API request already remaps the retired model")
+	require.Equal(t, "universal-3-5-pro", result.Model, "Result.Model must record what actually ran")
+}
+
 func TestAssemblyAI_EmptyModelOmitsSpeechModels(t *testing.T) {
 	// Defensive: the pipeline substitutes DefaultModel() for an empty model,
 	// but a direct caller may still pass "". That must behave like auto, not
@@ -338,6 +360,7 @@ func TestBuildSpeechModels(t *testing.T) {
 		{"auto with explicit pins uses the pins", AutoModel, []string{"universal-3-5-pro"}, []string{"universal-3-5-pro", "universal-2"}},
 		{"deprecated primary is remapped", "universal-3-pro", nil, []string{"universal-3-5-pro", "universal-2"}},
 		{"deprecated in fallbacks is remapped", "", []string{"universal-3-pro", "universal-2"}, []string{"universal-3-5-pro", "universal-2"}},
+		{"deprecated primary duplicated in fallbacks dedupes", "universal-3-pro", []string{"universal-3-pro"}, []string{"universal-3-5-pro", "universal-2"}},
 		{"fallback model alone is not duplicated", "universal-2", nil, []string{"universal-2"}},
 		{"pinned model gets the safety net", "universal-3-5-pro", nil, []string{"universal-3-5-pro", "universal-2"}},
 		{"empty entries are dropped", "", []string{"", "universal-3-5-pro"}, []string{"universal-3-5-pro", "universal-2"}},
