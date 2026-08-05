@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-05
+
 ### Changed
 - **AssemblyAI defaults to automatic model selection.** The default model is now
   `auto`, which omits `speech_models` from the request so AssemblyAI applies its
@@ -19,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `universal-3-5-pro` with a warning.
 - AssemblyAI results now record the model the API actually used, rather than
   `auto`, in the sidecar JSON.
+
+### Fixed
+- AssemblyAI: pinning the retired `universal-3-pro` together with an SRT output
+  format no longer fails the capability check before the request is built.
+  Deprecated model IDs are now resolved to their replacement everywhere,
+  including capability lookups, so such a job runs as `universal-3-5-pro` and
+  reports that model rather than erroring with "model does not return
+  word-level timestamps".
 
 ## [0.11.1] - 2026-06-30
 
