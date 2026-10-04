@@ -34,3 +34,8 @@
 
 # Golden test files must stay LF so byte comparisons work on Windows
 internal/adapters/format/testdata/*.golden text eol=lf
+
+# Audio test fixtures are binary
+*.mp3 binary
+*.wav binary
+*.flac binary

@@ -1,0 +1,174 @@
+{
+  "text": "The quick brown fox jumps over the lazy dog. Today we are testing word-level timestamps for two new transcription models. After a short pause, we count: 1, 2, 3, 4, 5.",
+  "usage": {
+    "seconds": 12,
+    "cost": 0.0003333333333333333
+  },
+  "language": "en",
+  "duration": 11.32,
+  "segments": [
+    {
+      "id": 0,
+      "start": 0,
+      "end": 11.325,
+      "text": "The quick brown fox jumps over the lazy dog. Today we are testing word-level timestamps for two new transcription models. After a short pause, we count: 1, 2, 3, 4, 5."
+    }
+  ],
+  "words": [
+    {
+      "word": "The",
+      "start": 0.28,
+      "end": 0.359
+    },
+    {
+      "word": "quick",
+      "start": 0.44,
+      "end": 0.62
+    },
+    {
+      "word": "brown",
+      "start": 0.72,
+      "end": 0.94
+    },
+    {
+      "word": "fox",
+      "start": 1.08,
+      "end": 1.32
+    },
+    {
+      "word": "jumps",
+      "start": 1.56,
+      "end": 1.759
+    },
+    {
+      "word": "over",
+      "start": 1.8,
+      "end": 1.979
+    },
+    {
+      "word": "the",
+      "start": 2,
+      "end": 2.08
+    },
+    {
+      "word": "lazy",
+      "start": 2.16,
+      "end": 2.419
+    },
+    {
+      "word": "dog.",
+      "start": 2.56,
+      "end": 2.8
+    },
+    {
+      "word": "Today",
+      "start": 3.36,
+      "end": 3.62
+    },
+    {
+      "word": "we",
+      "start": 3.68,
+      "end": 3.78
+    },
+    {
+      "word": "are",
+      "start": 3.82,
+      "end": 3.899
+    },
+    {
+      "word": "testing",
+      "start": 4,
+      "end": 4.28
+    },
+    {
+      "word": "word-level",
+      "start": 4.44,
+      "end": 4.919
+    },
+    {
+      "word": "timestamps",
+      "start": 5.04,
+      "end": 5.58
+    },
+    {
+      "word": "for",
+      "start": 5.84,
+      "end": 5.98
+    },
+    {
+      "word": "two",
+      "start": 6.04,
+      "end": 6.16
+    },
+    {
+      "word": "new",
+      "start": 6.24,
+      "end": 6.379
+    },
+    {
+      "word": "transcription",
+      "start": 6.52,
+      "end": 6.999
+    },
+    {
+      "word": "models.",
+      "start": 7.08,
+      "end": 7.4
+    },
+    {
+      "word": "After",
+      "start": 8,
+      "end": 8.179
+    },
+    {
+      "word": "a",
+      "start": 8.24,
+      "end": 8.259
+    },
+    {
+      "word": "short",
+      "start": 8.32,
+      "end": 8.499
+    },
+    {
+      "word": "pause,",
+      "start": 8.6,
+      "end": 8.82
+    },
+    {
+      "word": "we",
+      "start": 8.88,
+      "end": 8.96
+    },
+    {
+      "word": "count:",
+      "start": 9.04,
+      "end": 9.299
+    },
+    {
+      "word": "1,",
+      "start": 9.68,
+      "end": 9.88
+    },
+    {
+      "word": "2,",
+      "start": 9.96,
+      "end": 10.159
+    },
+    {
+      "word": "3,",
+      "start": 10.24,
+      "end": 10.46
+    },
+    {
+      "word": "4,",
+      "start": 10.52,
+      "end": 10.7
+    },
+    {
+      "word": "5.",
+      "start": 10.8,
+      "end": 11.12
+    }
+  ]
+}

@@ -1,0 +1,1577 @@
+{
+  "text": "Lighthouses were once staffed by keepers who trimmed wicks, wound clockwork, and logged every passing ship through long winter nights on remote rocky coasts.\nBread rises because yeast consumes sugars and releases carbon dioxide, which becomes trapped in a stretchy network of gluten formed while the dough is kneaded.\nThe first transatlantic telegraph cable failed after only three weeks, yet it proved that messages could cross an ocean in minutes rather than in many days.\nHoneybees communicate the direction and distance of flowers through a waggle dance, angling their bodies relative to the sun while vibrating rapidly on the comb.\nGlaciers carve valleys into a distinctive U-shape, dragging boulders for hundreds of kilometers and leaving behind ridges of gravel called moraines when they retreat.\nIn medieval monasteries, scribes copied manuscripts by candlelight, mixing inks from oak galls and iron salts, and occasionally scribbling complaints in the margins.\nOctopuses can change both the color and the texture of their skin within a fraction of a second, even though most species are thought to be color blind.\nEarly railway timetables forced towns to adopt standard time, replacing dozens of local clocks that had each been set by the position of the noon sun.\nVolcanic soils are often remarkably fertile, which explains why farmers return to the slopes of active mountains despite the obvious and recurring danger. Paper money first appeared in China more than a thousand years ago, when merchants grew tired of carrying heavy strings of copper and iron coins.",
+  "usage": {
+    "seconds": 97,
+    "cost": 0.0026944444444444446
+  },
+  "language": "en",
+  "duration": 96.28,
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.36,
+      "end": 8.92,
+      "text": "Lighthouses were once staffed by keepers who trimmed wicks, wound clockwork, and logged every passing ship through long winter nights on remote rocky coasts.",
+      "speaker": 0
+    },
+    {
+      "id": 1,
+      "start": 9.72,
+      "end": 19,
+      "text": "Bread rises because yeast consumes sugars and releases carbon dioxide, which becomes trapped in a stretchy network of gluten formed while the dough is kneaded.",
+      "speaker": 1
+    },
+    {
+      "id": 2,
+      "start": 19.56,
+      "end": 27.96,
+      "text": "The first transatlantic telegraph cable failed after only three weeks, yet it proved that messages could cross an ocean in minutes rather than in many days.",
+      "speaker": 0
+    },
+    {
+      "id": 3,
+      "start": 28.84,
+      "end": 38.04,
+      "text": "Honeybees communicate the direction and distance of flowers through a waggle dance, angling their bodies relative to the sun while vibrating rapidly on the comb.",
+      "speaker": 1
+    },
+    {
+      "id": 4,
+      "start": 38.64,
+      "end": 47.84,
+      "text": "Glaciers carve valleys into a distinctive U-shape, dragging boulders for hundreds of kilometers and leaving behind ridges of gravel called moraines when they retreat.",
+      "speaker": 0
+    },
+    {
+      "id": 5,
+      "start": 48.6,
+      "end": 58.6,
+      "text": "In medieval monasteries, scribes copied manuscripts by candlelight, mixing inks from oak galls and iron salts, and occasionally scribbling complaints in the margins.",
+      "speaker": 1
+    },
+    {
+      "id": 6,
+      "start": 59.24,
+      "end": 67.319,
+      "text": "Octopuses can change both the color and the texture of their skin within a fraction of a second, even though most species are thought to be color blind.",
+      "speaker": 0
+    },
+    {
+      "id": 7,
+      "start": 68.16,
+      "end": 77.28,
+      "text": "Early railway timetables forced towns to adopt standard time, replacing dozens of local clocks that had each been set by the position of the noon sun.",
+      "speaker": 1
+    },
+    {
+      "id": 8,
+      "start": 77.88,
+      "end": 88.08,
+      "text": "Volcanic soils are often remarkably fertile, which explains why farmers return to the slopes of active mountains despite the obvious and recurring danger. Paper",
+      "speaker": 0
+    },
+    {
+      "id": 9,
+      "start": 88.2,
+      "end": 96.039,
+      "text": "money first appeared in China more than a thousand years ago, when merchants grew tired of carrying heavy strings of copper and iron coins.",
+      "speaker": 1
+    }
+  ],
+  "words": [
+    {
+      "word": "Lighthouses",
+      "start": 0.36,
+      "end": 0.86,
+      "speaker": 0
+    },
+    {
+      "word": "were",
+      "start": 0.92,
+      "end": 1.019,
+      "speaker": 0
+    },
+    {
+      "word": "once",
+      "start": 1.08,
+      "end": 1.219,
+      "speaker": 0
+    },
+    {
+      "word": "staffed",
+      "start": 1.32,
+      "end": 1.6,
+      "speaker": 0
+    },
+    {
+      "word": "by",
+      "start": 1.64,
+      "end": 1.739,
+      "speaker": 0
+    },
+    {
+      "word": "keepers",
+      "start": 1.84,
+      "end": 2.16,
+      "speaker": 0
+    },
+    {
+      "word": "who",
+      "start": 2.2,
+      "end": 2.3,
+      "speaker": 0
+    },
+    {
+      "word": "trimmed",
+      "start": 2.4,
+      "end": 2.64,
+      "speaker": 0
+    },
+    {
+      "word": "wicks,",
+      "start": 2.72,
+      "end": 3.079,
+      "speaker": 0
+    },
+    {
+      "word": "wound",
+      "start": 3.48,
+      "end": 3.78,
+      "speaker": 0
+    },
+    {
+      "word": "clockwork,",
+      "start": 3.92,
+      "end": 4.4,
+      "speaker": 0
+    },
+    {
+      "word": "and",
+      "start": 4.76,
+      "end": 4.88,
+      "speaker": 0
+    },
+    {
+      "word": "logged",
+      "start": 4.96,
+      "end": 5.28,
+      "speaker": 0
+    },
+    {
+      "word": "every",
+      "start": 5.36,
+      "end": 5.539,
+      "speaker": 0
+    },
+    {
+      "word": "passing",
+      "start": 5.68,
+      "end": 6,
+      "speaker": 0
+    },
+    {
+      "word": "ship",
+      "start": 6.12,
+      "end": 6.299,
+      "speaker": 0
+    },
+    {
+      "word": "through",
+      "start": 6.34,
+      "end": 6.54,
+      "speaker": 0
+    },
+    {
+      "word": "long",
+      "start": 6.64,
+      "end": 6.819,
+      "speaker": 0
+    },
+    {
+      "word": "winter",
+      "start": 6.96,
+      "end": 7.179,
+      "speaker": 0
+    },
+    {
+      "word": "nights",
+      "start": 7.28,
+      "end": 7.499,
+      "speaker": 0
+    },
+    {
+      "word": "on",
+      "start": 7.56,
+      "end": 7.679,
+      "speaker": 0
+    },
+    {
+      "word": "remote",
+      "start": 7.76,
+      "end": 8.06,
+      "speaker": 0
+    },
+    {
+      "word": "rocky",
+      "start": 8.16,
+      "end": 8.4,
+      "speaker": 0
+    },
+    {
+      "word": "coasts.",
+      "start": 8.52,
+      "end": 8.92,
+      "speaker": 0
+    },
+    {
+      "word": "Bread",
+      "start": 9.72,
+      "end": 9.919,
+      "speaker": 1
+    },
+    {
+      "word": "rises",
+      "start": 10.04,
+      "end": 10.399,
+      "speaker": 1
+    },
+    {
+      "word": "because",
+      "start": 10.68,
+      "end": 10.92,
+      "speaker": 1
+    },
+    {
+      "word": "yeast",
+      "start": 11.04,
+      "end": 11.299,
+      "speaker": 1
+    },
+    {
+      "word": "consumes",
+      "start": 11.44,
+      "end": 11.82,
+      "speaker": 1
+    },
+    {
+      "word": "sugars",
+      "start": 12,
+      "end": 12.339,
+      "speaker": 1
+    },
+    {
+      "word": "and",
+      "start": 12.52,
+      "end": 12.62,
+      "speaker": 1
+    },
+    {
+      "word": "releases",
+      "start": 12.72,
+      "end": 13.139,
+      "speaker": 1
+    },
+    {
+      "word": "carbon",
+      "start": 13.36,
+      "end": 13.6,
+      "speaker": 1
+    },
+    {
+      "word": "dioxide,",
+      "start": 13.68,
+      "end": 14.32,
+      "speaker": 1
+    },
+    {
+      "word": "which",
+      "start": 14.84,
+      "end": 14.98,
+      "speaker": 1
+    },
+    {
+      "word": "becomes",
+      "start": 15.08,
+      "end": 15.359,
+      "speaker": 1
+    },
+    {
+      "word": "trapped",
+      "start": 15.52,
+      "end": 15.76,
+      "speaker": 1
+    },
+    {
+      "word": "in",
+      "start": 15.84,
+      "end": 15.92,
+      "speaker": 1
+    },
+    {
+      "word": "a",
+      "start": 15.96,
+      "end": 15.999,
+      "speaker": 1
+    },
+    {
+      "word": "stretchy",
+      "start": 16.14,
+      "end": 16.44,
+      "speaker": 1
+    },
+    {
+      "word": "network",
+      "start": 16.52,
+      "end": 16.82,
+      "speaker": 1
+    },
+    {
+      "word": "of",
+      "start": 16.86,
+      "end": 16.92,
+      "speaker": 1
+    },
+    {
+      "word": "gluten",
+      "start": 17.04,
+      "end": 17.32,
+      "speaker": 1
+    },
+    {
+      "word": "formed",
+      "start": 17.44,
+      "end": 17.74,
+      "speaker": 1
+    },
+    {
+      "word": "while",
+      "start": 17.96,
+      "end": 18.1,
+      "speaker": 1
+    },
+    {
+      "word": "the",
+      "start": 18.12,
+      "end": 18.199,
+      "speaker": 1
+    },
+    {
+      "word": "dough",
+      "start": 18.28,
+      "end": 18.479,
+      "speaker": 1
+    },
+    {
+      "word": "is",
+      "start": 18.52,
+      "end": 18.6,
+      "speaker": 1
+    },
+    {
+      "word": "kneaded.",
+      "start": 18.7,
+      "end": 19,
+      "speaker": 1
+    },
+    {
+      "word": "The",
+      "start": 19.56,
+      "end": 19.66,
+      "speaker": 0
+    },
+    {
+      "word": "first",
+      "start": 19.72,
+      "end": 19.94,
+      "speaker": 0
+    },
+    {
+      "word": "transatlantic",
+      "start": 20.08,
+      "end": 20.74,
+      "speaker": 0
+    },
+    {
+      "word": "telegraph",
+      "start": 20.88,
+      "end": 21.32,
+      "speaker": 0
+    },
+    {
+      "word": "cable",
+      "start": 21.44,
+      "end": 21.679,
+      "speaker": 0
+    },
+    {
+      "word": "failed",
+      "start": 21.84,
+      "end": 22.12,
+      "speaker": 0
+    },
+    {
+      "word": "after",
+      "start": 22.24,
+      "end": 22.459,
+      "speaker": 0
+    },
+    {
+      "word": "only",
+      "start": 22.52,
+      "end": 22.699,
+      "speaker": 0
+    },
+    {
+      "word": "three",
+      "start": 22.84,
+      "end": 23.019,
+      "speaker": 0
+    },
+    {
+      "word": "weeks,",
+      "start": 23.12,
+      "end": 23.44,
+      "speaker": 0
+    },
+    {
+      "word": "yet",
+      "start": 23.84,
+      "end": 23.98,
+      "speaker": 0
+    },
+    {
+      "word": "it",
+      "start": 24.02,
+      "end": 24.1,
+      "speaker": 0
+    },
+    {
+      "word": "proved",
+      "start": 24.2,
+      "end": 24.46,
+      "speaker": 0
+    },
+    {
+      "word": "that",
+      "start": 24.56,
+      "end": 24.659,
+      "speaker": 0
+    },
+    {
+      "word": "messages",
+      "start": 24.8,
+      "end": 25.179,
+      "speaker": 0
+    },
+    {
+      "word": "could",
+      "start": 25.28,
+      "end": 25.4,
+      "speaker": 0
+    },
+    {
+      "word": "cross",
+      "start": 25.48,
+      "end": 25.679,
+      "speaker": 0
+    },
+    {
+      "word": "an",
+      "start": 25.72,
+      "end": 25.8,
+      "speaker": 0
+    },
+    {
+      "word": "ocean",
+      "start": 25.88,
+      "end": 26.12,
+      "speaker": 0
+    },
+    {
+      "word": "in",
+      "start": 26.2,
+      "end": 26.28,
+      "speaker": 0
+    },
+    {
+      "word": "minutes",
+      "start": 26.36,
+      "end": 26.64,
+      "speaker": 0
+    },
+    {
+      "word": "rather",
+      "start": 26.8,
+      "end": 26.979,
+      "speaker": 0
+    },
+    {
+      "word": "than",
+      "start": 27,
+      "end": 27.14,
+      "speaker": 0
+    },
+    {
+      "word": "in",
+      "start": 27.16,
+      "end": 27.26,
+      "speaker": 0
+    },
+    {
+      "word": "many",
+      "start": 27.36,
+      "end": 27.52,
+      "speaker": 0
+    },
+    {
+      "word": "days.",
+      "start": 27.64,
+      "end": 27.96,
+      "speaker": 0
+    },
+    {
+      "word": "Honeybees",
+      "start": 28.84,
+      "end": 29.34,
+      "speaker": 1
+    },
+    {
+      "word": "communicate",
+      "start": 29.48,
+      "end": 29.94,
+      "speaker": 1
+    },
+    {
+      "word": "the",
+      "start": 30,
+      "end": 30.1,
+      "speaker": 1
+    },
+    {
+      "word": "direction",
+      "start": 30.16,
+      "end": 30.6,
+      "speaker": 1
+    },
+    {
+      "word": "and",
+      "start": 30.64,
+      "end": 30.74,
+      "speaker": 1
+    },
+    {
+      "word": "distance",
+      "start": 30.84,
+      "end": 31.14,
+      "speaker": 1
+    },
+    {
+      "word": "of",
+      "start": 31.18,
+      "end": 31.259,
+      "speaker": 1
+    },
+    {
+      "word": "flowers",
+      "start": 31.4,
+      "end": 31.759,
+      "speaker": 1
+    },
+    {
+      "word": "through",
+      "start": 32.12,
+      "end": 32.299,
+      "speaker": 1
+    },
+    {
+      "word": "a",
+      "start": 32.34,
+      "end": 32.379,
+      "speaker": 1
+    },
+    {
+      "word": "waggle",
+      "start": 32.52,
+      "end": 32.819,
+      "speaker": 1
+    },
+    {
+      "word": "dance,",
+      "start": 32.92,
+      "end": 33.24,
+      "speaker": 1
+    },
+    {
+      "word": "angling",
+      "start": 33.8,
+      "end": 34.18,
+      "speaker": 1
+    },
+    {
+      "word": "their",
+      "start": 34.24,
+      "end": 34.38,
+      "speaker": 1
+    },
+    {
+      "word": "bodies",
+      "start": 34.44,
+      "end": 34.76,
+      "speaker": 1
+    },
+    {
+      "word": "relative",
+      "start": 34.92,
+      "end": 35.24,
+      "speaker": 1
+    },
+    {
+      "word": "to",
+      "start": 35.28,
+      "end": 35.359,
+      "speaker": 1
+    },
+    {
+      "word": "the",
+      "start": 35.4,
+      "end": 35.5,
+      "speaker": 1
+    },
+    {
+      "word": "sun",
+      "start": 35.6,
+      "end": 35.779,
+      "speaker": 1
+    },
+    {
+      "word": "while",
+      "start": 36.159,
+      "end": 36.319,
+      "speaker": 1
+    },
+    {
+      "word": "vibrating",
+      "start": 36.48,
+      "end": 36.899,
+      "speaker": 1
+    },
+    {
+      "word": "rapidly",
+      "start": 37.04,
+      "end": 37.42,
+      "speaker": 1
+    },
+    {
+      "word": "on",
+      "start": 37.48,
+      "end": 37.539,
+      "speaker": 1
+    },
+    {
+      "word": "the",
+      "start": 37.56,
+      "end": 37.639,
+      "speaker": 1
+    },
+    {
+      "word": "comb.",
+      "start": 37.76,
+      "end": 38.04,
+      "speaker": 1
+    },
+    {
+      "word": "Glaciers",
+      "start": 38.64,
+      "end": 39.019,
+      "speaker": 0
+    },
+    {
+      "word": "carve",
+      "start": 39.2,
+      "end": 39.439,
+      "speaker": 0
+    },
+    {
+      "word": "valleys",
+      "start": 39.56,
+      "end": 39.859,
+      "speaker": 0
+    },
+    {
+      "word": "into",
+      "start": 39.92,
+      "end": 40.079,
+      "speaker": 0
+    },
+    {
+      "word": "a",
+      "start": 40.14,
+      "end": 40.179,
+      "speaker": 0
+    },
+    {
+      "word": "distinctive",
+      "start": 40.28,
+      "end": 40.719,
+      "speaker": 0
+    },
+    {
+      "word": "U-shape,",
+      "start": 40.84,
+      "end": 41.359,
+      "speaker": 0
+    },
+    {
+      "word": "dragging",
+      "start": 41.84,
+      "end": 42.159,
+      "speaker": 0
+    },
+    {
+      "word": "boulders",
+      "start": 42.28,
+      "end": 42.62,
+      "speaker": 0
+    },
+    {
+      "word": "for",
+      "start": 42.68,
+      "end": 42.799,
+      "speaker": 0
+    },
+    {
+      "word": "hundreds",
+      "start": 42.879,
+      "end": 43.199,
+      "speaker": 0
+    },
+    {
+      "word": "of",
+      "start": 43.22,
+      "end": 43.299,
+      "speaker": 0
+    },
+    {
+      "word": "kilometers",
+      "start": 43.4,
+      "end": 43.939,
+      "speaker": 0
+    },
+    {
+      "word": "and",
+      "start": 44.32,
+      "end": 44.439,
+      "speaker": 0
+    },
+    {
+      "word": "leaving",
+      "start": 44.519,
+      "end": 44.759,
+      "speaker": 0
+    },
+    {
+      "word": "behind",
+      "start": 44.84,
+      "end": 45.159,
+      "speaker": 0
+    },
+    {
+      "word": "ridges",
+      "start": 45.32,
+      "end": 45.579,
+      "speaker": 0
+    },
+    {
+      "word": "of",
+      "start": 45.62,
+      "end": 45.699,
+      "speaker": 0
+    },
+    {
+      "word": "gravel",
+      "start": 45.84,
+      "end": 46.139,
+      "speaker": 0
+    },
+    {
+      "word": "called",
+      "start": 46.24,
+      "end": 46.419,
+      "speaker": 0
+    },
+    {
+      "word": "moraines",
+      "start": 46.56,
+      "end": 47.019,
+      "speaker": 0
+    },
+    {
+      "word": "when",
+      "start": 47.12,
+      "end": 47.199,
+      "speaker": 0
+    },
+    {
+      "word": "they",
+      "start": 47.24,
+      "end": 47.34,
+      "speaker": 0
+    },
+    {
+      "word": "retreat.",
+      "start": 47.44,
+      "end": 47.84,
+      "speaker": 0
+    },
+    {
+      "word": "In",
+      "start": 48.6,
+      "end": 48.719,
+      "speaker": 1
+    },
+    {
+      "word": "medieval",
+      "start": 48.84,
+      "end": 49.279,
+      "speaker": 1
+    },
+    {
+      "word": "monasteries,",
+      "start": 49.4,
+      "end": 50.039,
+      "speaker": 1
+    },
+    {
+      "word": "scribes",
+      "start": 50.6,
+      "end": 50.9,
+      "speaker": 1
+    },
+    {
+      "word": "copied",
+      "start": 51.08,
+      "end": 51.36,
+      "speaker": 1
+    },
+    {
+      "word": "manuscripts",
+      "start": 51.44,
+      "end": 52.019,
+      "speaker": 1
+    },
+    {
+      "word": "by",
+      "start": 52.12,
+      "end": 52.219,
+      "speaker": 1
+    },
+    {
+      "word": "candlelight,",
+      "start": 52.32,
+      "end": 52.879,
+      "speaker": 1
+    },
+    {
+      "word": "mixing",
+      "start": 53.32,
+      "end": 53.62,
+      "speaker": 1
+    },
+    {
+      "word": "inks",
+      "start": 53.72,
+      "end": 53.939,
+      "speaker": 1
+    },
+    {
+      "word": "from",
+      "start": 54,
+      "end": 54.12,
+      "speaker": 1
+    },
+    {
+      "word": "oak",
+      "start": 54.24,
+      "end": 54.4,
+      "speaker": 1
+    },
+    {
+      "word": "galls",
+      "start": 54.48,
+      "end": 54.779,
+      "speaker": 1
+    },
+    {
+      "word": "and",
+      "start": 54.84,
+      "end": 54.98,
+      "speaker": 1
+    },
+    {
+      "word": "iron",
+      "start": 55.12,
+      "end": 55.36,
+      "speaker": 1
+    },
+    {
+      "word": "salts,",
+      "start": 55.48,
+      "end": 55.839,
+      "speaker": 1
+    },
+    {
+      "word": "and",
+      "start": 56.12,
+      "end": 56.24,
+      "speaker": 1
+    },
+    {
+      "word": "occasionally",
+      "start": 56.32,
+      "end": 56.82,
+      "speaker": 1
+    },
+    {
+      "word": "scribbling",
+      "start": 56.96,
+      "end": 57.34,
+      "speaker": 1
+    },
+    {
+      "word": "complaints",
+      "start": 57.48,
+      "end": 57.859,
+      "speaker": 1
+    },
+    {
+      "word": "in",
+      "start": 57.92,
+      "end": 57.98,
+      "speaker": 1
+    },
+    {
+      "word": "the",
+      "start": 58,
+      "end": 58.079,
+      "speaker": 1
+    },
+    {
+      "word": "margins.",
+      "start": 58.16,
+      "end": 58.6,
+      "speaker": 1
+    },
+    {
+      "word": "Octopuses",
+      "start": 59.24,
+      "end": 59.779,
+      "speaker": 0
+    },
+    {
+      "word": "can",
+      "start": 59.84,
+      "end": 59.959,
+      "speaker": 0
+    },
+    {
+      "word": "change",
+      "start": 60.12,
+      "end": 60.379,
+      "speaker": 0
+    },
+    {
+      "word": "both",
+      "start": 60.52,
+      "end": 60.68,
+      "speaker": 0
+    },
+    {
+      "word": "the",
+      "start": 60.76,
+      "end": 60.84,
+      "speaker": 0
+    },
+    {
+      "word": "color",
+      "start": 60.96,
+      "end": 61.24,
+      "speaker": 0
+    },
+    {
+      "word": "and",
+      "start": 61.6,
+      "end": 61.679,
+      "speaker": 0
+    },
+    {
+      "word": "the",
+      "start": 61.72,
+      "end": 61.799,
+      "speaker": 0
+    },
+    {
+      "word": "texture",
+      "start": 61.92,
+      "end": 62.2,
+      "speaker": 0
+    },
+    {
+      "word": "of",
+      "start": 62.24,
+      "end": 62.299,
+      "speaker": 0
+    },
+    {
+      "word": "their",
+      "start": 62.32,
+      "end": 62.48,
+      "speaker": 0
+    },
+    {
+      "word": "skin",
+      "start": 62.6,
+      "end": 62.819,
+      "speaker": 0
+    },
+    {
+      "word": "within",
+      "start": 62.96,
+      "end": 63.139,
+      "speaker": 0
+    },
+    {
+      "word": "a",
+      "start": 63.2,
+      "end": 63.239,
+      "speaker": 0
+    },
+    {
+      "word": "fraction",
+      "start": 63.36,
+      "end": 63.64,
+      "speaker": 0
+    },
+    {
+      "word": "of",
+      "start": 63.66,
+      "end": 63.72,
+      "speaker": 0
+    },
+    {
+      "word": "a",
+      "start": 63.78,
+      "end": 63.799,
+      "speaker": 0
+    },
+    {
+      "word": "second,",
+      "start": 63.88,
+      "end": 64.2,
+      "speaker": 0
+    },
+    {
+      "word": "even",
+      "start": 64.68,
+      "end": 64.839,
+      "speaker": 0
+    },
+    {
+      "word": "though",
+      "start": 64.88,
+      "end": 65.04,
+      "speaker": 0
+    },
+    {
+      "word": "most",
+      "start": 65.12,
+      "end": 65.299,
+      "speaker": 0
+    },
+    {
+      "word": "species",
+      "start": 65.48,
+      "end": 65.799,
+      "speaker": 0
+    },
+    {
+      "word": "are",
+      "start": 65.86,
+      "end": 65.96,
+      "speaker": 0
+    },
+    {
+      "word": "thought",
+      "start": 66.039,
+      "end": 66.219,
+      "speaker": 0
+    },
+    {
+      "word": "to",
+      "start": 66.24,
+      "end": 66.319,
+      "speaker": 0
+    },
+    {
+      "word": "be",
+      "start": 66.36,
+      "end": 66.46,
+      "speaker": 0
+    },
+    {
+      "word": "color",
+      "start": 66.56,
+      "end": 66.819,
+      "speaker": 0
+    },
+    {
+      "word": "blind.",
+      "start": 66.96,
+      "end": 67.319,
+      "speaker": 0
+    },
+    {
+      "word": "Early",
+      "start": 68.16,
+      "end": 68.36,
+      "speaker": 1
+    },
+    {
+      "word": "railway",
+      "start": 68.52,
+      "end": 68.9,
+      "speaker": 1
+    },
+    {
+      "word": "timetables",
+      "start": 69,
+      "end": 69.579,
+      "speaker": 1
+    },
+    {
+      "word": "forced",
+      "start": 69.76,
+      "end": 69.999,
+      "speaker": 1
+    },
+    {
+      "word": "towns",
+      "start": 70.08,
+      "end": 70.379,
+      "speaker": 1
+    },
+    {
+      "word": "to",
+      "start": 70.48,
+      "end": 70.559,
+      "speaker": 1
+    },
+    {
+      "word": "adopt",
+      "start": 70.64,
+      "end": 70.96,
+      "speaker": 1
+    },
+    {
+      "word": "standard",
+      "start": 71.16,
+      "end": 71.5,
+      "speaker": 1
+    },
+    {
+      "word": "time,",
+      "start": 71.64,
+      "end": 71.92,
+      "speaker": 1
+    },
+    {
+      "word": "replacing",
+      "start": 72.44,
+      "end": 72.879,
+      "speaker": 1
+    },
+    {
+      "word": "dozens",
+      "start": 73.08,
+      "end": 73.4,
+      "speaker": 1
+    },
+    {
+      "word": "of",
+      "start": 73.44,
+      "end": 73.539,
+      "speaker": 1
+    },
+    {
+      "word": "local",
+      "start": 73.68,
+      "end": 73.899,
+      "speaker": 1
+    },
+    {
+      "word": "clocks",
+      "start": 74.039,
+      "end": 74.339,
+      "speaker": 1
+    },
+    {
+      "word": "that",
+      "start": 74.64,
+      "end": 74.74,
+      "speaker": 1
+    },
+    {
+      "word": "had",
+      "start": 74.78,
+      "end": 74.92,
+      "speaker": 1
+    },
+    {
+      "word": "each",
+      "start": 75,
+      "end": 75.159,
+      "speaker": 1
+    },
+    {
+      "word": "been",
+      "start": 75.24,
+      "end": 75.379,
+      "speaker": 1
+    },
+    {
+      "word": "set",
+      "start": 75.48,
+      "end": 75.639,
+      "speaker": 1
+    },
+    {
+      "word": "by",
+      "start": 75.76,
+      "end": 75.839,
+      "speaker": 1
+    },
+    {
+      "word": "the",
+      "start": 75.88,
+      "end": 75.96,
+      "speaker": 1
+    },
+    {
+      "word": "position",
+      "start": 76.039,
+      "end": 76.399,
+      "speaker": 1
+    },
+    {
+      "word": "of",
+      "start": 76.48,
+      "end": 76.539,
+      "speaker": 1
+    },
+    {
+      "word": "the",
+      "start": 76.56,
+      "end": 76.659,
+      "speaker": 1
+    },
+    {
+      "word": "noon",
+      "start": 76.72,
+      "end": 76.939,
+      "speaker": 1
+    },
+    {
+      "word": "sun.",
+      "start": 77.039,
+      "end": 77.279,
+      "speaker": 1
+    },
+    {
+      "word": "Volcanic",
+      "start": 77.88,
+      "end": 78.38,
+      "speaker": 0
+    },
+    {
+      "word": "soils",
+      "start": 78.48,
+      "end": 78.819,
+      "speaker": 0
+    },
+    {
+      "word": "are",
+      "start": 78.9,
+      "end": 79.019,
+      "speaker": 0
+    },
+    {
+      "word": "often",
+      "start": 79.12,
+      "end": 79.359,
+      "speaker": 0
+    },
+    {
+      "word": "remarkably",
+      "start": 79.48,
+      "end": 79.98,
+      "speaker": 0
+    },
+    {
+      "word": "fertile,",
+      "start": 80.12,
+      "end": 80.439,
+      "speaker": 0
+    },
+    {
+      "word": "which",
+      "start": 80.92,
+      "end": 81.06,
+      "speaker": 0
+    },
+    {
+      "word": "explains",
+      "start": 81.16,
+      "end": 81.599,
+      "speaker": 0
+    },
+    {
+      "word": "why",
+      "start": 81.72,
+      "end": 81.84,
+      "speaker": 0
+    },
+    {
+      "word": "farmers",
+      "start": 82.04,
+      "end": 82.319,
+      "speaker": 0
+    },
+    {
+      "word": "return",
+      "start": 82.48,
+      "end": 82.779,
+      "speaker": 0
+    },
+    {
+      "word": "to",
+      "start": 82.8,
+      "end": 82.879,
+      "speaker": 0
+    },
+    {
+      "word": "the",
+      "start": 82.92,
+      "end": 82.999,
+      "speaker": 0
+    },
+    {
+      "word": "slopes",
+      "start": 83.12,
+      "end": 83.419,
+      "speaker": 0
+    },
+    {
+      "word": "of",
+      "start": 83.46,
+      "end": 83.519,
+      "speaker": 0
+    },
+    {
+      "word": "active",
+      "start": 83.68,
+      "end": 83.939,
+      "speaker": 0
+    },
+    {
+      "word": "mountains",
+      "start": 84.08,
+      "end": 84.439,
+      "speaker": 0
+    },
+    {
+      "word": "despite",
+      "start": 84.88,
+      "end": 85.18,
+      "speaker": 0
+    },
+    {
+      "word": "the",
+      "start": 85.24,
+      "end": 85.34,
+      "speaker": 0
+    },
+    {
+      "word": "obvious",
+      "start": 85.48,
+      "end": 85.859,
+      "speaker": 0
+    },
+    {
+      "word": "and",
+      "start": 85.92,
+      "end": 86.019,
+      "speaker": 0
+    },
+    {
+      "word": "recurring",
+      "start": 86.12,
+      "end": 86.519,
+      "speaker": 0
+    },
+    {
+      "word": "danger.",
+      "start": 86.68,
+      "end": 86.979,
+      "speaker": 0
+    },
+    {
+      "word": "Paper",
+      "start": 87.84,
+      "end": 88.079,
+      "speaker": 0
+    },
+    {
+      "word": "money",
+      "start": 88.2,
+      "end": 88.4,
+      "speaker": 1
+    },
+    {
+      "word": "first",
+      "start": 88.64,
+      "end": 88.799,
+      "speaker": 1
+    },
+    {
+      "word": "appeared",
+      "start": 88.88,
+      "end": 89.2,
+      "speaker": 1
+    },
+    {
+      "word": "in",
+      "start": 89.24,
+      "end": 89.319,
+      "speaker": 1
+    },
+    {
+      "word": "China",
+      "start": 89.48,
+      "end": 89.739,
+      "speaker": 1
+    },
+    {
+      "word": "more",
+      "start": 89.96,
+      "end": 90.059,
+      "speaker": 1
+    },
+    {
+      "word": "than",
+      "start": 90.12,
+      "end": 90.219,
+      "speaker": 1
+    },
+    {
+      "word": "a",
+      "start": 90.28,
+      "end": 90.319,
+      "speaker": 1
+    },
+    {
+      "word": "thousand",
+      "start": 90.48,
+      "end": 90.76,
+      "speaker": 1
+    },
+    {
+      "word": "years",
+      "start": 90.8,
+      "end": 90.98,
+      "speaker": 1
+    },
+    {
+      "word": "ago,",
+      "start": 91.039,
+      "end": 91.279,
+      "speaker": 1
+    },
+    {
+      "word": "when",
+      "start": 91.72,
+      "end": 91.84,
+      "speaker": 1
+    },
+    {
+      "word": "merchants",
+      "start": 91.96,
+      "end": 92.259,
+      "speaker": 1
+    },
+    {
+      "word": "grew",
+      "start": 92.36,
+      "end": 92.539,
+      "speaker": 1
+    },
+    {
+      "word": "tired",
+      "start": 92.68,
+      "end": 92.96,
+      "speaker": 1
+    },
+    {
+      "word": "of",
+      "start": 93.039,
+      "end": 93.139,
+      "speaker": 1
+    },
+    {
+      "word": "carrying",
+      "start": 93.24,
+      "end": 93.559,
+      "speaker": 1
+    },
+    {
+      "word": "heavy",
+      "start": 93.72,
+      "end": 93.9,
+      "speaker": 1
+    },
+    {
+      "word": "strings",
+      "start": 94.039,
+      "end": 94.319,
+      "speaker": 1
+    },
+    {
+      "word": "of",
+      "start": 94.36,
+      "end": 94.46,
+      "speaker": 1
+    },
+    {
+      "word": "copper",
+      "start": 94.6,
+      "end": 94.9,
+      "speaker": 1
+    },
+    {
+      "word": "and",
+      "start": 95,
+      "end": 95.12,
+      "speaker": 1
+    },
+    {
+      "word": "iron",
+      "start": 95.24,
+      "end": 95.499,
+      "speaker": 1
+    },
+    {
+      "word": "coins.",
+      "start": 95.64,
+      "end": 96.039,
+      "speaker": 1
+    }
+  ]
+}
