@@ -1,0 +1,1260 @@
+{
+  "text": "Lighthouses were once staffed by keepers who trimmed wicks, wound clockwork, and logged every passing ship through long winter nights on remote rocky coasts. Bread rises because yeast consumes sugars and releases carbon dioxide, which becomes trapped in a stretchy network of gluten formed while the dough is needed. The first transatlantic telegraph cable failed after only three weeks, yet it proved that messages could cross an ocean in minutes rather than in many days. Honeybees communicate the direction and distance of flowers through a waggle dance, angling their bodies relative to the sun while vibrating rapidly on the comb. Glaciers carve valleys into a distinctive U-shape, dragging boulders for hundreds of kilometers and leaving behind ridges of gravel called moraines when they retreat. In medieval monasteries, scribes copied manuscripts by candlelight, mixing inks from oak galls and iron salts, and occasionally scribbling complaints in the margins. Octopuses can change both the color and the texture of their skin within a fraction of a second, even though most species are thought to be colorblind. Early railway timetables forced towns to adopt standard time, replacing dozens of local clocks that had each been set by the position of the noon sun. Volcanic soils are often remarkably fertile, which explains why farmers return to the slopes of active mountains despite the obvious and recurring danger. Paper money first appeared in China more than a thousand years ago when merchants grew tired of carrying heavy strings of copper and iron coins.",
+  "usage": {
+    "total_tokens": 2408,
+    "input_tokens": 2408,
+    "output_tokens": 0,
+    "cost": 0.004816
+  },
+  "task": "transcribe",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0,
+      "end": 96.1,
+      "text": "Lighthouses were once staffed by keepers who trimmed wicks, wound clockwork, and logged every passing ship through long winter nights on remote rocky coasts. Bread rises because yeast consumes sugars and releases carbon dioxide, which becomes trapped in a stretchy network of gluten formed while the dough is needed. The first transatlantic telegraph cable failed after only three weeks, yet it proved that messages could cross an ocean in minutes rather than in many days. Honeybees communicate the direction and distance of flowers through a waggle dance, angling their bodies relative to the sun while vibrating rapidly on the comb. Glaciers carve valleys into a distinctive U-shape, dragging boulders for hundreds of kilometers and leaving behind ridges of gravel called moraines when they retreat. In medieval monasteries, scribes copied manuscripts by candlelight, mixing inks from oak galls and iron salts, and occasionally scribbling complaints in the margins. Octopuses can change both the color and the texture of their skin within a fraction of a second, even though most species are thought to be colorblind. Early railway timetables forced towns to adopt standard time, replacing dozens of local clocks that had each been set by the position of the noon sun. Volcanic soils are often remarkably fertile, which explains why farmers return to the slopes of active mountains despite the obvious and recurring danger. Paper money first appeared in China more than a thousand years ago when merchants grew tired of carrying heavy strings of copper and iron coins."
+    }
+  ],
+  "words": [
+    {
+      "word": "Lighthouses",
+      "start": 0.3,
+      "end": 0.9
+    },
+    {
+      "word": "were",
+      "start": 0.9,
+      "end": 1
+    },
+    {
+      "word": "once",
+      "start": 1,
+      "end": 1.2
+    },
+    {
+      "word": "staffed",
+      "start": 1.2,
+      "end": 1.6
+    },
+    {
+      "word": "by",
+      "start": 1.6,
+      "end": 1.8
+    },
+    {
+      "word": "keepers",
+      "start": 1.8,
+      "end": 2.2
+    },
+    {
+      "word": "who",
+      "start": 2.2,
+      "end": 2.3
+    },
+    {
+      "word": "trimmed",
+      "start": 2.3,
+      "end": 2.7
+    },
+    {
+      "word": "wicks,",
+      "start": 2.7,
+      "end": 3.3
+    },
+    {
+      "word": "wound",
+      "start": 3.4,
+      "end": 3.8
+    },
+    {
+      "word": "clockwork,",
+      "start": 3.8,
+      "end": 4.5
+    },
+    {
+      "word": "and",
+      "start": 4.7,
+      "end": 4.9
+    },
+    {
+      "word": "logged",
+      "start": 4.9,
+      "end": 5.3
+    },
+    {
+      "word": "every",
+      "start": 5.3,
+      "end": 5.6
+    },
+    {
+      "word": "passing",
+      "start": 5.6,
+      "end": 6
+    },
+    {
+      "word": "ship",
+      "start": 6,
+      "end": 6.3
+    },
+    {
+      "word": "through",
+      "start": 6.3,
+      "end": 6.6
+    },
+    {
+      "word": "long",
+      "start": 6.6,
+      "end": 6.9
+    },
+    {
+      "word": "winter",
+      "start": 6.9,
+      "end": 7.2
+    },
+    {
+      "word": "nights",
+      "start": 7.2,
+      "end": 7.6
+    },
+    {
+      "word": "on",
+      "start": 7.6,
+      "end": 7.7
+    },
+    {
+      "word": "remote",
+      "start": 7.7,
+      "end": 8.1
+    },
+    {
+      "word": "rocky",
+      "start": 8.1,
+      "end": 8.4
+    },
+    {
+      "word": "coasts.",
+      "start": 8.4,
+      "end": 8.9
+    },
+    {
+      "word": "Bread",
+      "start": 9.6,
+      "end": 9.9
+    },
+    {
+      "word": "rises",
+      "start": 9.9,
+      "end": 10.5
+    },
+    {
+      "word": "because",
+      "start": 10.6,
+      "end": 11
+    },
+    {
+      "word": "yeast",
+      "start": 11,
+      "end": 11.3
+    },
+    {
+      "word": "consumes",
+      "start": 11.3,
+      "end": 11.8
+    },
+    {
+      "word": "sugars",
+      "start": 11.8,
+      "end": 12.5
+    },
+    {
+      "word": "and",
+      "start": 12.5,
+      "end": 12.7
+    },
+    {
+      "word": "releases",
+      "start": 12.7,
+      "end": 13.2
+    },
+    {
+      "word": "carbon",
+      "start": 13.2,
+      "end": 13.6
+    },
+    {
+      "word": "dioxide,",
+      "start": 13.6,
+      "end": 14.4
+    },
+    {
+      "word": "which",
+      "start": 14.8,
+      "end": 15
+    },
+    {
+      "word": "becomes",
+      "start": 15,
+      "end": 15.4
+    },
+    {
+      "word": "trapped",
+      "start": 15.4,
+      "end": 15.8
+    },
+    {
+      "word": "in",
+      "start": 15.8,
+      "end": 15.9
+    },
+    {
+      "word": "a",
+      "start": 15.9,
+      "end": 16
+    },
+    {
+      "word": "stretchy",
+      "start": 16,
+      "end": 16.5
+    },
+    {
+      "word": "network",
+      "start": 16.5,
+      "end": 16.8
+    },
+    {
+      "word": "of",
+      "start": 16.8,
+      "end": 17
+    },
+    {
+      "word": "gluten",
+      "start": 17,
+      "end": 17.3
+    },
+    {
+      "word": "formed",
+      "start": 17.3,
+      "end": 17.9
+    },
+    {
+      "word": "while",
+      "start": 18,
+      "end": 18.1
+    },
+    {
+      "word": "the",
+      "start": 18.1,
+      "end": 18.2
+    },
+    {
+      "word": "dough",
+      "start": 18.2,
+      "end": 18.5
+    },
+    {
+      "word": "is",
+      "start": 18.5,
+      "end": 18.6
+    },
+    {
+      "word": "needed.",
+      "start": 18.6,
+      "end": 19
+    },
+    {
+      "word": "The",
+      "start": 19.5,
+      "end": 19.6
+    },
+    {
+      "word": "first",
+      "start": 19.6,
+      "end": 19.9
+    },
+    {
+      "word": "transatlantic",
+      "start": 19.9,
+      "end": 20.7
+    },
+    {
+      "word": "telegraph",
+      "start": 20.7,
+      "end": 21.3
+    },
+    {
+      "word": "cable",
+      "start": 21.3,
+      "end": 21.7
+    },
+    {
+      "word": "failed",
+      "start": 21.7,
+      "end": 22.2
+    },
+    {
+      "word": "after",
+      "start": 22.2,
+      "end": 22.5
+    },
+    {
+      "word": "only",
+      "start": 22.5,
+      "end": 22.7
+    },
+    {
+      "word": "three",
+      "start": 22.7,
+      "end": 23
+    },
+    {
+      "word": "weeks,",
+      "start": 23,
+      "end": 23.5
+    },
+    {
+      "word": "yet",
+      "start": 23.8,
+      "end": 24
+    },
+    {
+      "word": "it",
+      "start": 24,
+      "end": 24.1
+    },
+    {
+      "word": "proved",
+      "start": 24.1,
+      "end": 24.5
+    },
+    {
+      "word": "that",
+      "start": 24.5,
+      "end": 24.7
+    },
+    {
+      "word": "messages",
+      "start": 24.7,
+      "end": 25.2
+    },
+    {
+      "word": "could",
+      "start": 25.2,
+      "end": 25.4
+    },
+    {
+      "word": "cross",
+      "start": 25.4,
+      "end": 25.7
+    },
+    {
+      "word": "an",
+      "start": 25.7,
+      "end": 25.8
+    },
+    {
+      "word": "ocean",
+      "start": 25.8,
+      "end": 26.2
+    },
+    {
+      "word": "in",
+      "start": 26.2,
+      "end": 26.3
+    },
+    {
+      "word": "minutes",
+      "start": 26.3,
+      "end": 26.7
+    },
+    {
+      "word": "rather",
+      "start": 26.7,
+      "end": 27
+    },
+    {
+      "word": "than",
+      "start": 27,
+      "end": 27.1
+    },
+    {
+      "word": "in",
+      "start": 27.1,
+      "end": 27.3
+    },
+    {
+      "word": "many",
+      "start": 27.3,
+      "end": 27.5
+    },
+    {
+      "word": "days.",
+      "start": 27.5,
+      "end": 28
+    },
+    {
+      "word": "Honeybees",
+      "start": 28.8,
+      "end": 29.3
+    },
+    {
+      "word": "communicate",
+      "start": 29.3,
+      "end": 30
+    },
+    {
+      "word": "the",
+      "start": 30,
+      "end": 30
+    },
+    {
+      "word": "direction",
+      "start": 30,
+      "end": 30.7
+    },
+    {
+      "word": "and",
+      "start": 30.7,
+      "end": 30.8
+    },
+    {
+      "word": "distance",
+      "start": 30.8,
+      "end": 31.2
+    },
+    {
+      "word": "of",
+      "start": 31.2,
+      "end": 31.3
+    },
+    {
+      "word": "flowers",
+      "start": 31.3,
+      "end": 31.9
+    },
+    {
+      "word": "through",
+      "start": 32.1,
+      "end": 32.3
+    },
+    {
+      "word": "a",
+      "start": 32.3,
+      "end": 32.4
+    },
+    {
+      "word": "waggle",
+      "start": 32.4,
+      "end": 32.8
+    },
+    {
+      "word": "dance,",
+      "start": 32.8,
+      "end": 33.3
+    },
+    {
+      "word": "angling",
+      "start": 33.7,
+      "end": 34.2
+    },
+    {
+      "word": "their",
+      "start": 34.2,
+      "end": 34.3
+    },
+    {
+      "word": "bodies",
+      "start": 34.3,
+      "end": 34.8
+    },
+    {
+      "word": "relative",
+      "start": 34.8,
+      "end": 35.2
+    },
+    {
+      "word": "to",
+      "start": 35.2,
+      "end": 35.4
+    },
+    {
+      "word": "the",
+      "start": 35.4,
+      "end": 35.5
+    },
+    {
+      "word": "sun",
+      "start": 35.5,
+      "end": 35.9
+    },
+    {
+      "word": "while",
+      "start": 36.1,
+      "end": 36.3
+    },
+    {
+      "word": "vibrating",
+      "start": 36.3,
+      "end": 37
+    },
+    {
+      "word": "rapidly",
+      "start": 37,
+      "end": 37.5
+    },
+    {
+      "word": "on",
+      "start": 37.5,
+      "end": 37.6
+    },
+    {
+      "word": "the",
+      "start": 37.6,
+      "end": 37.7
+    },
+    {
+      "word": "comb.",
+      "start": 37.7,
+      "end": 38
+    },
+    {
+      "word": "Glaciers",
+      "start": 38.6,
+      "end": 39.1
+    },
+    {
+      "word": "carve",
+      "start": 39.1,
+      "end": 39.4
+    },
+    {
+      "word": "valleys",
+      "start": 39.4,
+      "end": 39.9
+    },
+    {
+      "word": "into",
+      "start": 39.9,
+      "end": 40.1
+    },
+    {
+      "word": "a",
+      "start": 40.1,
+      "end": 40.2
+    },
+    {
+      "word": "distinctive",
+      "start": 40.2,
+      "end": 40.8
+    },
+    {
+      "word": "U-shape,",
+      "start": 40.8,
+      "end": 41.3
+    },
+    {
+      "word": "dragging",
+      "start": 41.8,
+      "end": 42.2
+    },
+    {
+      "word": "boulders",
+      "start": 42.2,
+      "end": 42.7
+    },
+    {
+      "word": "for",
+      "start": 42.7,
+      "end": 42.8
+    },
+    {
+      "word": "hundreds",
+      "start": 42.8,
+      "end": 43.2
+    },
+    {
+      "word": "of",
+      "start": 43.2,
+      "end": 43.3
+    },
+    {
+      "word": "kilometers",
+      "start": 43.3,
+      "end": 44
+    },
+    {
+      "word": "and",
+      "start": 44.3,
+      "end": 44.5
+    },
+    {
+      "word": "leaving",
+      "start": 44.5,
+      "end": 44.7
+    },
+    {
+      "word": "behind",
+      "start": 44.7,
+      "end": 45.2
+    },
+    {
+      "word": "ridges",
+      "start": 45.2,
+      "end": 45.6
+    },
+    {
+      "word": "of",
+      "start": 45.6,
+      "end": 45.7
+    },
+    {
+      "word": "gravel",
+      "start": 45.7,
+      "end": 46.2
+    },
+    {
+      "word": "called",
+      "start": 46.2,
+      "end": 46.5
+    },
+    {
+      "word": "moraines",
+      "start": 46.5,
+      "end": 47.1
+    },
+    {
+      "word": "when",
+      "start": 47.1,
+      "end": 47.2
+    },
+    {
+      "word": "they",
+      "start": 47.2,
+      "end": 47.3
+    },
+    {
+      "word": "retreat.",
+      "start": 47.3,
+      "end": 47.9
+    },
+    {
+      "word": "In",
+      "start": 48.6,
+      "end": 48.8
+    },
+    {
+      "word": "medieval",
+      "start": 48.8,
+      "end": 49.3
+    },
+    {
+      "word": "monasteries,",
+      "start": 49.3,
+      "end": 50.1
+    },
+    {
+      "word": "scribes",
+      "start": 50.4,
+      "end": 51
+    },
+    {
+      "word": "copied",
+      "start": 51,
+      "end": 51.3
+    },
+    {
+      "word": "manuscripts",
+      "start": 51.3,
+      "end": 52.1
+    },
+    {
+      "word": "by",
+      "start": 52.1,
+      "end": 52.2
+    },
+    {
+      "word": "candlelight,",
+      "start": 52.2,
+      "end": 52.9
+    },
+    {
+      "word": "mixing",
+      "start": 53.3,
+      "end": 53.7
+    },
+    {
+      "word": "inks",
+      "start": 53.7,
+      "end": 54
+    },
+    {
+      "word": "from",
+      "start": 54,
+      "end": 54.2
+    },
+    {
+      "word": "oak",
+      "start": 54.2,
+      "end": 54.4
+    },
+    {
+      "word": "galls",
+      "start": 54.4,
+      "end": 54.9
+    },
+    {
+      "word": "and",
+      "start": 54.9,
+      "end": 55.1
+    },
+    {
+      "word": "iron",
+      "start": 55.1,
+      "end": 55.4
+    },
+    {
+      "word": "salts,",
+      "start": 55.4,
+      "end": 55.9
+    },
+    {
+      "word": "and",
+      "start": 56.1,
+      "end": 56.3
+    },
+    {
+      "word": "occasionally",
+      "start": 56.3,
+      "end": 56.8
+    },
+    {
+      "word": "scribbling",
+      "start": 56.8,
+      "end": 57.4
+    },
+    {
+      "word": "complaints",
+      "start": 57.4,
+      "end": 57.9
+    },
+    {
+      "word": "in",
+      "start": 57.9,
+      "end": 58
+    },
+    {
+      "word": "the",
+      "start": 58,
+      "end": 58.1
+    },
+    {
+      "word": "margins.",
+      "start": 58.1,
+      "end": 58.7
+    },
+    {
+      "word": "Octopuses",
+      "start": 59.2,
+      "end": 59.8
+    },
+    {
+      "word": "can",
+      "start": 59.8,
+      "end": 60
+    },
+    {
+      "word": "change",
+      "start": 60,
+      "end": 60.4
+    },
+    {
+      "word": "both",
+      "start": 60.4,
+      "end": 60.7
+    },
+    {
+      "word": "the",
+      "start": 60.7,
+      "end": 60.8
+    },
+    {
+      "word": "color",
+      "start": 60.8,
+      "end": 61.3
+    },
+    {
+      "word": "and",
+      "start": 61.6,
+      "end": 61.7
+    },
+    {
+      "word": "the",
+      "start": 61.7,
+      "end": 61.8
+    },
+    {
+      "word": "texture",
+      "start": 61.8,
+      "end": 62.2
+    },
+    {
+      "word": "of",
+      "start": 62.2,
+      "end": 62.3
+    },
+    {
+      "word": "their",
+      "start": 62.3,
+      "end": 62.5
+    },
+    {
+      "word": "skin",
+      "start": 62.5,
+      "end": 62.9
+    },
+    {
+      "word": "within",
+      "start": 62.9,
+      "end": 63.2
+    },
+    {
+      "word": "a",
+      "start": 63.2,
+      "end": 63.2
+    },
+    {
+      "word": "fraction",
+      "start": 63.2,
+      "end": 63.6
+    },
+    {
+      "word": "of",
+      "start": 63.6,
+      "end": 63.7
+    },
+    {
+      "word": "a",
+      "start": 63.7,
+      "end": 63.8
+    },
+    {
+      "word": "second,",
+      "start": 63.8,
+      "end": 64.2
+    },
+    {
+      "word": "even",
+      "start": 64.6,
+      "end": 64.8
+    },
+    {
+      "word": "though",
+      "start": 64.8,
+      "end": 65
+    },
+    {
+      "word": "most",
+      "start": 65,
+      "end": 65.3
+    },
+    {
+      "word": "species",
+      "start": 65.3,
+      "end": 65.8
+    },
+    {
+      "word": "are",
+      "start": 65.8,
+      "end": 65.9
+    },
+    {
+      "word": "thought",
+      "start": 65.9,
+      "end": 66.2
+    },
+    {
+      "word": "to",
+      "start": 66.2,
+      "end": 66.3
+    },
+    {
+      "word": "be",
+      "start": 66.3,
+      "end": 66.5
+    },
+    {
+      "word": "colorblind.",
+      "start": 66.5,
+      "end": 67.4
+    },
+    {
+      "word": "Early",
+      "start": 68.1,
+      "end": 68.4
+    },
+    {
+      "word": "railway",
+      "start": 68.4,
+      "end": 68.9
+    },
+    {
+      "word": "timetables",
+      "start": 68.9,
+      "end": 69.7
+    },
+    {
+      "word": "forced",
+      "start": 69.7,
+      "end": 70
+    },
+    {
+      "word": "towns",
+      "start": 70,
+      "end": 70.4
+    },
+    {
+      "word": "to",
+      "start": 70.4,
+      "end": 70.6
+    },
+    {
+      "word": "adopt",
+      "start": 70.6,
+      "end": 71
+    },
+    {
+      "word": "standard",
+      "start": 71,
+      "end": 71.5
+    },
+    {
+      "word": "time,",
+      "start": 71.5,
+      "end": 71.9
+    },
+    {
+      "word": "replacing",
+      "start": 72.4,
+      "end": 73
+    },
+    {
+      "word": "dozens",
+      "start": 73,
+      "end": 73.4
+    },
+    {
+      "word": "of",
+      "start": 73.4,
+      "end": 73.6
+    },
+    {
+      "word": "local",
+      "start": 73.6,
+      "end": 73.9
+    },
+    {
+      "word": "clocks",
+      "start": 73.9,
+      "end": 74.4
+    },
+    {
+      "word": "that",
+      "start": 74.6,
+      "end": 74.8
+    },
+    {
+      "word": "had",
+      "start": 74.8,
+      "end": 74.9
+    },
+    {
+      "word": "each",
+      "start": 74.9,
+      "end": 75.2
+    },
+    {
+      "word": "been",
+      "start": 75.2,
+      "end": 75.4
+    },
+    {
+      "word": "set",
+      "start": 75.4,
+      "end": 75.7
+    },
+    {
+      "word": "by",
+      "start": 75.7,
+      "end": 75.8
+    },
+    {
+      "word": "the",
+      "start": 75.8,
+      "end": 75.9
+    },
+    {
+      "word": "position",
+      "start": 75.9,
+      "end": 76.5
+    },
+    {
+      "word": "of",
+      "start": 76.5,
+      "end": 76.6
+    },
+    {
+      "word": "the",
+      "start": 76.6,
+      "end": 76.7
+    },
+    {
+      "word": "noon",
+      "start": 76.7,
+      "end": 77
+    },
+    {
+      "word": "sun.",
+      "start": 77,
+      "end": 77.3
+    },
+    {
+      "word": "Volcanic",
+      "start": 77.8,
+      "end": 78.4
+    },
+    {
+      "word": "soils",
+      "start": 78.4,
+      "end": 78.9
+    },
+    {
+      "word": "are",
+      "start": 78.9,
+      "end": 79
+    },
+    {
+      "word": "often",
+      "start": 79,
+      "end": 79.4
+    },
+    {
+      "word": "remarkably",
+      "start": 79.4,
+      "end": 80
+    },
+    {
+      "word": "fertile,",
+      "start": 80,
+      "end": 80.4
+    },
+    {
+      "word": "which",
+      "start": 80.9,
+      "end": 81
+    },
+    {
+      "word": "explains",
+      "start": 81,
+      "end": 81.7
+    },
+    {
+      "word": "why",
+      "start": 81.7,
+      "end": 81.9
+    },
+    {
+      "word": "farmers",
+      "start": 81.9,
+      "end": 82.4
+    },
+    {
+      "word": "return",
+      "start": 82.4,
+      "end": 82.8
+    },
+    {
+      "word": "to",
+      "start": 82.8,
+      "end": 82.9
+    },
+    {
+      "word": "the",
+      "start": 82.9,
+      "end": 83
+    },
+    {
+      "word": "slopes",
+      "start": 83,
+      "end": 83.4
+    },
+    {
+      "word": "of",
+      "start": 83.4,
+      "end": 83.6
+    },
+    {
+      "word": "active",
+      "start": 83.6,
+      "end": 83.9
+    },
+    {
+      "word": "mountains",
+      "start": 83.9,
+      "end": 84.5
+    },
+    {
+      "word": "despite",
+      "start": 84.8,
+      "end": 85.2
+    },
+    {
+      "word": "the",
+      "start": 85.2,
+      "end": 85.4
+    },
+    {
+      "word": "obvious",
+      "start": 85.4,
+      "end": 85.9
+    },
+    {
+      "word": "and",
+      "start": 85.9,
+      "end": 86.1
+    },
+    {
+      "word": "recurring",
+      "start": 86.1,
+      "end": 86.6
+    },
+    {
+      "word": "danger.",
+      "start": 86.6,
+      "end": 87
+    },
+    {
+      "word": "Paper",
+      "start": 87.8,
+      "end": 88.1
+    },
+    {
+      "word": "money",
+      "start": 88.1,
+      "end": 88.5
+    },
+    {
+      "word": "first",
+      "start": 88.6,
+      "end": 88.8
+    },
+    {
+      "word": "appeared",
+      "start": 88.8,
+      "end": 89.2
+    },
+    {
+      "word": "in",
+      "start": 89.2,
+      "end": 89.3
+    },
+    {
+      "word": "China",
+      "start": 89.3,
+      "end": 89.8
+    },
+    {
+      "word": "more",
+      "start": 89.9,
+      "end": 90.1
+    },
+    {
+      "word": "than",
+      "start": 90.1,
+      "end": 90.2
+    },
+    {
+      "word": "a",
+      "start": 90.2,
+      "end": 90.3
+    },
+    {
+      "word": "thousand",
+      "start": 90.3,
+      "end": 90.8
+    },
+    {
+      "word": "years",
+      "start": 90.8,
+      "end": 91
+    },
+    {
+      "word": "ago",
+      "start": 91,
+      "end": 91.3
+    },
+    {
+      "word": "when",
+      "start": 91.7,
+      "end": 91.8
+    },
+    {
+      "word": "merchants",
+      "start": 91.8,
+      "end": 92.3
+    },
+    {
+      "word": "grew",
+      "start": 92.3,
+      "end": 92.5
+    },
+    {
+      "word": "tired",
+      "start": 92.5,
+      "end": 93
+    },
+    {
+      "word": "of",
+      "start": 93,
+      "end": 93.1
+    },
+    {
+      "word": "carrying",
+      "start": 93.1,
+      "end": 93.6
+    },
+    {
+      "word": "heavy",
+      "start": 93.6,
+      "end": 93.9
+    },
+    {
+      "word": "strings",
+      "start": 93.9,
+      "end": 94.4
+    },
+    {
+      "word": "of",
+      "start": 94.4,
+      "end": 94.5
+    },
+    {
+      "word": "copper",
+      "start": 94.5,
+      "end": 95
+    },
+    {
+      "word": "and",
+      "start": 95,
+      "end": 95.2
+    },
+    {
+      "word": "iron",
+      "start": 95.2,
+      "end": 95.5
+    },
+    {
+      "word": "coins.",
+      "start": 95.5,
+      "end": 96.1
+    }
+  ]
+}
